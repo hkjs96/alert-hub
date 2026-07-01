@@ -1,0 +1,32 @@
+import type { NormalizedAlert } from "@/lib/types";
+import { slackNotifier } from "@/lib/notify/slack";
+
+// A Notifier is any channel that can deliver an alert. Today there is exactly
+// one (Slack); email, then Twilio SMS/voice, get added later simply by
+// registering more notifiers here — nothing else in the pipeline changes.
+export interface Notifier {
+  readonly name: string;
+  /** True when the notifier is configured and able to send. */
+  isConfigured(): boolean;
+  notify(alert: NormalizedAlert): Promise<void>;
+}
+
+const notifiers: Notifier[] = [slackNotifier];
+
+/**
+ * Fan an alert out to every configured notifier. Failures are swallowed per
+ * notifier so one broken channel never blocks ingest or the others.
+ */
+export async function notifyAll(alert: NormalizedAlert): Promise<void> {
+  await Promise.all(
+    notifiers
+      .filter((n) => n.isConfigured())
+      .map(async (n) => {
+        try {
+          await n.notify(alert);
+        } catch (err) {
+          console.error(`[notify:${n.name}] failed`, err);
+        }
+      }),
+  );
+}

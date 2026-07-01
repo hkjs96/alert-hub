@@ -1,0 +1,58 @@
+import type { Notifier } from "@/lib/notify";
+import type { NormalizedAlert } from "@/lib/types";
+
+const SEVERITY_EMOJI: Record<string, string> = {
+  "SEV-0": "🚨",
+  "SEV-1": "🚨",
+  "SEV-2": "🔴",
+  "SEV-3": "🟠",
+  "SEV-4": "🟡",
+  "SEV-5": "⚪",
+  UNKNOWN: "⚠️",
+};
+
+function buildText(alert: NormalizedAlert): string {
+  const emoji = SEVERITY_EMOJI[alert.severity] ?? "⚠️";
+  const lines: string[] = [
+    `${emoji} *${alert.title}* is *${alert.status}*`,
+  ];
+
+  const meta: string[] = [`severity: ${alert.severity}`, `source: ${alert.source}`];
+  if (alert.resource) meta.push(`resource: ${alert.resource}`);
+  if (alert.metric) meta.push(`metric: ${alert.metric}`);
+  if (alert.accountId) meta.push(`account: ${alert.accountId}`);
+  if (alert.region) meta.push(`region: ${alert.region}`);
+  lines.push(meta.join(" · "));
+
+  if (alert.stateReason) lines.push(`> ${alert.stateReason}`);
+
+  return lines.join("\n");
+}
+
+/**
+ * Slack Incoming Webhook notifier. Reads SLACK_WEBHOOK_URL at call time so the
+ * dashboard/ingest work fine with it unset — in that case `isConfigured()` is
+ * false and the notifier is simply skipped.
+ */
+export const slackNotifier: Notifier = {
+  name: "slack",
+
+  isConfigured() {
+    return Boolean(process.env.SLACK_WEBHOOK_URL);
+  },
+
+  async notify(alert) {
+    const url = process.env.SLACK_WEBHOOK_URL;
+    if (!url) return;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: buildText(alert) }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Slack webhook returned ${res.status} ${res.statusText}`);
+    }
+  },
+};

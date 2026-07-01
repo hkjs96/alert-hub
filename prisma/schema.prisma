@@ -1,0 +1,66 @@
+// Prisma schema for alert-hub.
+//
+// This is the "event plane": it receives already-fired alarms, dedups them by
+// fingerprint, stores a provider-agnostic normalized shape, and keeps an
+// append-only event history. The model intentionally leaves room for later
+// features (assignee/routing/grouping) without forcing columns now.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Alert {
+  id          String   @id @default(cuid())
+  fingerprint String   @unique
+
+  title       String
+  description String?
+
+  source   String @default("cloudwatch")
+  severity String @default("UNKNOWN")
+  status   String @default("FIRING")
+
+  resource   String?
+  metric     String?
+  namespace  String?
+  value      String?
+  threshold  Float?
+  comparison String?
+  region     String?
+  accountId  String?
+  stateReason String?
+
+  count       Int      @default(1)
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  raw Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events AlertEvent[]
+
+  @@index([status])
+  @@index([severity])
+  @@index([lastSeenAt])
+}
+
+model AlertEvent {
+  id      String @id @default(cuid())
+  alertId String
+  alert   Alert  @relation(fields: [alertId], references: [id], onDelete: Cascade)
+
+  status      String
+  stateReason String?
+  value       String?
+
+  createdAt DateTime @default(now())
+
+  @@index([alertId])
+}
