@@ -51,20 +51,44 @@ npm run dev                 # http://localhost:3000
 
 ## Webhook
 
-`POST /api/webhooks/alarm` accepts three payload shapes:
+The ingest is two layers — **transport** (how it arrives) × **provider** (payload
+format):
 
-1. **SNS envelope** (`{ "Type", "TopicArn", ... }`).
-   `SubscriptionConfirmation` is auto-confirmed by fetching `SubscribeURL`;
-   `Notification` has its `Message` (a JSON string) parsed and normalized.
-2. **Raw CloudWatch alarm JSON** (top-level `AlarmName` + `NewStateValue`).
-3. **Generic JSON**: `title` (or `name`) plus optional
-   `severity`, `status`, `source`, `resource`, `metric`, `reason`, `value`.
+- **Transport:** direct HTTPS POST, or an **SNS envelope** (`{ Type, TopicArn }`).
+  `SubscriptionConfirmation` is auto-confirmed by fetching `SubscribeURL`;
+  `Notification` has its `Message` (a JSON string) peeled and parsed.
+- **Provider:** the URL segment selects the parser.
+
+```
+POST /api/webhooks/cloudwatch    CloudWatch alarm JSON (usually via SNS)
+POST /api/webhooks/prometheus    Alertmanager webhook (batch: alerts[])
+POST /api/webhooks/grafana       Grafana unified alerting (legacy best-effort)
+POST /api/webhooks/pagerduty     PagerDuty v3 webhook (v2 best-effort)
+POST /api/webhooks/generic       title|name + optional fields
+POST /api/webhooks/alarm         auto-detect (sniffs the payload shape)
+```
+
+Each provider lives behind one `Provider` interface (`src/lib/providers/*`) and
+maps its payload onto the common `NormalizedAlert`. Prometheus/Grafana send a
+**batch** per POST, so a single request can create many alerts. Adding a source
+is just adding a provider file — nothing downstream changes.
+
+> **PoC target generations:** Grafana unified (8+), Alertmanager `version:"4"`,
+> PagerDuty v3. Older generations (Grafana legacy `evalMatches`, PagerDuty v2
+> `messages[]`) are detected and parsed best-effort.
+>
+> **Auth:** `INGEST_TOKEN` (header `x-webhook-token`) gates every route today.
+> Per-source signature verification (SNS message signatures, PagerDuty
+> `X-PagerDuty-Signature`) is the next step.
 
 ### Deduplication
 
 Alerts upsert on `fingerprint`:
 
 - CloudWatch → `cw:<AlarmArn>`
+- Prometheus/Grafana → `<source>:<native fingerprint>` (falls back to
+  `<source>:<alertname>:<resource>`)
+- PagerDuty → `pagerduty:<incident.id>`
 - Generic → `<source>:<title>:<resource>`
 
 Same fingerprint ⇒ the alert is updated and an `AlertEvent` is appended.
@@ -94,7 +118,7 @@ curl -sS -X POST http://localhost:3000/api/webhooks/alarm \
 **2. CloudWatch alarm (ALARM ⇒ FIRING):**
 
 ```bash
-curl -sS -X POST http://localhost:3000/api/webhooks/alarm \
+curl -sS -X POST http://localhost:3000/api/webhooks/cloudwatch \
   -H 'content-type: application/json' \
   -d '{
     "AlarmName": "SEV-1 prod-db CPU",
@@ -117,7 +141,7 @@ curl -sS -X POST http://localhost:3000/api/webhooks/alarm \
 new event appended, no count bump, no re-notify):
 
 ```bash
-curl -sS -X POST http://localhost:3000/api/webhooks/alarm \
+curl -sS -X POST http://localhost:3000/api/webhooks/cloudwatch \
   -H 'content-type: application/json' \
   -d '{
     "AlarmName": "SEV-1 prod-db CPU",
@@ -127,20 +151,99 @@ curl -sS -X POST http://localhost:3000/api/webhooks/alarm \
   }'
 ```
 
+**4. Prometheus / Alertmanager (batch of two alerts in one POST):**
+
+```bash
+curl -sS -X POST http://localhost:3000/api/webhooks/prometheus \
+  -H 'content-type: application/json' \
+  -d '{
+    "version": "4",
+    "status": "firing",
+    "groupKey": "{}:{alertname=\"HighErrorRate\"}",
+    "alerts": [
+      {
+        "status": "firing",
+        "labels": { "alertname": "HighErrorRate", "severity": "critical", "instance": "api-1:9090", "job": "api" },
+        "annotations": { "summary": "5xx rate high", "description": "error rate 12% > 5%" },
+        "fingerprint": "a1b2c3"
+      },
+      {
+        "status": "firing",
+        "labels": { "alertname": "HighLatency", "severity": "warning", "instance": "api-2:9090" },
+        "annotations": { "description": "p99 900ms > 500ms" },
+        "fingerprint": "d4e5f6"
+      }
+    ]
+  }'
+```
+
+**5. PagerDuty v3 webhook (incident triggered ⇒ FIRING; acknowledged ⇒ ACKNOWLEDGED):**
+
+```bash
+curl -sS -X POST http://localhost:3000/api/webhooks/pagerduty \
+  -H 'content-type: application/json' \
+  -d '{
+    "event": {
+      "event_type": "incident.triggered",
+      "data": {
+        "id": "PABC123",
+        "title": "API is down",
+        "status": "triggered",
+        "urgency": "high",
+        "priority": { "summary": "P1" },
+        "service": { "summary": "checkout-api" }
+      }
+    }
+  }'
+```
+
+**6. Grafana unified alerting:**
+
+```bash
+curl -sS -X POST http://localhost:3000/api/webhooks/grafana \
+  -H 'content-type: application/json' \
+  -d '{
+    "status": "firing",
+    "version": "1",
+    "orgId": 1,
+    "alerts": [
+      {
+        "status": "firing",
+        "labels": { "alertname": "DiskAlmostFull", "severity": "warning", "instance": "web-3" },
+        "annotations": { "summary": "disk 92%" },
+        "fingerprint": "g7h8i9",
+        "valueString": "92",
+        "dashboardURL": "https://grafana.example.com/d/abc"
+      }
+    ]
+  }'
+```
+
 Open <http://localhost:3000> to see the cards, status filter, severity badges,
 the table, and each alert's event timeline.
 
 ## Wiring up real AWS
 
-1. On a CloudWatch alarm, set **AlarmActions** → an **SNS topic**.
+1. On a CloudWatch alarm, set **AlarmActions** → an **SNS topic** (same region
+   as the alarm). For multi-account collection, give the topic a resource
+   policy allowing the source accounts to `sns:Publish` (scope with
+   `aws:SourceAccount`).
 2. Add an **HTTPS subscription** on that topic pointing at your deployed
-   `https://<host>/api/webhooks/alarm`.
+   `https://<host>/api/webhooks/cloudwatch`.
 3. SNS sends a `SubscriptionConfirmation`; alert-hub auto-confirms it by fetching
    `SubscribeURL`. After that, alarm state changes arrive as `Notification`
    envelopes and land on the dashboard (and Slack).
 
+Other sources point their webhooks at the matching route
+(`/api/webhooks/prometheus`, `/grafana`, `/pagerduty`) — or `/api/webhooks/alarm`
+to let the payload be auto-detected.
+
 ## Roadmap (next slices)
 
-Email channel → ack/resolve actions → on-call/escalation → Twilio SMS/voice
-paging. Each is additive on top of this MVP's notifier interface, explicit
-status transitions, and append-only event history.
+- **Ingest:** per-source signature verification (SNS message signatures,
+  PagerDuty `X-PagerDuty-Signature`); more providers behind the same interface.
+- **Product:** email channel → ack/resolve actions → on-call/escalation →
+  Twilio SMS/voice paging.
+
+Each is additive on top of this MVP's provider interface, notifier interface,
+explicit status transitions, and append-only event history.

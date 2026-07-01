@@ -97,6 +97,24 @@ export async function ingestAlert(n: NormalizedAlert): Promise<IngestResult> {
   return { alertId, status: n.status, firedTransition, created };
 }
 
+/**
+ * Ingest a batch (Prometheus/Grafana send many alerts per POST). Sequential on
+ * purpose: keeps event ordering sane and avoids a connection-pool spike for a
+ * large batch. Failures are isolated per alert so one bad entry can't sink the
+ * rest of the batch.
+ */
+export async function ingestAlerts(alerts: NormalizedAlert[]): Promise<IngestResult[]> {
+  const results: IngestResult[] = [];
+  for (const alert of alerts) {
+    try {
+      results.push(await ingestAlert(alert));
+    } catch (err) {
+      console.error(`[ingest] failed for ${alert.fingerprint}`, err);
+    }
+  }
+  return results;
+}
+
 // --- Read helpers used by the dashboard ------------------------------------
 
 export async function getAlerts(status?: AlertStatus) {

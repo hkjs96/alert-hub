@@ -14,6 +14,13 @@ const SEVERITY_STYLES: Record<string, string> = {
   "SEV-3": "bg-amber-400 text-amber-950 ring-amber-500/30",
   "SEV-4": "bg-yellow-300 text-yellow-900 ring-yellow-500/30",
   "SEV-5": "bg-slate-300 text-slate-800 ring-slate-400/30",
+  // Word severities from Prometheus / Grafana / PagerDuty.
+  CRITICAL: "bg-red-600 text-white ring-red-700/30",
+  HIGH: "bg-orange-500 text-white ring-orange-600/30",
+  ERROR: "bg-orange-500 text-white ring-orange-600/30",
+  WARNING: "bg-amber-400 text-amber-950 ring-amber-500/30",
+  LOW: "bg-yellow-300 text-yellow-900 ring-yellow-500/30",
+  INFO: "bg-sky-200 text-sky-800 ring-sky-400/30",
   UNKNOWN: "bg-slate-200 text-slate-600 ring-slate-400/30",
 };
 
