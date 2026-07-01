@@ -7,11 +7,21 @@
 
 generator client {
   provider = "prisma-client-js"
+  // "native" builds the engine for the local dev machine. The extra RHEL target
+  // is a future-proofing seed for AWS Lambda / Vercel (Amazon Linux) so the
+  // EC2 -> serverless migration doesn't need a schema change. Harmless locally.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Runtime uses the POOLED connection (Supabase Supavisor / PgBouncer,
+  // port 6543, ?pgbouncer=true) so a serverless fleet can't exhaust Postgres
+  // connections — this pre-solves the pooling problem before any Lambda move.
+  url = env("DATABASE_URL")
+  // Migrations (prisma migrate / db push) need a DIRECT connection (port 5432),
+  // because they run DDL the pooler can't. Locally, point both at the same DB.
+  directUrl = env("DIRECT_URL")
 }
 
 model Alert {

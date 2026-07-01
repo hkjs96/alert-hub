@@ -35,19 +35,32 @@ Slack Incoming Webhook. API routes run on the Node.js runtime.
 
 ```bash
 npm install
-cp .env.example .env        # then edit DATABASE_URL (and SLACK_WEBHOOK_URL)
+cp .env.example .env        # set DATABASE_URL + DIRECT_URL (and SLACK_WEBHOOK_URL)
 npx prisma generate
 npx prisma db push          # create the tables in your Postgres
 npm run dev                 # http://localhost:3000
 ```
 
+PoC setup is **local dev + Supabase free Postgres**. Supabase ships a built-in
+connection pooler (Supavisor), so the runtime uses the **pooled** URL
+(`DATABASE_URL`, port 6543) while migrations use the **direct** URL
+(`DIRECT_URL`, port 5432). Using the pooler now means a later move to
+Lambda/Vercel needs **no RDS Proxy** — the connection-pool problem is already
+handled. Locally, point both URLs at the same Postgres.
+
 ### Environment variables
 
 | Var                 | Required | Purpose                                                    |
 | ------------------- | -------- | ---------------------------------------------------------- |
-| `DATABASE_URL`      | yes      | Postgres connection string for Prisma.                     |
+| `DATABASE_URL`      | yes      | Pooled Postgres URL (app runtime).                         |
+| `DIRECT_URL`        | yes      | Direct Postgres URL (migrations / `db push`).              |
 | `SLACK_WEBHOOK_URL` | no       | Slack Incoming Webhook. Unset ⇒ Slack notifications skipped. |
 | `INGEST_TOKEN`      | no       | If set, requests must send header `x-webhook-token: <token>`. |
+
+> **Migration seam.** The ingest core (`normalizeWith` + `ingestAlerts`) is
+> transport-agnostic, `prisma generate` already emits an Amazon-Linux engine
+> (`binaryTargets`), and the pooled DB URL is serverless-ready — so EC2 → Lambda
+> /Vercel later is mostly infra config, not an app rewrite.
 
 ## Webhook
 
