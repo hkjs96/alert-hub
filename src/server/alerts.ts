@@ -3,13 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { notifyAll } from "@/lib/notify";
 import type { AlertStatus, NormalizedAlert } from "@/lib/types";
 
-// Map a normalized alert onto the columns we (over)write on every ingest.
-// firstSeenAt/count are handled separately so they are only ever set on create
-// or bumped on a genuine FIRING transition.
-function toWritableData(
-  n: NormalizedAlert,
-): Omit<Prisma.AlertUncheckedCreateInput, "fingerprint" | "count"> {
+// Columns written when an alert is first created. Optional fields land as
+// null; count starts at 1.
+function toCreateData(n: NormalizedAlert): Prisma.AlertUncheckedCreateInput {
   return {
+    fingerprint: n.fingerprint,
     title: n.title,
     description: n.description ?? null,
     source: n.source,
@@ -24,8 +22,44 @@ function toWritableData(
     region: n.region ?? null,
     accountId: n.accountId ?? null,
     stateReason: n.stateReason ?? null,
+    count: 1,
     raw: (n.raw ?? undefined) as Prisma.InputJsonValue | undefined,
   };
+}
+
+// Columns written on follow-up events. Absent values stay `undefined` so
+// Prisma SKIPS them: a sparse follow-up (e.g. a CloudWatch OK resend without
+// Trigger) must not erase the enrichment the FIRING payload carried
+// (metric/namespace/threshold/region/...). severity likewise only moves off
+// the stored value when the new payload actually knows one.
+function toUpdateData(n: NormalizedAlert) {
+  return {
+    title: n.title,
+    description: n.description ?? undefined,
+    source: n.source,
+    severity: n.severity === "UNKNOWN" ? undefined : n.severity,
+    status: n.status,
+    resource: n.resource ?? undefined,
+    metric: n.metric ?? undefined,
+    namespace: n.namespace ?? undefined,
+    value: n.value ?? undefined,
+    threshold: n.threshold ?? undefined,
+    comparison: n.comparison ?? undefined,
+    region: n.region ?? undefined,
+    accountId: n.accountId ?? undefined,
+    stateReason: n.stateReason ?? undefined,
+    // raw always reflects the latest payload; history lives in AlertEvent.
+    raw: (n.raw ?? undefined) as Prisma.InputJsonValue | undefined,
+    lastSeenAt: new Date(),
+  };
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    (err as { code?: string }).code === "P2002"
+  );
 }
 
 export interface IngestResult {
@@ -43,58 +77,87 @@ export interface IngestResult {
  * - Known fingerprint => update fields, append an AlertEvent (append-only
  *   history), and bump `count` only when this is a transition INTO FIRING.
  *
- * A FIRING transition (new alert arriving as FIRING, or a known alert moving
- * from non-FIRING to FIRING) is the sole trigger for outbound notifications.
+ * Concurrency: two racing requests for the same new fingerprint both pass the
+ * findUnique check, but only one create wins; the loser hits the unique
+ * constraint (P2002) and falls through to the update path instead of crashing.
+ * The FIRING transition itself is decided by a status-guarded updateMany, so
+ * exactly one concurrent request wins the count++/notify even under a race.
  */
 export async function ingestAlert(n: NormalizedAlert): Promise<IngestResult> {
-  const existing = await prisma.alert.findUnique({
-    where: { fingerprint: n.fingerprint },
-    select: { id: true, status: true },
-  });
-
   const eventData = {
     status: n.status,
     stateReason: n.stateReason ?? null,
     value: n.value ?? null,
   };
 
-  let alertId: string;
-  let firedTransition: boolean;
-  let created: boolean;
+  const existing = await prisma.alert.findUnique({
+    where: { fingerprint: n.fingerprint },
+    select: { id: true },
+  });
 
   if (!existing) {
-    firedTransition = n.status === "FIRING";
-    created = true;
-    const alert = await prisma.alert.create({
-      data: {
-        fingerprint: n.fingerprint,
-        ...toWritableData(n),
-        count: 1,
-        events: { create: eventData },
-      },
+    try {
+      const alert = await prisma.alert.create({
+        data: { ...toCreateData(n), events: { create: eventData } },
+        select: { id: true },
+      });
+      const firedTransition = n.status === "FIRING";
+      if (firedTransition) {
+        await notifyAll(n);
+      }
+      return { alertId: alert.id, status: n.status, firedTransition, created: true };
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+      // Lost the create race — the row exists now; treat as an update.
+    }
+  }
+
+  return updateExisting(n, eventData, existing?.id);
+}
+
+async function updateExisting(
+  n: NormalizedAlert,
+  eventData: { status: string; stateReason: string | null; value: string | null },
+  knownId?: string,
+): Promise<IngestResult> {
+  const data = toUpdateData(n);
+  let firedTransition = false;
+
+  if (n.status === "FIRING") {
+    // Guarded update: only matches while the stored status is not FIRING, so
+    // the transition (count++ + notify) happens exactly once even when several
+    // FIRING events land concurrently.
+    const transitioned = await prisma.alert.updateMany({
+      where: { fingerprint: n.fingerprint, status: { not: "FIRING" } },
+      data: { ...data, count: { increment: 1 } },
+    });
+    firedTransition = transitioned.count > 0;
+    if (!firedTransition) {
+      await prisma.alert.updateMany({ where: { fingerprint: n.fingerprint }, data });
+    }
+  } else {
+    await prisma.alert.updateMany({ where: { fingerprint: n.fingerprint }, data });
+  }
+
+  let alertId = knownId;
+  if (!alertId) {
+    const alert = await prisma.alert.findUnique({
+      where: { fingerprint: n.fingerprint },
       select: { id: true },
     });
+    if (!alert) {
+      throw new Error(`alert ${n.fingerprint} vanished mid-ingest`);
+    }
     alertId = alert.id;
-  } else {
-    firedTransition = n.status === "FIRING" && existing.status !== "FIRING";
-    created = false;
-    await prisma.alert.update({
-      where: { id: existing.id },
-      data: {
-        ...toWritableData(n),
-        lastSeenAt: new Date(),
-        count: firedTransition ? { increment: 1 } : undefined,
-        events: { create: eventData },
-      },
-    });
-    alertId = existing.id;
   }
+
+  await prisma.alertEvent.create({ data: { alertId, ...eventData } });
 
   if (firedTransition) {
     await notifyAll(n);
   }
 
-  return { alertId, status: n.status, firedTransition, created };
+  return { alertId, status: n.status, firedTransition, created: false };
 }
 
 /**
