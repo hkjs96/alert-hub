@@ -55,7 +55,14 @@ handled. Locally, point both URLs at the same Postgres.
 | `DATABASE_URL`      | yes      | Pooled Postgres URL (app runtime).                         |
 | `DIRECT_URL`        | yes      | Direct Postgres URL (migrations / `db push`).              |
 | `SLACK_WEBHOOK_URL` | no       | Slack Incoming Webhook. Unset ⇒ Slack notifications skipped. |
-| `INGEST_TOKEN`      | no       | If set, requests must send header `x-webhook-token: <token>`. |
+| `APP_URL`           | no       | Public base URL; adds an alert deep link to notifications.   |
+| `INGEST_TOKEN`      | no       | If set, requests must carry the token (see below).            |
+
+When `INGEST_TOKEN` is set, senders authenticate with **either** the
+`x-webhook-token: <token>` header **or** a `?token=<token>` query parameter.
+The query form exists because SNS and PagerDuty cannot attach custom headers —
+bake the token into the subscription/webhook URL instead
+(`https://<host>/api/webhooks/cloudwatch?token=...`).
 
 > **Migration seam.** The ingest core (`normalizeWith` + `ingestAlerts`) is
 > transport-agnostic, `prisma generate` already emits an Amazon-Linux engine
@@ -90,8 +97,10 @@ is just adding a provider file — nothing downstream changes.
 > PagerDuty v3. Older generations (Grafana legacy `evalMatches`, PagerDuty v2
 > `messages[]`) are detected and parsed best-effort.
 >
-> **Auth:** `INGEST_TOKEN` (header `x-webhook-token`) gates every route today.
-> Per-source signature verification (SNS message signatures, PagerDuty
+> **Auth:** `INGEST_TOKEN` (header or `?token=`) gates every route today.
+> `SubscribeURL` is validated to point at a real `sns.<region>.amazonaws.com`
+> host before it is fetched, and bodies over 1MB are rejected. Per-source
+> signature verification (SNS message signatures, PagerDuty
 > `X-PagerDuty-Signature`) is the next step.
 
 ### Deduplication
@@ -107,6 +116,18 @@ Alerts upsert on `fingerprint`:
 Same fingerprint ⇒ the alert is updated and an `AlertEvent` is appended.
 `count` increments **only** on a transition **into** FIRING, and Slack fires on
 that same transition (skipped if `SLACK_WEBHOOK_URL` is unset).
+
+## Tests
+
+```bash
+npm test          # vitest: provider parsers, ingest logic (Prisma mocked), webhook route
+```
+
+No database needed — the suite covers payload normalization for all five
+providers (including version-generation edge cases), dedup/transition semantics
+(sparse updates must not erase enrichment; count++/notify only on transitions
+into FIRING; create races), and route behavior (token auth, SSRF guard on
+`SubscribeURL`, SNS envelope peeling, body cap).
 
 ## curl tests
 
