@@ -103,7 +103,7 @@ export async function ingestAlert(n: NormalizedAlert): Promise<IngestResult> {
       });
       const firedTransition = n.status === "FIRING";
       if (firedTransition) {
-        await notifyAll(n);
+        await notifyAll(n, { alertId: alert.id });
       }
       return { alertId: alert.id, status: n.status, firedTransition, created: true };
     } catch (err) {
@@ -154,7 +154,7 @@ async function updateExisting(
   await prisma.alertEvent.create({ data: { alertId, ...eventData } });
 
   if (firedTransition) {
-    await notifyAll(n);
+    await notifyAll(n, { alertId });
   }
 
   return { alertId, status: n.status, firedTransition, created: false };

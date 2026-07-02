@@ -64,6 +64,9 @@ export function mapFiringStatus(input: string | undefined): AlertStatus {
       return "RESOLVED";
     case "no_data":
     case "nodata":
+    // Grafana legacy "paused": the rule stopped evaluating — that is an
+    // absence of signal, not an active alert.
+    case "paused":
       return "INSUFFICIENT_DATA";
     default:
       return "FIRING";

@@ -1,4 +1,4 @@
-import type { Notifier } from "@/lib/notify";
+import type { Notifier, NotifyContext } from "@/lib/notify";
 import type { NormalizedAlert } from "@/lib/types";
 
 const SEVERITY_EMOJI: Record<string, string> = {
@@ -11,7 +11,7 @@ const SEVERITY_EMOJI: Record<string, string> = {
   UNKNOWN: "⚠️",
 };
 
-function buildText(alert: NormalizedAlert): string {
+function buildText(alert: NormalizedAlert, ctx: NotifyContext): string {
   const emoji = SEVERITY_EMOJI[alert.severity] ?? "⚠️";
   const lines: string[] = [
     `${emoji} *${alert.title}* is *${alert.status}*`,
@@ -25,6 +25,12 @@ function buildText(alert: NormalizedAlert): string {
   lines.push(meta.join(" · "));
 
   if (alert.stateReason) lines.push(`> ${alert.stateReason}`);
+
+  // Deep link to the alert detail page when the app knows its public URL.
+  const appUrl = process.env.APP_URL?.replace(/\/+$/, "");
+  if (appUrl && ctx.alertId) {
+    lines.push(`<${appUrl}/alerts/${ctx.alertId}|Open in alert-hub>`);
+  }
 
   return lines.join("\n");
 }
@@ -41,14 +47,14 @@ export const slackNotifier: Notifier = {
     return Boolean(process.env.SLACK_WEBHOOK_URL);
   },
 
-  async notify(alert) {
+  async notify(alert, ctx = {}) {
     const url = process.env.SLACK_WEBHOOK_URL;
     if (!url) return;
 
     const res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text: buildText(alert) }),
+      body: JSON.stringify({ text: buildText(alert, ctx) }),
     });
 
     if (!res.ok) {
