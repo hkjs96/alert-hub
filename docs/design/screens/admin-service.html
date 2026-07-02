@@ -1,0 +1,143 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>alert-hub · 서비스 관리</title><style>
+  :root{
+    --plane:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;
+    --grid:#e1e0d9;--border:rgba(11,11,11,.10);
+    --firing:#d03b3b;--ack:#2a78d6;--resolved:#0ca30c;--nodata:#898781;
+    --warn:#fab219;--serious:#ec835a;
+    --firing-bg:rgba(208,59,59,.10);--ack-bg:rgba(42,120,214,.10);
+    --resolved-bg:rgba(12,163,12,.10);--nodata-bg:rgba(137,135,129,.12);
+    --warn-bg:rgba(250,178,25,.16);--serious-bg:rgba(236,131,90,.14);
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --plane:#0d0d0d;--surface:#1a1a19;--ink:#fff;--ink2:#c3c2b7;--muted:#898781;
+    --grid:#2c2c2a;--border:rgba(255,255,255,.10);
+    --ack:#3987e5;
+    --firing-bg:rgba(208,59,59,.22);--ack-bg:rgba(57,135,229,.22);
+    --resolved-bg:rgba(12,163,12,.20);--nodata-bg:rgba(137,135,129,.22);
+    --warn-bg:rgba(250,178,25,.20);--serious-bg:rgba(236,131,90,.20);
+  }}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--plane);color:var(--ink);
+    font:14px/1.55 system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;}
+  .wrap{max-width:1200px;margin:0 auto;padding:28px 24px 60px}
+  .spec{font-size:12px;color:var(--muted);margin:4px 0 20px}
+  h1{font-size:20px;margin:0 0 2px;letter-spacing:-.01em}
+  h2{font-size:13px;margin:26px 0 10px;color:var(--ink2);text-transform:uppercase;letter-spacing:.06em}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  /* ---- status chip: tinted bg + dark ink + dot (never color-alone) ---- */
+  .chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;
+    padding:2px 10px;font-size:12px;font-weight:600;color:var(--ink)}
+  .chip .dot{width:7px;height:7px;border-radius:999px;flex:none}
+  .chip.firing{background:var(--firing-bg)} .chip.firing .dot{background:var(--firing)}
+  .chip.ack{background:var(--ack-bg)} .chip.ack .dot{background:var(--ack)}
+  .chip.resolved{background:var(--resolved-bg)} .chip.resolved .dot{background:var(--resolved)}
+  .chip.nodata{background:var(--nodata-bg)} .chip.nodata .dot{background:var(--nodata)}
+  /* ---- severity: ordinal, square marker + label ---- */
+  .sev{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;
+    padding:2px 9px;border-radius:6px;color:var(--ink)}
+  .sev .sq{width:8px;height:8px;border-radius:2px;flex:none}
+  .sev.s1{background:var(--firing-bg)} .sev.s1 .sq{background:var(--firing)}
+  .sev.s2{background:var(--serious-bg)} .sev.s2 .sq{background:var(--serious)}
+  .sev.s3{background:var(--warn-bg)} .sev.s3 .sq{background:var(--warn)}
+  .sev.s4{background:var(--nodata-bg)} .sev.s4 .sq{background:var(--muted)}
+  .sev.unk{background:transparent;border:1px dashed var(--grid);color:var(--muted)}
+  .sev.unk .sq{background:var(--grid)}
+  /* ---- stat tiles ---- */
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .tile{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:14px 16px;position:relative}
+  .tile .lbl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .tile .val{font-size:30px;font-weight:700;letter-spacing:-.02em;margin-top:2px}
+  .tile .sub{font-size:12px;color:var(--ink2);margin-top:2px}
+  .tile.firing{box-shadow:inset 0 3px 0 var(--firing)}
+  .tile.ack{box-shadow:inset 0 3px 0 var(--ack)}
+  .tile.resolved{box-shadow:inset 0 3px 0 var(--resolved)}
+  .tile.nodata{box-shadow:inset 0 3px 0 var(--nodata)}
+  /* ---- filter bar ---- */
+  .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .combo{display:inline-flex;align-items:center;gap:6px;background:var(--surface);
+    border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:13px;color:var(--ink2)}
+  .combo b{color:var(--ink);font-weight:600}
+  .combo .car{color:var(--muted);font-size:10px}
+  .fchip{border:1px solid var(--border);background:var(--surface);border-radius:999px;
+    padding:3px 12px;font-size:12.5px;color:var(--ink2)}
+  .fchip.on{background:var(--ink);color:var(--surface);border-color:var(--ink);font-weight:600}
+  .search{margin-left:auto;background:var(--surface);border:1px solid var(--border);
+    border-radius:8px;padding:5px 12px;font-size:13px;color:var(--muted);min-width:200px}
+  /* ---- table ---- */
+  table{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface);
+    border-radius:12px;overflow:hidden}
+  .tclip{border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
+    text-align:left;padding:9px 12px;border-bottom:1px solid var(--grid);font-weight:600}
+  td{padding:9px 12px;border-bottom:1px solid var(--grid);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tr.rfiring td:first-child{box-shadow:inset 3px 0 0 var(--firing)}
+  .t-title{font-weight:600;color:var(--ink)}
+  .t-org{font-size:11.5px;color:var(--muted)}
+  .num{font-variant-numeric:tabular-nums;text-align:right;color:var(--ink2)}
+  .time{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap;font-size:12px}
+  .env{font-size:11px;font-weight:700;border-radius:5px;padding:1px 7px;background:var(--nodata-bg);color:var(--ink2)}
+  .env.prd{background:var(--firing-bg)}
+  .env.stg{background:var(--warn-bg)}
+  /* ---- people ---- */
+  .avt{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;
+    border-radius:999px;background:var(--ack-bg);color:var(--ink);font-size:10.5px;font-weight:700;flex:none}
+  .who{display:inline-flex;align-items:center;gap:6px}
+  .pchip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;
+    font-size:12.5px;border:1px solid var(--border);background:var(--surface)}
+  .pchip .x{color:var(--muted);cursor:pointer}
+  .pchip.owner{background:var(--ack);border-color:var(--ack);color:#fff}
+  .pchip.owner .x{color:rgba(255,255,255,.75)}
+  .pchip.deputy{background:var(--ack-bg)}
+  .ptag{font-size:10px;font-weight:800;opacity:.75;letter-spacing:.04em}
+  /* ---- misc ---- */
+  .banner{display:flex;gap:10px;align-items:center;border-radius:10px;padding:10px 14px;
+    background:var(--warn-bg);border:1px solid var(--border);font-size:13px}
+  .banner b{font-weight:700}
+  .btn{display:inline-block;background:var(--ink);color:var(--surface);border-radius:8px;
+    padding:5px 12px;font-size:12.5px;font-weight:600}
+  .btn.ghost{background:transparent;color:var(--ink2);border:1px solid var(--border)}
+  .tl{list-style:none;margin:0;padding:0 0 0 18px;position:relative}
+  .tl:before{content:"";position:absolute;left:4px;top:6px;bottom:6px;width:2px;background:var(--grid)}
+  .tl li{position:relative;padding:0 0 16px 14px}
+  .tl .pt{position:absolute;left:-18px;top:4px;width:10px;height:10px;border-radius:999px;
+    border:2px solid var(--surface)}
+  .swatch{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px}
+  .swatch .c{width:44px;height:26px;border-radius:6px;border:1px solid var(--border);flex:none}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--ink2)}
+  .crumb{font-size:12px;color:var(--muted);margin-bottom:4px}
+  .grid2{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start}
+  @media (max-width:900px){.grid2{grid-template-columns:1fr}}
+</style></head><body><div class="wrap">
+<div class="crumb">관리 / 고객사 / 삼성전자 / 결제고도화 / <b>주문API</b></div>
+<h1>주문API</h1>
+<p class="spec">서비스 담당(프로젝트 오버라이드) → 계정 매핑(+계정별 오버라이드) → 롤업 로스터.</p>
+<div class="card" style="margin-bottom:14px">
+  <h2 style="margin-top:0">서비스 담당</h2>
+  <div class="row">
+    <span class="pchip owner"><span class="ptag">정</span>김또깡 <span class="x">×</span></span>
+    <span class="pchip"><span class="ptag">멤버</span>이몽룡 <span class="x">×</span></span>
+    <span class="combo">인원 선택 <span class="car">▾</span></span><span class="combo">멤버 <span class="car">▾</span></span><span class="btn">+ 추가</span>
+  </div>
+</div>
+<div class="card" style="margin-bottom:14px">
+  <h2 style="margin-top:0">AWS 계정 매핑</h2>
+  <div class="row" style="margin-bottom:10px">
+    <span class="combo"><code>123456789012</code></span><span class="combo">별칭</span><span class="combo">prd <span class="car">▾</span></span><span class="btn">+ 계정 매핑</span>
+  </div>
+  <div class="swatch"><code>111122223012</code> <span class="env prd">PRD</span> 주문-운영
+    <span style="margin-left:auto;font-size:12px;color:var(--muted)">담당: 서비스 상속</span></div>
+  <div class="swatch"><code>111122224044</code> <span class="env stg">STG</span> 주문-검증
+    <span style="margin-left:auto" class="pchip"><span class="ptag">정</span>변학도</span></div>
+</div>
+<div class="card">
+  <h2 style="margin-top:0">관련 인원 (롤업)</h2>
+  <div class="swatch"><span class="avt">김</span><b>김또깡</b><span class="ptag">정</span><span style="margin-left:auto;color:var(--muted);font-size:12px">직접</span></div>
+  <div class="swatch"><span class="avt">이</span><b>이몽룡</b><span class="ptag">멤버</span><span style="margin-left:auto;color:var(--muted);font-size:12px">직접</span></div>
+  <div class="swatch"><span class="avt">변</span><b>변학도</b><span class="ptag">정</span><span style="margin-left:auto;color:var(--ack);font-size:12px">↳ 계정 …4044</span></div>
+</div>
+</div></body></html>

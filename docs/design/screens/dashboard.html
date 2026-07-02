@@ -1,0 +1,162 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>alert-hub · 대시보드</title><style>
+  :root{
+    --plane:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;
+    --grid:#e1e0d9;--border:rgba(11,11,11,.10);
+    --firing:#d03b3b;--ack:#2a78d6;--resolved:#0ca30c;--nodata:#898781;
+    --warn:#fab219;--serious:#ec835a;
+    --firing-bg:rgba(208,59,59,.10);--ack-bg:rgba(42,120,214,.10);
+    --resolved-bg:rgba(12,163,12,.10);--nodata-bg:rgba(137,135,129,.12);
+    --warn-bg:rgba(250,178,25,.16);--serious-bg:rgba(236,131,90,.14);
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --plane:#0d0d0d;--surface:#1a1a19;--ink:#fff;--ink2:#c3c2b7;--muted:#898781;
+    --grid:#2c2c2a;--border:rgba(255,255,255,.10);
+    --ack:#3987e5;
+    --firing-bg:rgba(208,59,59,.22);--ack-bg:rgba(57,135,229,.22);
+    --resolved-bg:rgba(12,163,12,.20);--nodata-bg:rgba(137,135,129,.22);
+    --warn-bg:rgba(250,178,25,.20);--serious-bg:rgba(236,131,90,.20);
+  }}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--plane);color:var(--ink);
+    font:14px/1.55 system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;}
+  .wrap{max-width:1200px;margin:0 auto;padding:28px 24px 60px}
+  .spec{font-size:12px;color:var(--muted);margin:4px 0 20px}
+  h1{font-size:20px;margin:0 0 2px;letter-spacing:-.01em}
+  h2{font-size:13px;margin:26px 0 10px;color:var(--ink2);text-transform:uppercase;letter-spacing:.06em}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  /* ---- status chip: tinted bg + dark ink + dot (never color-alone) ---- */
+  .chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;
+    padding:2px 10px;font-size:12px;font-weight:600;color:var(--ink)}
+  .chip .dot{width:7px;height:7px;border-radius:999px;flex:none}
+  .chip.firing{background:var(--firing-bg)} .chip.firing .dot{background:var(--firing)}
+  .chip.ack{background:var(--ack-bg)} .chip.ack .dot{background:var(--ack)}
+  .chip.resolved{background:var(--resolved-bg)} .chip.resolved .dot{background:var(--resolved)}
+  .chip.nodata{background:var(--nodata-bg)} .chip.nodata .dot{background:var(--nodata)}
+  /* ---- severity: ordinal, square marker + label ---- */
+  .sev{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;
+    padding:2px 9px;border-radius:6px;color:var(--ink)}
+  .sev .sq{width:8px;height:8px;border-radius:2px;flex:none}
+  .sev.s1{background:var(--firing-bg)} .sev.s1 .sq{background:var(--firing)}
+  .sev.s2{background:var(--serious-bg)} .sev.s2 .sq{background:var(--serious)}
+  .sev.s3{background:var(--warn-bg)} .sev.s3 .sq{background:var(--warn)}
+  .sev.s4{background:var(--nodata-bg)} .sev.s4 .sq{background:var(--muted)}
+  .sev.unk{background:transparent;border:1px dashed var(--grid);color:var(--muted)}
+  .sev.unk .sq{background:var(--grid)}
+  /* ---- stat tiles ---- */
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .tile{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:14px 16px;position:relative}
+  .tile .lbl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .tile .val{font-size:30px;font-weight:700;letter-spacing:-.02em;margin-top:2px}
+  .tile .sub{font-size:12px;color:var(--ink2);margin-top:2px}
+  .tile.firing{box-shadow:inset 0 3px 0 var(--firing)}
+  .tile.ack{box-shadow:inset 0 3px 0 var(--ack)}
+  .tile.resolved{box-shadow:inset 0 3px 0 var(--resolved)}
+  .tile.nodata{box-shadow:inset 0 3px 0 var(--nodata)}
+  /* ---- filter bar ---- */
+  .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .combo{display:inline-flex;align-items:center;gap:6px;background:var(--surface);
+    border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:13px;color:var(--ink2)}
+  .combo b{color:var(--ink);font-weight:600}
+  .combo .car{color:var(--muted);font-size:10px}
+  .fchip{border:1px solid var(--border);background:var(--surface);border-radius:999px;
+    padding:3px 12px;font-size:12.5px;color:var(--ink2)}
+  .fchip.on{background:var(--ink);color:var(--surface);border-color:var(--ink);font-weight:600}
+  .search{margin-left:auto;background:var(--surface);border:1px solid var(--border);
+    border-radius:8px;padding:5px 12px;font-size:13px;color:var(--muted);min-width:200px}
+  /* ---- table ---- */
+  table{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface);
+    border-radius:12px;overflow:hidden}
+  .tclip{border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
+    text-align:left;padding:9px 12px;border-bottom:1px solid var(--grid);font-weight:600}
+  td{padding:9px 12px;border-bottom:1px solid var(--grid);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tr.rfiring td:first-child{box-shadow:inset 3px 0 0 var(--firing)}
+  .t-title{font-weight:600;color:var(--ink)}
+  .t-org{font-size:11.5px;color:var(--muted)}
+  .num{font-variant-numeric:tabular-nums;text-align:right;color:var(--ink2)}
+  .time{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap;font-size:12px}
+  .env{font-size:11px;font-weight:700;border-radius:5px;padding:1px 7px;background:var(--nodata-bg);color:var(--ink2)}
+  .env.prd{background:var(--firing-bg)}
+  .env.stg{background:var(--warn-bg)}
+  /* ---- people ---- */
+  .avt{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;
+    border-radius:999px;background:var(--ack-bg);color:var(--ink);font-size:10.5px;font-weight:700;flex:none}
+  .who{display:inline-flex;align-items:center;gap:6px}
+  .pchip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;
+    font-size:12.5px;border:1px solid var(--border);background:var(--surface)}
+  .pchip .x{color:var(--muted);cursor:pointer}
+  .pchip.owner{background:var(--ack);border-color:var(--ack);color:#fff}
+  .pchip.owner .x{color:rgba(255,255,255,.75)}
+  .pchip.deputy{background:var(--ack-bg)}
+  .ptag{font-size:10px;font-weight:800;opacity:.75;letter-spacing:.04em}
+  /* ---- misc ---- */
+  .banner{display:flex;gap:10px;align-items:center;border-radius:10px;padding:10px 14px;
+    background:var(--warn-bg);border:1px solid var(--border);font-size:13px}
+  .banner b{font-weight:700}
+  .btn{display:inline-block;background:var(--ink);color:var(--surface);border-radius:8px;
+    padding:5px 12px;font-size:12.5px;font-weight:600}
+  .btn.ghost{background:transparent;color:var(--ink2);border:1px solid var(--border)}
+  .tl{list-style:none;margin:0;padding:0 0 0 18px;position:relative}
+  .tl:before{content:"";position:absolute;left:4px;top:6px;bottom:6px;width:2px;background:var(--grid)}
+  .tl li{position:relative;padding:0 0 16px 14px}
+  .tl .pt{position:absolute;left:-18px;top:4px;width:10px;height:10px;border-radius:999px;
+    border:2px solid var(--surface)}
+  .swatch{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px}
+  .swatch .c{width:44px;height:26px;border-radius:6px;border:1px solid var(--border);flex:none}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--ink2)}
+  .crumb{font-size:12px;color:var(--muted);margin-bottom:4px}
+  .grid2{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start}
+  @media (max-width:900px){.grid2{grid-template-columns:1fr}}
+</style></head><body><div class="wrap">
+<div class="crumb">alert-hub · 이벤트 플레인</div>
+<h1>대시보드 <span style="font-weight:400;font-size:13px;color:var(--muted)">(Phase 2b 목표 화면)</span></h1>
+<p class="spec">위→아래: 미매핑 배너(있을 때만) → 필터 바 → stat tiles → 테이블+담당 패널. 모든 조직 정보는 수신 시점 스냅샷.</p>
+<div class="banner" style="margin-bottom:14px">⚠️ <b>미매핑 계정 1개</b>에서 알람이 오고 있습니다 — <u>계정 9999…0000 매핑하기</u><span style="margin-left:auto"><span class="btn ghost">숨기기</span></span></div>
+<div class="filters" style="margin-bottom:14px">
+  <span class="combo">고객사 <b>전체</b> <span class="car">▾</span></span>
+  <span class="combo">프로젝트 <b>전체</b> <span class="car">▾</span></span>
+  <span class="combo">환경 <b>PRD</b> <span class="car">▾</span></span>
+  <span class="fchip on">전체 53</span><span class="fchip">Firing 7</span><span class="fchip">Ack 3</span><span class="fchip">Resolved 41</span>
+  <span class="search">🔍 검색…</span>
+</div>
+<div class="tiles" style="margin-bottom:14px">
+  <div class="tile firing"><div class="lbl">Firing</div><div class="val">7</div><div class="sub">SEV-1 · 2건</div></div>
+  <div class="tile ack"><div class="lbl">Acked</div><div class="val">3</div><div class="sub">진행 중</div></div>
+  <div class="tile resolved"><div class="lbl">Resolved 24h</div><div class="val">41</div><div class="sub">▲ 12</div></div>
+  <div class="tile nodata"><div class="lbl">No data</div><div class="val">2</div><div class="sub">점검</div></div>
+  <div class="tile"><div class="lbl">Total</div><div class="val">53</div><div class="sub">계정 11</div></div>
+</div>
+<div class="grid2">
+  <div class="tclip"><table>
+    <tr><th>상태</th><th>심각도</th><th>알람</th><th>담당</th><th>최근</th></tr>
+    <tr class="rfiring"><td><span class="chip firing"><span class="dot"></span>FIRING</span></td>
+      <td><span class="sev s1"><span class="sq"></span>SEV-1</span></td>
+      <td><div class="t-title">prod-db CPU &gt; 90%</div><div class="t-org">삼성전자 · 결제고도화/주문API · <span class="env prd">PRD</span></div></td>
+      <td><span class="who"><span class="avt">김</span>김또깡</span></td><td class="time">10:42</td></tr>
+    <tr class="rfiring"><td><span class="chip firing"><span class="dot"></span>FIRING</span></td>
+      <td><span class="sev s3"><span class="sq"></span>SEV-3</span></td>
+      <td><div class="t-title">checkout p99 latency</div><div class="t-org">쿠팡물류 · 풀필먼트/배차 · <span class="env prd">PRD</span></div></td>
+      <td><span class="who"><span class="avt">박</span>박리더</span></td><td class="time">10:38</td></tr>
+    <tr><td><span class="chip ack"><span class="dot"></span>ACK</span></td>
+      <td><span class="sev s2"><span class="sq"></span>SEV-2</span></td>
+      <td><div class="t-title">API 5xx rate high</div><div class="t-org">삼성전자 · 결제고도화/정산배치 · <span class="env prd">PRD</span></div></td>
+      <td><span class="who"><span class="avt">홍</span>홍길동</span></td><td class="time">10:12</td></tr>
+    <tr><td><span class="chip resolved"><span class="dot"></span>RESOLVED</span></td>
+      <td><span class="sev s4"><span class="sq"></span>SEV-4</span></td>
+      <td><div class="t-title">disk 91% (web-3)</div><div class="t-org">현대오토 · 관제/모니터링 · <span class="env prd">PRD</span></div></td>
+      <td><span class="who"><span class="avt">최</span>최부장</span></td><td class="time">09:55</td></tr>
+  </table></div>
+  <div class="card">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">필터 결과의 담당 인원</div>
+    <div class="swatch"><span class="avt">김</span><b>김또깡</b><span class="ptag">정</span><span style="margin-left:auto" class="chip firing"><span class="dot"></span>2</span></div>
+    <div class="swatch"><span class="avt">홍</span><b>홍길동</b><span class="ptag">정</span><span style="margin-left:auto" class="chip ack"><span class="dot"></span>1</span></div>
+    <div class="swatch"><span class="avt">박</span><b>박리더</b><span class="ptag">정</span><span style="margin-left:auto" class="chip firing"><span class="dot"></span>1</span></div>
+    <div style="margin-top:10px;font-size:12px;color:var(--muted)">클릭 → 그 사람 담당 알람만 필터</div>
+  </div>
+</div>
+</div></body></html>
