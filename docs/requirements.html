@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>alert-hub 요구사항 명세서 v0.3</title>
+<style>
+:root{
+  --plane:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;
+  --grid:#e1e0d9;--border:rgba(11,11,11,.10);
+  --firing:#d03b3b;--ack:#2a78d6;--resolved:#0ca30c;--nodata:#898781;--warn:#fab219;--serious:#ec835a;
+  --firing-bg:rgba(208,59,59,.10);--ack-bg:rgba(42,120,214,.10);--resolved-bg:rgba(12,163,12,.10);
+  --nodata-bg:rgba(137,135,129,.12);--warn-bg:rgba(250,178,25,.16);--serious-bg:rgba(236,131,90,.14);
+}
+@media (prefers-color-scheme:dark){:root{
+  --plane:#0d0d0d;--surface:#1a1a19;--ink:#fff;--ink2:#c3c2b7;--grid:#2c2c2a;--border:rgba(255,255,255,.10);
+  --ack:#3987e5;--firing-bg:rgba(208,59,59,.22);--ack-bg:rgba(57,135,229,.22);--resolved-bg:rgba(12,163,12,.20);
+  --nodata-bg:rgba(137,135,129,.22);--warn-bg:rgba(250,178,25,.20);--serious-bg:rgba(236,131,90,.20);
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--plane);color:var(--ink);
+  font:14px/1.65 system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:36px 26px 100px}
+h1{font-size:24px;margin:0;letter-spacing:-.02em}
+.docmeta{color:var(--muted);font-size:13px;margin-top:4px}
+h2{font-size:18px;margin:52px 0 4px;padding-top:22px;border-top:2px solid var(--ink);letter-spacing:-.01em}
+h2 .no{color:var(--firing);margin-right:8px;font-variant-numeric:tabular-nums}
+h3{font-size:14.5px;margin:26px 0 8px}
+h3 .tag{font-size:11px;color:var(--muted);font-weight:400;margin-left:6px}
+p.lead{color:var(--ink2);margin:4px 0 14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface)}
+.tclip{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:10px 0}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;
+  padding:8px 11px;border-bottom:1px solid var(--grid);font-weight:600;background:var(--surface)}
+td{padding:8px 11px;border-bottom:1px solid var(--grid);vertical-align:top}
+tr:last-child td{border-bottom:none}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:var(--nodata-bg);
+  border-radius:4px;padding:0 5px;color:var(--ink2)}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:600}
+.chip .dot{width:6px;height:6px;border-radius:99px}
+.c-f{background:var(--firing-bg)} .c-f .dot{background:var(--firing)}
+.c-a{background:var(--ack-bg)} .c-a .dot{background:var(--ack)}
+.c-r{background:var(--resolved-bg)} .c-r .dot{background:var(--resolved)}
+.c-n{background:var(--nodata-bg)} .c-n .dot{background:var(--nodata)}
+.must{display:inline-block;font-size:10px;font-weight:800;border-radius:4px;padding:0 5px;background:var(--firing-bg);color:var(--ink)}
+.should{display:inline-block;font-size:10px;font-weight:800;border-radius:4px;padding:0 5px;background:var(--warn-bg);color:var(--ink)}
+.later{display:inline-block;font-size:10px;font-weight:800;border-radius:4px;padding:0 5px;background:var(--nodata-bg);color:var(--ink2)}
+.done{color:var(--resolved);font-weight:700}
+/* ---------- 다이어그램 공통 ---------- */
+.dg{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin:12px 0;overflow-x:auto}
+.dg .cap{font-size:11.5px;color:var(--muted);margin-bottom:14px}
+.pipe{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
+.node{background:var(--plane);border:1.5px solid var(--ink2);border-radius:10px;padding:8px 12px;
+  font-size:12px;text-align:center;min-width:96px;display:flex;flex-direction:column;justify-content:center}
+.node b{font-size:12.5px}
+.node small{color:var(--muted);font-size:10.5px;line-height:1.4}
+.node.src{border-style:dashed;border-color:var(--muted)}
+.node.hot{border-color:var(--firing);background:var(--firing-bg)}
+.node.store{border-color:var(--ack);background:var(--ack-bg)}
+.node.out{border-color:var(--resolved);background:var(--resolved-bg)}
+.arr{display:flex;align-items:center;color:var(--muted);padding:0 7px;font-size:15px}
+.vstack{display:flex;flex-direction:column;gap:6px}
+.lane{display:flex;align-items:center;gap:0;margin:4px 0;flex-wrap:wrap}
+.lane .who{width:120px;flex:none;font-size:11.5px;color:var(--muted);font-weight:600}
+/* ---------- 스토리보드 ---------- */
+.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.frame{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.frame .scene{height:120px;background:var(--plane);border-bottom:1px solid var(--grid);
+  padding:10px;position:relative;font-size:9.5px;overflow:hidden}
+.frame .num{position:absolute;top:6px;right:8px;font-size:10px;font-weight:800;color:var(--muted)}
+.frame .cap{padding:8px 11px;font-size:11.5px;line-height:1.5}
+.frame .cap b{display:block;font-size:12px}
+.frame .cap .actor{color:var(--ack);font-weight:700;font-size:10.5px}
+/* 미니 UI 프리미티브 (스토리보드 장면용) */
+.m-bar{height:7px;border-radius:3px;background:var(--grid);margin:3px 0}
+.m-row{display:flex;gap:4px;align-items:center;margin:3px 0}
+.m-chip{height:9px;border-radius:99px;padding:0 6px;font-size:7.5px;display:inline-flex;align-items:center;font-weight:700}
+.m-tile{flex:1;border:1px solid var(--grid);border-radius:5px;padding:3px 5px;background:var(--surface)}
+.m-tile b{font-size:11px}
+.m-tile span{display:block;font-size:6.5px;color:var(--muted);text-transform:uppercase}
+.m-pop{position:absolute;inset:auto 8px 8px 8px;background:var(--surface);border:1.5px solid var(--ink2);
+  border-radius:7px;padding:6px 8px;box-shadow:0 4px 14px rgba(0,0,0,.15);font-size:8.5px}
+.m-btn{display:inline-block;background:var(--ink);color:var(--surface);border-radius:4px;padding:1px 7px;font-size:8px;font-weight:700}
+.m-slack{background:#3f0e40;color:#fff;border-radius:6px;padding:6px 8px;font-size:8.5px;line-height:1.5}
+.m-note{position:absolute;background:var(--warn-bg);border:1px solid var(--warn);border-radius:5px;
+  padding:2px 6px;font-size:8px;font-weight:700}
+.callout{display:flex;gap:8px;margin:6px 0;font-size:12.5px}
+.callout .n{flex:none;width:18px;height:18px;border-radius:99px;background:var(--ink);color:var(--surface);
+  font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+/* 와이어프레임 (화면 요구용, 스토리보드보다 큼) */
+.wf{background:var(--plane);border:1px solid var(--grid);border-radius:10px;padding:12px;font-size:10px;margin:10px 0}
+.wf .w-head{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.wf .w-box{background:var(--surface);border:1px solid var(--grid);border-radius:7px;padding:7px 9px;margin:6px 0}
+.wf .w-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.toc{columns:2;gap:30px;font-size:13.5px}
+.toc a{color:var(--ink2);text-decoration:none;display:block;padding:2px 0}
+.toc a:hover{color:var(--ack)}
+.toc b{color:var(--ink)}
+ul{margin:6px 0;padding-left:20px} li{margin:3px 0}
+.hr-soft{border:none;border-top:1px solid var(--grid);margin:20px 0}
+.pill-seq{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:99px;
+  background:var(--ack);color:#fff;font-size:10px;font-weight:800;margin-right:4px}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>alert-hub 요구사항 명세서 <span style="font-weight:400;color:var(--muted)">v0.3</span></h1>
+<div class="docmeta">역도출 문서 — MVP 구현(코드)·조직모델 논의·디자인 피드백(v0.2)을 전부 흡수한 통합본 · 2026-07-02 · 작성: Claude(alert-hub 세션)</div>
+<div class="card" style="border-left:4px solid var(--ack)">
+  <b>이 문서가 답하는 것</b> — 무엇을 왜 만드는가(§1), 어떻게 흐르는가(§2–3 구성도·흐름도),
+  데이터가 어떻게 생겼는가(§4), 화면이 무엇을 해야 하는가(§5–6 IA·화면요구),
+  사용자가 어떻게 쓰는가(§7 스토리보드 · §8 유저스토리), 지켜야 할 품질(§9), 그리고 순서(§10 로드맵).
+  <span class="must">MUST</span>=MVP·Phase2 필수 <span class="should">SHOULD</span>=권장 <span class="later">LATER</span>=Phase3+ · <span class="done">✔</span>=이미 구현됨
+</div>
+
+<div class="card toc">
+  <b>목차</b>
+  <a href="#s1">1. 제품 개요 — 왜, 무엇</a>
+  <a href="#s2">2. 시스템 구성도</a>
+  <a href="#s3">3. 알람 처리 흐름도</a>
+  <a href="#s4">4. 도메인 모델 (조직·담당·순서)</a>
+  <a href="#s5">5. 정보 구조 (IA)</a>
+  <a href="#s6">6. 화면별 요구사항 + 와이어프레임</a>
+  <a href="#s7">7. 스토리보드 (시나리오 3편)</a>
+  <a href="#s8">8. 페르소나 & 유저 스토리</a>
+  <a href="#s9">9. 비기능 요구사항</a>
+  <a href="#s10">10. 로드맵 & 열린 이슈</a>
+</div>
+
+<!-- ================================================================ 1 -->
+<h2 id="s1"><span class="no">1</span>제품 개요 — 왜, 무엇</h2>
+<p class="lead">alert-hub는 알람을 <b>만드는</b> 도구가 아니라 <b>울린 알람을 받는</b> 도구다 — PagerDuty가 앉는 자리.</p>
+<div class="dg"><div class="cap">구성도 1 · 컨트롤 플레인과 이벤트 플레인의 분리 — alert-hub의 자리</div>
+  <div class="pipe">
+    <div class="node src"><b>컨트롤 플레인</b><small>알람을 만든다<br>aws-alert-manager 등<br><u>우리 관심 밖</u></small></div>
+    <div class="arr">알람 발생 →</div>
+    <div class="node hot"><b>이벤트 플레인 = alert-hub</b><small>수신 → 중복제거 → 저장<br>→ 담당 결정 → 통지</small></div>
+    <div class="arr">→</div>
+    <div class="node out"><b>사람</b><small>Slack (→ email → 전화)</small></div>
+  </div>
+</div>
+<ul>
+  <li><b>핵심 가치</b>: 하나의 콘솔에서 <b>여러 고객사(MSP)</b>의 알람을 동시 관제하고, 조직 계층으로 담당자를 자동 결정한다. <span class="must">MUST</span></li>
+  <li><b>성공 기준</b>: 외부 알람 → 엔드포인트 수신 → 저장 → 대시보드 → Slack 한 사이클이 실제로 돈다. <span class="done">✔ 달성</span></li>
+  <li><b>비범위</b>: 알람 정의 CRUD(임계값 설정 등), APM/메트릭 수집. 온콜 스케줄·전화 페이징은 Phase 3.</li>
+</ul>
+<div class="tclip"><table>
+  <tr><th>기능</th><th>원류</th><th>현재 상태</th><th>다음</th></tr>
+  <tr><td>다중 소스 수집</td><td>Keep</td><td class="done">✔ 5종(CloudWatch/Grafana/Prometheus/PagerDuty/generic) + SNS 전송</td><td>provider 추가</td></tr>
+  <tr><td>중복제거(dedup)</td><td>Keep/PD</td><td class="done">✔ fingerprint upsert, FIRING 전환 원자화</td><td>—</td></tr>
+  <tr><td>조직 계층·담당 결정</td><td>PD의 우회를 1급으로</td><td class="done">✔ 모델·해석 구현</td><td>순서 기반으로 개편(§4)</td></tr>
+  <tr><td>통지</td><td>둘 다</td><td class="done">✔ Slack (notifier 인터페이스 뒤)</td><td>email → Twilio 전화/SMS</td></tr>
+  <tr><td>인시던트 액션(ack/resolve)</td><td>PD</td><td>모델만(status 값 존재)</td><td>Phase 2c 버튼 활성화</td></tr>
+  <tr><td>알람 처리 순서(통지 우선순위)</td><td>PD 에스컬레이션의 토대</td><td>설계 확정(v0.2 피드백)</td><td>Phase 2a-rev 구현</td></tr>
+  <tr><td>온콜/자동 에스컬레이션</td><td>PD</td><td>—</td><td><span class="later">LATER</span> Phase 3 (order 데이터가 입력)</td></tr>
+</table></div>
+
+<!-- ================================================================ 2 -->
+<h2 id="s2"><span class="no">2</span>시스템 구성도</h2>
+<p class="lead">인입은 <b>전송(transport) × 포맷(provider)</b> 2계층. 저장 이후는 소스와 무관한 공통 형태만 흐른다.</p>
+<div class="dg"><div class="cap">구성도 2 · 엔드 투 엔드 파이프라인 (굵은 테두리 = alert-hub 내부)</div>
+  <div class="lane"><div class="who">소스</div>
+    <div class="vstack">
+      <div class="node src"><b>CloudWatch</b><small>직접 HTTP 불가 → SNS 경유</small></div>
+      <div class="node src"><b>Grafana / Prometheus / PagerDuty</b><small>웹훅 직접 POST</small></div>
+    </div>
+    <div class="arr">→</div>
+    <div class="node"><b>전송 계층</b><small>SNS 봉투 벗기기<br>구독확인 자동(SSRF가드)<br>· raw HTTPS</small></div>
+    <div class="arr">→</div>
+    <div class="node"><b>provider 5종</b><small>payload → 공통형<br>NormalizedAlert[]<br>(배치 지원)</small></div>
+    <div class="arr">→</div>
+    <div class="node hot"><b>enrich</b><small>accountId → 조직 체인<br>+ 담당 스냅샷 (2b)</small></div>
+    <div class="arr">→</div>
+    <div class="node store"><b>dedup·저장</b><small>fingerprint upsert<br>이벤트 append-only</small></div>
+  </div>
+  <div class="lane"><div class="who"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+      <div class="node store"><b>PostgreSQL</b><small>Supabase (pooled+direct)</small></div>
+      <div class="node out"><b>notifier</b><small>Slack 지금 · email/Twilio 나중<br>FIRING 전환 시 1회만</small></div>
+      <div class="node"><b>대시보드</b><small>모니터링 + 등록관리</small></div>
+    </div>
+  </div>
+</div>
+<div class="tclip"><table>
+  <tr><th>엔드포인트</th><th>용도</th><th>인증</th></tr>
+  <tr><td><code>POST /api/webhooks/cloudwatch</code></td><td>SNS 봉투(CloudWatch) — 멀티계정은 우리 소유 중앙 SNS 토픽(리전별) + 소스 계정 <code>sns:Publish</code> 정책</td><td rowspan="3"><code>INGEST_TOKEN</code> 헤더 또는 <code>?token=</code> (SNS/PD는 커스텀 헤더 불가) · 소스별 서명검증 <span class="should">SHOULD</span></td></tr>
+  <tr><td><code>/prometheus · /grafana · /pagerduty · /generic</code></td><td>각 포맷 전용 (세대 차이는 provider 내부에서 흡수: Grafana 통합/레거시, PD v3/v2)</td></tr>
+  <tr><td><code>/alarm</code></td><td>자동감지 fallback</td></tr>
+</table></div>
+
+<!-- ================================================================ 3 -->
+<h2 id="s3"><span class="no">3</span>알람 처리 흐름도</h2>
+<div class="dg"><div class="cap">흐름도 1 · 인입 한 건의 여정 (구현 완료 구간 + 2b의 enrich)</div>
+  <div class="pipe">
+    <div class="node"><b>① 수신</b><small>토큰 검증<br>1MB 캡</small></div><div class="arr">→</div>
+    <div class="node"><b>② SNS?</b><small>구독확인→자동 confirm<br>(sns.*.amazonaws.com만)<br>Notification→Message 파싱</small></div><div class="arr">→</div>
+    <div class="node"><b>③ 정규화</b><small>provider가<br>NormalizedAlert[]로</small></div><div class="arr">→</div>
+    <div class="node hot"><b>④ upsert</b><small>fingerprint 기존?<br>신규→생성 / 기존→갱신<br>희소 필드는 보존</small></div><div class="arr">→</div>
+    <div class="node hot"><b>⑤ FIRING 전환?</b><small>비FIRING→FIRING일 때만<br>count++ · 통지 (원자적)</small></div><div class="arr">→</div>
+    <div class="node out"><b>⑥ 기록·통지</b><small>이벤트 append<br>Slack → 1순위 담당</small></div>
+  </div>
+</div>
+<div class="dg"><div class="cap">흐름도 2 · 상태 머신 — 전이는 명시적, 이력은 append-only</div>
+  <div class="pipe" style="align-items:center">
+    <span class="chip c-f"><span class="dot"></span>FIRING</span><div class="arr">— ack 액션(2c) →</div>
+    <span class="chip c-a"><span class="dot"></span>ACKNOWLEDGED</span><div class="arr">— resolve/OK 수신 →</div>
+    <span class="chip c-r"><span class="dot"></span>RESOLVED</span><div class="arr">— 재발화 → FIRING (count++)</div>
+    <span class="chip c-n"><span class="dot"></span>INSUFFICIENT_DATA</span>
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-top:10px">모든 전이가 AlertEvent 행으로 남는다(수정·삭제 없음). RESOLVED 재수신은 count 증가 없이 이벤트만 append.</div>
+</div>
+<div class="tclip"><table>
+  <tr><th>소스</th><th>fingerprint (dedup 키)</th><th>비고</th></tr>
+  <tr><td>CloudWatch</td><td><code>cw:&lt;AlarmArn&gt;</code></td><td>accountId=ARN 5번째 세그먼트, region=4번째</td></tr>
+  <tr><td>Prometheus/Grafana</td><td><code>소스:&lt;native fingerprint&gt;</code></td><td>없으면 <code>소스:alertname:resource</code></td></tr>
+  <tr><td>PagerDuty</td><td><code>pagerduty:&lt;incident.id&gt;</code></td><td>event_type→상태(triggered/acknowledged/resolved)</td></tr>
+  <tr><td>generic</td><td><code>source:title:resource</code></td><td>title|name 필수</td></tr>
+</table></div>
+
+<!-- ================================================================ 4 -->
+<h2 id="s4"><span class="no">4</span>도메인 모델 — 조직 · 담당 · 순서</h2>
+<p class="lead">v0.2 피드백의 핵심 채택: <b>등록(누가 속하나)</b>과 <b>순서(누구부터 통지되나)</b>를 분리한다. 정/부/멤버 고정 라벨은 폐기.</p>
+<div class="dg"><div class="cap">구성도 3 · 데이터 모델 — 계층은 엄격한 트리, 사람과 배정은 별도</div>
+  <div class="pipe">
+    <div class="node store"><b>Customer</b><small>테넌트의 유일한 뿌리<br>"내부" 고객사 포함</small></div><div class="arr">1─N</div>
+    <div class="node store"><b>Project</b><small>customerId 필수<br>(테넌트는 여기서 한 번)</small></div><div class="arr">1─N</div>
+    <div class="node store"><b>Service</b></div><div class="arr">1─N</div>
+    <div class="node store"><b>AwsAccountMap</b><small>accountId(12자리) unique<br>environment(prd/stg/dev)</small></div>
+  </div>
+  <div class="pipe" style="margin-top:14px">
+    <div class="node"><b>Contact</b><small>이름·이메일·부서<br>소속: 내부(null) or 고객사</small></div><div class="arr">N─N (레벨 아무 곳)</div>
+    <div class="node hot"><b>Assignment</b><small>contact × 스코프(4레벨 중 1)<br>× <b>order(순번)</b> — kind 없음</small></div>
+  </div>
+</div>
+<h3>해석 규칙 <span class="tag">알람 → 담당자 결정</span></h3>
+<div class="card">
+  <div class="callout"><span class="n">1</span><div><b>체인 복원</b> — 알람의 accountId → AccountMap → Service → Project → Customer. 매칭 실패 = "미매핑"(버리지 않음, §6.1).</div></div>
+  <div class="callout"><span class="n">2</span><div><b>최구체 직접등록 레벨 채택</b> — 계정 → 서비스 → 프로젝트 → 고객사 순으로 내려가지 않고 올라가며, <b>직접 등록이 존재하는 첫 레벨의 순서 리스트를 통째로</b> 쓴다. 레벨 간 병합 금지.</div></div>
+  <div class="callout"><span class="n">3</span><div><b>1순위 = 주 담당</b> — 별도 라벨 없이 순번에서 파생. 통지·대시보드 "담당" 표시는 1순위.</div></div>
+  <div class="callout"><span class="n">4</span><div><b>스냅샷</b> — 수신 시점의 (체인 + 순서 리스트)를 Alert에 저장. 담당 교체가 과거 알람의 책임 표시를 왜곡하지 않는다. 현재 배정과 달라지면 상세에서 "담당 변경됨" 배지. <span class="should">SHOULD</span></div></div>
+  <div class="callout"><span class="n">5</span><div><b>데이터 격리</b> — 담당 후보 드롭다운 = 내부 인원 + 해당 고객사 소속만. 타 고객사 인원은 노출 자체 금지. <span class="must">MUST</span></div></div>
+</div>
+<div class="tclip"><table>
+  <tr><th>시나리오 (대화에서 수렴)</th><th>데이터</th><th>해석 결과</th></tr>
+  <tr><td>고객사마다 리더 레벨이 다름</td><td>A사: 프로젝트에 등록 / B사: 서비스마다 등록</td><td>각자 그 레벨에서 결정 — 별도 설정 없음</td></tr>
+  <tr><td>프로젝트 담당 홍길동, 서비스 A.b만 김또깡</td><td>프로젝트[홍길동] + 서비스A.b[김또깡]</td><td>A.b 알람→김또깡, A.a 알람→홍길동(상속)</td></tr>
+  <tr><td>겸직</td><td>홍길동을 프로젝트 A·B 양쪽에 등록</td><td>체인별 독립 해석</td></tr>
+  <tr><td>교체 (홍길동→김또깡)</td><td>행 교체</td><td>새 알람부터 김또깡, 과거는 스냅샷 유지</td></tr>
+  <tr><td>통지 우선순위</td><td>같은 레벨에서 1·2·3순위 정렬</td><td>1순위 통지 — Phase 3에서 미응답 시 2순위 자동 상향의 입력</td></tr>
+  <tr><td>내부 엔지니어 N개 고객사 전담</td><td>멤버 관리에서 고객사 토글(=고객사 레벨 등록 숏컷)</td><td>세밀 매핑(프로젝트/서비스 단위)은 조직·담당자 관리에서</td></tr>
+</table></div>
+
+<!-- ================================================================ 5 -->
+<h2 id="s5"><span class="no">5</span>정보 구조 (IA)</h2>
+<div class="dg"><div class="cap">구성도 4 · 메뉴 트리 — "관리"가 아니라 "등록관리": 다 같이 보는 등록 허브</div>
+  <div class="pipe">
+    <div class="vstack">
+      <div class="node"><b>📊 모니터링</b></div>
+      <div class="node" style="margin-left:26px"><b>대시보드</b><small>필터·타일·테이블·담당 패널</small></div>
+      <div class="node" style="margin-left:26px"><b>알람 상세</b><small>사실 + 사람·조직 + 액션</small></div>
+    </div>
+    <div style="width:30px"></div>
+    <div class="vstack">
+      <div class="node"><b>🗂 등록관리</b></div>
+      <div class="node" style="margin-left:26px"><b>조직 · 담당자 관리</b><small>고객사/프로젝트/서비스 등록<br>+ 레벨별 담당자 + 계정 매핑</small></div>
+      <div class="node" style="margin-left:26px"><b>알람 처리 순서</b><small>레벨별 1·2·3순위 정렬<br>그 자리에서 인원 추가 가능</small></div>
+      <div class="node" style="margin-left:26px"><b>멤버 관리</b><small>인원 마스터 + MSP 배지<br>+ 내부 인원↔고객사 토글</small></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ 6 -->
+<h2 id="s6"><span class="no">6</span>화면별 요구사항 + 와이어프레임</h2>
+
+<h3>6.1 대시보드 <span class="tag">모니터링</span></h3>
+<div class="wf">
+  <div class="w-box" style="background:var(--warn-bg)">⚠ <b>미매핑 계정 1개</b>에서 알람 수신 중 — [지금 매핑] [미매핑만 보기 ⬦] <span style="float:right">[숨기기]</span></div>
+  <div class="w-head"><span class="m-chip" style="background:var(--surface);border:1px solid var(--grid)">고객사 ▾</span><span class="m-chip" style="background:var(--surface);border:1px solid var(--grid)">프로젝트 ▾</span><span class="m-chip" style="background:var(--surface);border:1px solid var(--grid)">환경 ▾</span><span class="m-chip" style="background:var(--ink);color:var(--surface)">Firing</span><span class="m-chip" style="background:var(--ink);color:var(--surface)">Ack</span><span class="m-chip" style="background:var(--surface);border:1px solid var(--grid)">Resolved</span><span style="font-size:9px;color:var(--ack)">✕ 초기화</span><span style="margin-left:auto;font-size:9px;color:var(--muted)">🔍 검색</span></div>
+  <div class="m-row"><div class="m-tile"><span>Firing</span><b style="color:var(--firing)">7</b></div><div class="m-tile"><span>Acked</span><b>3</b></div><div class="m-tile"><span>Resolved</span><b>41</b></div><div class="m-tile"><span>NoData</span><b>2</b></div><div class="m-tile"><span>Total</span><b>53</b></div></div>
+  <div style="display:flex;gap:8px"><div style="flex:1"><div class="w-box"><div class="w-lbl">알람 테이블</div><div class="m-bar" style="background:var(--firing-bg);border-left:3px solid var(--firing)"></div><div class="m-bar" style="background:var(--firing-bg);border-left:3px solid var(--firing)"></div><div class="m-bar"></div><div class="m-bar"></div></div></div>
+  <div style="width:30%"><div class="w-box"><div class="w-lbl">담당 인원 패널</div><div class="m-bar" style="width:80%"></div><div class="m-bar" style="width:65%"></div><div class="m-bar" style="width:70%"></div></div></div></div>
+</div>
+<div class="tclip"><table>
+  <tr><th>요구</th><th>우선</th><th>상세</th></tr>
+  <tr><td>미매핑 배너</td><td><span class="must">MUST</span></td><td>매칭 실패 알람 ≥1건일 때만. "미매핑만 보기" 토글 + 행에서 인라인 매핑(모달로 서비스 선택)</td></tr>
+  <tr><td>필터 바</td><td><span class="must">MUST</span></td><td>고객사→프로젝트 종속 드롭다운 · 환경 · 상태 칩 <b>다중 토글</b> · 자유 검색 · 활성 필터 시 초기화 버튼</td></tr>
+  <tr><td>stat 타일 5개</td><td><span class="must">MUST</span></td><td>클릭 = 해당 상태 필터 토글. 색 링 + 라벨(색 단독 금지)</td></tr>
+  <tr><td>알람 테이블</td><td><span class="must">MUST</span></td><td>상태·심각도·제목(조직 체인 보조라인)·환경·담당(아바타, <b>1순위</b>)·횟수·최근. FIRING 좌측 3px 액센트</td></tr>
+  <tr><td>담당 인원 패널</td><td><span class="must">MUST</span></td><td>필터 결과 기준 담당별 건수. 클릭 → 그 사람 알람만 (토글)</td></tr>
+</table></div>
+
+<h3>6.2 알람 상세 <span class="tag">모니터링</span></h3>
+<div class="wf"><div style="display:flex;gap:8px">
+  <div style="flex:1"><div class="w-box"><div class="w-lbl">사실 — 메트릭 필드</div><div class="m-bar" style="width:90%"></div><div class="m-bar" style="width:75%"></div></div>
+  <div class="w-box"><div class="w-lbl">이벤트 타임라인 (append-only)</div><div class="m-row"><span class="m-chip" style="background:var(--firing-bg)">FIRING</span><span style="font-size:8px;color:var(--muted)">10:42Z</span></div><div class="m-row"><span class="m-chip" style="background:var(--resolved-bg)">RESOLVED</span><span style="font-size:8px;color:var(--muted)">09:18Z</span></div></div></div>
+  <div style="width:36%"><div class="w-box"><div class="w-lbl">담당 (수신 시점 스냅샷)</div><div class="m-row"><span class="pill-seq" style="width:12px;height:12px;font-size:8px">1</span><span style="font-size:9px"><b>김또깡</b> ↳주문API</span></div><div class="m-row"><span class="pill-seq" style="width:12px;height:12px;font-size:8px;background:var(--muted)">2</span><span style="font-size:9px">이몽룡</span></div><div class="m-note" style="position:static;display:inline-block;margin-top:3px">현재 배정과 다름</div><div class="m-row" style="margin-top:5px"><span class="m-btn">Acknowledge</span><span class="m-btn" style="background:var(--surface);color:var(--ink2);border:1px solid var(--grid)">Resolve</span></div></div>
+  <div class="w-box"><div class="w-lbl">조직 체인</div><div style="font-size:9px;line-height:1.7">삼성전자 └ 결제고도화 └ 주문API └ <code>1111…3012</code> PRD</div></div></div>
+</div></div>
+<div class="tclip"><table>
+  <tr><th>요구</th><th>우선</th><th>상세</th></tr>
+  <tr><td>좌=사실 / 우=사람·조직</td><td><span class="must">MUST</span></td><td>메트릭 필드 + 타임라인 / 스냅샷 담당(순번 표기) + 체인 트리(레벨별 배정 요약)</td></tr>
+  <tr><td>Ack / Resolve 버튼</td><td><span class="must">MUST</span> 2c</td><td>상태에 따라 비활성. 전이도 AlertEvent로 append</td></tr>
+  <tr><td>"담당 변경됨" 배지</td><td><span class="should">SHOULD</span></td><td>스냅샷 ≠ 현재 해석일 때 표시 (v0.2 열린이슈 ③의 답)</td></tr>
+</table></div>
+
+<h3>6.3 조직 · 담당자 관리 <span class="tag">등록관리</span></h3>
+<div class="tclip"><table>
+  <tr><th>요구</th><th>우선</th><th>상세</th></tr>
+  <tr><td>계층 CRUD</td><td><span class="must">MUST</span> <span class="done">✔ 골격</span></td><td>고객사(내부 플래그)/프로젝트/서비스 등록·삭제, 브레드크럼 탐색</td></tr>
+  <tr><td>레벨 탭 담당 등록</td><td><span class="must">MUST</span></td><td>고객사/프로젝트/서비스 탭 전환. 역할 라벨 없는 칩(× 제거) + 추가 드롭다운(<b>"+ 새 인원 등록"</b> 인라인 포함)</td></tr>
+  <tr><td>후보 데이터 격리</td><td><span class="must">MUST</span></td><td>내부 + 해당 고객사 인원만 노출</td></tr>
+  <tr><td>AWS 계정 매핑</td><td><span class="must">MUST</span> <span class="done">✔</span></td><td>12자리 검증, 별칭, 환경. 계정별 담당 <b>재정의</b>는 이 화면 인라인에서만</td></tr>
+  <tr><td>롤업 로스터</td><td><span class="must">MUST</span> <span class="done">✔</span></td><td>직접 vs "↳ 하위에서" 출처 구분</td></tr>
+</table></div>
+
+<h3>6.4 알람 처리 순서 <span class="tag">등록관리 · 신규 화면</span></h3>
+<div class="wf">
+  <div class="w-head"><span class="m-chip" style="background:var(--ink);color:var(--surface)">서비스 탭</span><span class="m-chip" style="background:var(--surface);border:1px solid var(--grid)">프로젝트 탭</span><span class="m-chip" style="background:var(--surface);border:1px solid var(--grid)">고객사 탭</span><span style="font-size:9px;color:var(--muted)">— 주문API</span></div>
+  <div class="w-box"><div class="m-row"><span class="pill-seq" style="width:13px;height:13px;font-size:8px">1</span><span style="font-size:9.5px"><b>김또깡</b></span><span style="margin-left:auto;font-size:9px;color:var(--muted)">↑ ↓ ×</span></div>
+  <div class="m-row"><span class="pill-seq" style="width:13px;height:13px;font-size:8px;background:var(--muted)">2</span><span style="font-size:9.5px">이몽룡</span><span style="margin-left:auto;font-size:9px;color:var(--muted)">↑ ↓ ×</span></div>
+  <div class="m-row"><span class="pill-seq" style="width:13px;height:13px;font-size:8px;background:var(--muted)">3</span><span style="font-size:9.5px">변학도</span><span style="margin-left:auto;font-size:9px;color:var(--muted)">↑ ↓ ×</span></div></div>
+  <div class="m-row"><span class="m-chip" style="background:var(--surface);border:1px solid var(--grid)">담당자 추가 ▾ (+새 인원 등록)</span></div>
+</div>
+<div class="tclip"><table>
+  <tr><th>요구</th><th>우선</th><th>상세</th></tr>
+  <tr><td>레벨 탭 + 순번 정렬</td><td><span class="must">MUST</span></td><td>순번 배지(1·2·3…), ↑↓ 재정렬, × 제거. 1순위=주담당=통지 대상</td></tr>
+  <tr><td>인라인 등록</td><td><span class="must">MUST</span></td><td>이 화면에서 추가+순서지정을 한 번에 (조직 관리 왕복 불필요)</td></tr>
+  <tr><td>상속 순서 표시</td><td><span class="must">MUST</span></td><td>직접 등록 없는 레벨은 상위 순서를 <b>read-only 참고</b>로 표시, "수정은 원본 레벨에서" 링크</td></tr>
+  <tr><td>계정 레벨 탭</td><td><span class="later">LATER</span></td><td>제외 — 계정 재정의는 6.3 인라인으로 충분 (열린이슈 ①)</td></tr>
+</table></div>
+
+<h3>6.5 멤버 관리 <span class="tag">등록관리</span></h3>
+<div class="wf">
+  <div class="w-box"><div class="m-row"><span style="font-size:9.5px"><b>성춘향</b></span><span class="m-chip" style="background:var(--ack-bg);font-weight:800">MSP</span><span style="font-size:8.5px;color:var(--muted)">인프라운영팀 · 배정 5곳</span></div>
+    <div style="border-top:1px dashed var(--grid);margin-top:4px;padding-top:4px"><span style="font-size:8px;color:var(--muted)">담당 고객사:</span> <span class="m-chip" style="background:var(--ack);color:#fff">삼성전자 ✓</span> <span class="m-chip" style="background:var(--ack);color:#fff">쿠팡물류 ✓</span> <span class="m-chip" style="background:var(--surface);border:1px solid var(--grid)">현대오토</span></div></div>
+  <div class="w-box"><div class="m-row"><span style="font-size:9.5px"><b>박담당</b></span><span style="font-size:8.5px;color:var(--muted)">삼성전자 소속 · 배정 2곳</span></div></div>
+</div>
+<div class="tclip"><table>
+  <tr><th>요구</th><th>우선</th><th>상세</th></tr>
+  <tr><td>인원 마스터</td><td><span class="must">MUST</span> <span class="done">✔ 골격</span></td><td>이름/소속/부서/이메일/배정 수. "+ 인원 등록"(소속: 내부 or 고객사)</td></tr>
+  <tr><td>MSP 배지 + 고객사 토글</td><td><span class="must">MUST</span></td><td>내부 인원 행 클릭 → 담당 고객사 토글 칩 인라인. 토글 = 그 고객사 레벨 순서 리스트 <b>맨 뒤에</b> 추가/제거</td></tr>
+  <tr><td>세밀 매핑 안내</td><td><span class="should">SHOULD</span></td><td>프로젝트/서비스 단위 매핑은 조직·담당자 관리로 (열린이슈 ②의 답 — 모델은 이미 지원)</td></tr>
+</table></div>
+
+<!-- ================================================================ 7 -->
+<h2 id="s7"><span class="no">7</span>스토리보드</h2>
+<p class="lead">세 가지 대표 시나리오. 프레임 속 화면은 §6 와이어프레임의 축약이다.</p>
+
+<h3>S1 · 새벽 2시, SEV-1 발화 → 해결 <span class="tag">페르소나: 온콜 엔지니어 김또깡</span></h3>
+<div class="board">
+  <div class="frame"><div class="scene"><span class="num">1/6</span>
+    <div style="font-size:8px;color:var(--muted)">AWS · 고객사 계정 1111…3012</div>
+    <div class="m-row"><span class="m-chip" style="background:var(--firing-bg);border:1px solid var(--firing)">CloudWatch ALARM</span></div>
+    <div style="font-size:9px"><b>prod-db CPU &gt; 90%</b></div>
+    <div style="font-size:8px;color:var(--muted)">AlarmActions → 중앙 SNS 토픽 → alert-hub 웹훅</div>
+    <div class="m-note" style="right:8px;bottom:8px">dedup: cw:&lt;ARN&gt;</div></div>
+    <div class="cap"><span class="actor">시스템</span><b>알람 수신·저장</b>정규화 → 계정 매칭(주문API/PRD) → FIRING 생성, 담당 스냅샷: 1순위 김또깡</div></div>
+  <div class="frame"><div class="scene"><span class="num">2/6</span>
+    <div class="m-slack">🚨 <b>SEV-1 · prod-db CPU &gt; 90% — FIRING</b><br>삼성전자 · 결제고도화/주문API · PRD<br>담당(1순위): 김또깡 · <u>Open in alert-hub</u></div></div>
+    <div class="cap"><span class="actor">시스템 → 김또깡</span><b>Slack 통지 (FIRING 전환 시 1회)</b>재발화 폭주에도 재통지는 전환 시에만 — 노이즈 억제</div></div>
+  <div class="frame"><div class="scene"><span class="num">3/6</span>
+    <div class="m-row"><span class="m-chip" style="background:var(--ink);color:var(--surface)">Firing</span><span class="m-chip" style="background:var(--surface);border:1px solid var(--grid)">환경 PRD</span></div>
+    <div class="m-row"><div class="m-tile"><span>Firing</span><b style="color:var(--firing)">7</b></div><div class="m-tile"><span>Total</span><b>53</b></div></div>
+    <div class="m-bar" style="background:var(--firing-bg);border-left:3px solid var(--firing)"></div>
+    <div class="m-bar" style="background:var(--firing-bg);border-left:3px solid var(--firing)"></div>
+    <div class="m-bar"></div></div>
+    <div class="cap"><span class="actor">김또깡</span><b>대시보드에서 트리아지</b>Firing 칩 + PRD 필터 → 내 담당(우측 패널에서 본인 클릭)만 남김</div></div>
+  <div class="frame"><div class="scene"><span class="num">4/6</span>
+    <div style="font-size:9px"><b>prod-db CPU &gt; 90%</b> <span class="m-chip" style="background:var(--firing-bg)">FIRING</span></div>
+    <div style="font-size:8px;color:var(--muted)">value 96.2 · threshold 90 · 4회째</div>
+    <div class="m-row" style="margin-top:6px"><span class="m-btn">Acknowledge</span></div>
+    <div class="m-note" style="left:8px;bottom:8px">타임라인: 08:59 F → 09:18 R → 10:42 F</div></div>
+    <div class="cap"><span class="actor">김또깡</span><b>상세 확인 후 Ack</b>재발화 이력 확인 → Acknowledge → 팀에 "보고 있음" 공유(상태 ACK)</div></div>
+  <div class="frame"><div class="scene"><span class="num">5/6</span>
+    <div style="display:flex;align-items:center;justify-content:center;height:90px;font-size:26px">🔧</div>
+    <div style="text-align:center;font-size:8.5px;color:var(--muted)">RDS 파라미터 조정 · 쿼리 킬</div></div>
+    <div class="cap"><span class="actor">김또깡</span><b>원인 조치</b>alert-hub 밖의 일 — 조치 후 메트릭이 내려간다</div></div>
+  <div class="frame"><div class="scene"><span class="num">6/6</span>
+    <div class="m-row"><span class="m-chip" style="background:var(--resolved-bg);border:1px solid var(--resolved)">CloudWatch OK</span></div>
+    <div class="m-row"><span class="m-chip" style="background:var(--resolved-bg)">RESOLVED</span><span style="font-size:8px;color:var(--muted)">count 그대로 · 재통지 없음</span></div>
+    <div class="m-bar" style="width:70%"></div>
+    <div class="m-note" style="right:8px;bottom:8px">이력 3줄 append</div></div>
+    <div class="cap"><span class="actor">시스템</span><b>OK 수신 → 자동 RESOLVED</b>같은 fingerprint로 upsert — 대시보드·타임라인에 종결 기록</div></div>
+</div>
+
+<h3>S2 · 미매핑 계정 발견 → 그 자리에서 연결 <span class="tag">페르소나: MSP 매니저</span></h3>
+<div class="board">
+  <div class="frame"><div class="scene"><span class="num">1/4</span>
+    <div class="w-box" style="background:var(--warn-bg);font-size:8.5px;padding:5px">⚠ <b>미매핑 계정 1개</b>에서 알람 수신 중</div>
+    <div class="m-bar"></div><div class="m-bar" style="background:var(--warn-bg)"></div></div>
+    <div class="cap"><span class="actor">시스템</span><b>미매핑 배너 노출</b>매칭 실패 알람도 버리지 않고 저장 + 배너로 드러냄</div></div>
+  <div class="frame"><div class="scene"><span class="num">2/4</span>
+    <div style="font-size:9px"><b>SNS Notification (raw)</b></div>
+    <div style="font-size:8px;color:var(--warn)">⚠ 미매핑 계정 <code style="font-size:7.5px">9999…0000</code> — <u>지금 매핑</u></div>
+    <div class="m-bar" style="width:60%"></div></div>
+    <div class="cap"><span class="actor">매니저</span><b>행에서 "지금 매핑" 클릭</b>등록관리 화면으로 이동 없이 인라인 처리 시작</div></div>
+  <div class="frame"><div class="scene"><span class="num">3/4</span>
+    <div class="m-pop"><b>계정 9999…0000 연결</b><br>고객사 [현대오토 ▾]<br>프로젝트 [관제 ▾] 서비스 [모니터링 ▾]<br>환경 [prd ▾] <span class="m-btn">연결</span></div></div>
+    <div class="cap"><span class="actor">매니저</span><b>모달에서 서비스 선택</b>종속 드롭다운으로 체인 지정 — 저장 즉시 AccountMap 생성</div></div>
+  <div class="frame"><div class="scene"><span class="num">4/4</span>
+    <div style="font-size:9px"><b>SNS Notification (raw)</b></div>
+    <div style="font-size:8px;color:var(--muted)">현대오토 · 관제/모니터링 · PRD</div>
+    <div class="m-row"><span class="pill-seq" style="width:12px;height:12px;font-size:8px">1</span><span style="font-size:9px">최부장 (프로젝트에서 상속)</span></div></div>
+    <div class="cap"><span class="actor">시스템</span><b>담당 자동 결정</b>연결 즉시 상속 규칙으로 담당 해석 — 다음 알람부터 통지도 정상</div></div>
+</div>
+
+<h3>S3 · 신규 고객사 온보딩 → 처리 순서 지정 <span class="tag">페르소나: 어드민 + MSP 매니저</span></h3>
+<div class="board">
+  <div class="frame"><div class="scene"><span class="num">1/5</span>
+    <div class="w-box" style="font-size:8.5px;padding:5px"><b>등록관리 › 조직·담당자 관리</b></div>
+    <div class="m-row"><span class="m-chip" style="background:var(--surface);border:1px solid var(--grid)">+ 고객사 "LG마트"</span></div>
+    <div class="m-row"><span class="m-chip" style="background:var(--surface);border:1px solid var(--grid)">+ 프로젝트 "매장관제"</span><span class="m-chip" style="background:var(--surface);border:1px solid var(--grid)">+ 서비스 "POS-API"</span></div></div>
+    <div class="cap"><span class="actor">어드민</span><b>계층 등록</b>고객사 → 프로젝트 → 서비스 3분 만에 생성 (테넌트는 프로젝트에서 확정)</div></div>
+  <div class="frame"><div class="scene"><span class="num">2/5</span>
+    <div style="font-size:8.5px"><b>POS-API › AWS 계정 매핑</b></div>
+    <div class="m-row"><code style="font-size:7.5px">555566667777</code><span class="m-chip" style="background:var(--firing-bg)">prd</span></div>
+    <div class="m-row"><code style="font-size:7.5px">555566668888</code><span class="m-chip" style="background:var(--warn-bg)">stg</span></div></div>
+    <div class="cap"><span class="actor">어드민</span><b>계정 매핑 + 환경 지정</b>이제 이 계정들의 알람은 LG마트/매장관제/POS-API로 귀속</div></div>
+  <div class="frame"><div class="scene"><span class="num">3/5</span>
+    <div style="font-size:8.5px"><b>멤버 관리</b></div>
+    <div class="m-row"><span style="font-size:9px"><b>성춘향</b></span><span class="m-chip" style="background:var(--ack-bg);font-weight:800">MSP</span></div>
+    <div style="font-size:8px">담당 고객사: <span class="m-chip" style="background:var(--ack);color:#fff">LG마트 ✓</span></div>
+    <div class="m-row" style="margin-top:3px"><span class="m-chip" style="background:var(--surface);border:1px solid var(--grid)">+ 인원 등록: 박점장 (LG마트 소속)</span></div></div>
+    <div class="cap"><span class="actor">매니저</span><b>사람 연결</b>내부 엔지니어는 고객사 토글로, 고객사 담당자는 신규 등록으로</div></div>
+  <div class="frame"><div class="scene"><span class="num">4/5</span>
+    <div style="font-size:8.5px"><b>알람 처리 순서 › 고객사: LG마트</b></div>
+    <div class="m-row"><span class="pill-seq" style="width:12px;height:12px;font-size:8px">1</span><span style="font-size:9px">성춘향(MSP)</span><span style="margin-left:auto;font-size:8px;color:var(--muted)">↑↓×</span></div>
+    <div class="m-row"><span class="pill-seq" style="width:12px;height:12px;font-size:8px;background:var(--muted)">2</span><span style="font-size:9px">박점장(고객)</span><span style="margin-left:auto;font-size:8px;color:var(--muted)">↑↓×</span></div></div>
+    <div class="cap"><span class="actor">매니저</span><b>통지 순서 지정</b>1순위 우리 엔지니어, 2순위 고객 담당 — 라벨 없이 순서만</div></div>
+  <div class="frame"><div class="scene"><span class="num">5/5</span>
+    <div class="m-slack" style="font-size:8px">🔴 <b>SEV-2 · POS 5xx — FIRING</b><br>LG마트 · 매장관제/POS-API · PRD<br>담당(1순위): 성춘향</div>
+    <div class="m-note" style="right:8px;bottom:8px">curl 테스트 1발로 검증</div></div>
+    <div class="cap"><span class="actor">매니저</span><b>테스트 알람으로 검증</b>README의 curl 예제 → 수신·귀속·통지까지 한 번에 확인, 온보딩 끝</div></div>
+</div>
+
+<!-- ================================================================ 8 -->
+<h2 id="s8"><span class="no">8</span>페르소나 & 유저 스토리</h2>
+<div class="tclip"><table>
+  <tr><th>페르소나</th><th>목표</th></tr>
+  <tr><td>🧑‍🚒 온콜 엔지니어</td><td>지금 급한 알람을 빨리 찾고, 내 것인지 판단하고, ack/resolve로 상태를 공유</td></tr>
+  <tr><td>🧑‍💼 MSP 매니저</td><td>고객사·인력 배정과 통지 순서를 관리, 미매핑을 빠르게 해소</td></tr>
+  <tr><td>🧑‍💻 고객사 담당자</td><td>자기 회사 알람만 필터해서 확인</td></tr>
+  <tr><td>🛠 어드민</td><td>조직·인원 마스터 데이터 등록/정리</td></tr>
+</table></div>
+<div class="tclip"><table>
+  <tr><th>Epic</th><th>대표 스토리 (전체는 각 화면 요구로 매핑됨)</th></tr>
+  <tr><td>A · 알람 트리아지</td><td>상태·심각도로 한눈에 구분 / 고객사·프로젝트·환경으로 좁히기 / 행에서 담당 즉시 확인 / 담당 패널에서 사람 클릭 필터 / 상세에서 이력 보고 ack·resolve</td></tr>
+  <tr><td>B · 미매핑 처리</td><td>배너로 즉시 인지 / 행에서 바로 서비스 연결(모달) / 연결 즉시 담당 해석</td></tr>
+  <tr><td>C · 조직·담당 관리</td><td>아무 레벨에 등록 / 후보는 내부+해당 고객사만 / 그 자리에서 신규 인원 생성 / 계정 하나만 예외 재정의 / 직접 vs 상속 출처 구분</td></tr>
+  <tr><td>D · 처리 순서</td><td>라벨 없이 자유 정렬 / 순서 화면에서 바로 추가 / 상속 순서 read-only 참고 / 스냅샷으로 "그때 1순위" 추적</td></tr>
+  <tr><td>E · 멤버 관리</td><td>내부+고객사 인원 한 테이블 / 내부 1명 → N개 고객사 토글 / 배정 수로 업무 쏠림 파악</td></tr>
+</table></div>
+
+<!-- ================================================================ 9 -->
+<h2 id="s9"><span class="no">9</span>비기능 요구사항</h2>
+<div class="tclip"><table>
+  <tr><th>영역</th><th>요구</th><th>상태</th></tr>
+  <tr><td rowspan="4">보안</td><td><code>INGEST_TOKEN</code> — 헤더 또는 쿼리(SNS/PD 헤더 불가 대응), 상수시간 비교</td><td class="done">✔</td></tr>
+  <tr><td>SNS SubscribeURL SSRF 가드 (<code>sns.*.amazonaws.com</code>만 fetch)</td><td class="done">✔</td></tr>
+  <tr><td>본문 1MB 캡 / 미인식 payload 400 (SNS는 재시도 폭주 방지 위해 200)</td><td class="done">✔</td></tr>
+  <tr><td>소스별 서명 검증 (SNS 메시지 서명, PD <code>X-PagerDuty-Signature</code>) + 후보 드롭다운 데이터 격리</td><td><span class="should">SHOULD</span> 다음</td></tr>
+  <tr><td rowspan="3">신뢰성</td><td>동시 수신 안전: 생성 레이스(P2002) 흡수, FIRING 전환 원자화(정확히 1회 count++/통지)</td><td class="done">✔</td></tr>
+  <tr><td>희소 재전송이 기존 enrichment를 지우지 않음(필드 보존 갱신)</td><td class="done">✔</td></tr>
+  <tr><td>이력 append-only — 전이 기록의 수정·삭제 없음</td><td class="done">✔</td></tr>
+  <tr><td rowspan="2">확장성</td><td>provider/notifier 인터페이스 — 소스·채널 추가가 파일 추가로 끝남</td><td class="done">✔</td></tr>
+  <tr><td>서버리스 이전 seam: pooled/direct DB URL, Lambda용 binaryTargets, 전송-무관 ingest 코어</td><td class="done">✔</td></tr>
+  <tr><td>품질</td><td>vitest 47개(파서·dedup 의미론·라우트 보안·조직 해석) — DB 없이 CI 가능. 신규 규칙(순서 해석·격리)도 테스트 동반 <span class="must">MUST</span></td><td class="done">✔ 유지</td></tr>
+  <tr><td>UI 원칙</td><td>색 단독으로 의미 전달 금지(모양+텍스트 병행, CVD 검증 ΔE≥16) · 라이트/다크 · 시스템 산세리프 + tabular 숫자</td><td class="done">✔ 디자인 확정</td></tr>
+</table></div>
+
+<!-- ================================================================ 10 -->
+<h2 id="s10"><span class="no">10</span>로드맵 & 열린 이슈</h2>
+<div class="tclip"><table>
+  <tr><th>Phase</th><th>내용</th><th>상태</th></tr>
+  <tr><td>1 · MVP</td><td>수신 5종 + dedup + 대시보드 + Slack + 보안/테스트</td><td class="done">✔ 완료 (푸시됨)</td></tr>
+  <tr><td>2a · 조직 마스터</td><td>계층·인원·배정 모델 + 등록관리 골격</td><td class="done">✔ 완료 → <b>2a-rev</b>: 정/부/멤버 폐기→순서 모델, 데이터 격리, IA 3메뉴(처리순서 신규·멤버관리 확장), 인라인 신규등록</td></tr>
+  <tr><td>2b · 알람↔조직 연결</td><td>enrichment 스냅샷(순번 포함) · 대시보드 개편(다중토글/초기화/미매핑 토글·모달/담당 패널) · 상세(순번 스냅샷·변경 배지)</td><td>다음</td></tr>
+  <tr><td>2c · 액션</td><td>Ack/Resolve 버튼 + 이벤트 기록 · 1순위 통지 반영</td><td>대기</td></tr>
+  <tr><td>3 · 사람 레이어</td><td>이메일 채널 → 시간 기반 자동 에스컬레이션(1순위 미ack N분→2순위) → Twilio 전화/SMS. order 데이터가 그대로 입력</td><td><span class="later">LATER</span></td></tr>
+</table></div>
+<div class="card">
+  <b>열린 이슈 (v0.2에서 이관, 답 포함)</b>
+  <ul>
+    <li>계정 레벨 전용 순서 편집 UI — <b>보류</b>: 재정의는 예외 케이스, 조직 관리 인라인으로 충분. 실사용 수요 확인 후.</li>
+    <li>내부 엔지니어의 프로젝트/서비스 단위 매핑 — <b>모델은 이미 지원</b>. 멤버 관리 토글은 고객사 레벨 숏컷일 뿐임을 문서·UI 문구로 명시.</li>
+    <li>스냅샷 vs 현재 배정 불일치 — <b>채택</b>: 상세에 "담당 변경됨" 배지(2b).</li>
+    <li>순서의 의미 범위 — 2b/2c는 "표시+1순위 통지"까지. 시간 기반 자동 상향은 Phase 3으로 명시적 분리.</li>
+  </ul>
+</div>
+
+<hr class="hr-soft">
+<div style="font-size:12px;color:var(--muted)">
+근거 문서: <code>docs/org-model.md</code>(조직 모델 상세) · <code>docs/design/</code>(디자인 초안 11종) · <code>README.md</code>(운영·연동) ·
+역요구사항 v0.2 PDF(디자인 세션 피드백). 본 v0.3이 상위 문서이며 충돌 시 v0.3을 따른다.
+</div>
+
+</div></body></html>
