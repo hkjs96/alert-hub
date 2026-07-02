@@ -20,7 +20,12 @@ export default function RootLayout({
             <Link href="/" className="text-lg font-semibold text-slate-900">
               alert-hub
             </Link>
-            <span className="text-sm text-slate-400">event plane · MVP</span>
+            <div className="flex items-center gap-4">
+              <Link href="/admin" className="text-sm text-slate-600 hover:text-blue-600">
+                관리
+              </Link>
+              <span className="text-sm text-slate-400">event plane · MVP</span>
+            </div>
           </div>
         </header>
         <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>

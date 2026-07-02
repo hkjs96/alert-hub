@@ -74,3 +74,118 @@ model AlertEvent {
 
   @@index([alertId])
 }
+
+// --- Org master data (Phase 2a) ---------------------------------------------
+// Customer > Project > Service > AwsAccountMap is a strict containment tree:
+// the tenant is decided ONCE at Project.customerId and derived by walking up
+// everywhere else. Ownership is deliberately NOT a column on these tables —
+// it lives in Assignment so it can attach to any level (see docs/org-model.md).
+
+model Customer {
+  id         String  @id @default(cuid())
+  name       String  @unique
+  // Marks the pseudo-customer used for internal (non-client) systems, so
+  // customerId never has to be nullable on Project.
+  isInternal Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects    Project[]
+  contacts    Contact[]
+  assignments Assignment[]
+}
+
+model Project {
+  id         String   @id @default(cuid())
+  name       String
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  services    Service[]
+  assignments Assignment[]
+
+  @@unique([customerId, name])
+}
+
+model Service {
+  id        String  @id @default(cuid())
+  name      String
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts    AwsAccountMap[]
+  assignments Assignment[]
+
+  @@unique([projectId, name])
+}
+
+model AwsAccountMap {
+  id        String  @id @default(cuid())
+  // 12-digit AWS account id, matched against the accountId parsed from
+  // incoming alarm ARNs. Unique: one account belongs to one service (shared
+  // accounts get resource-pattern overrides later — see docs/org-model.md).
+  accountId String  @unique
+  alias     String?
+  // prd | stg | dev ... — first source of truth for environment enrichment.
+  environment String?
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignments Assignment[]
+}
+
+model Contact {
+  id         String  @id @default(cuid())
+  name       String
+  email      String?
+  phone      String?
+  slackId    String?
+  department String?
+  // null = internal (our company); set = this person belongs to a customer.
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignments Assignment[]
+}
+
+// One person attached to one scope in one capacity. Exactly one of
+// customerId/projectId/serviceId/accountId is set (enforced in app code).
+// Attach = INSERT, detach = DELETE; OWNER is kept unique per scope by the
+// setter action (replace semantics).
+model Assignment {
+  id        String  @id @default(cuid())
+  kind      String  @default("MEMBER") // OWNER(정, 1명) | DEPUTY(부) | MEMBER
+  order     Int? // null = unordered; set when sequence matters (P3 escalation)
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  projectId  String?
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  serviceId  String?
+  service    Service? @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  accountId  String?
+  account    AwsAccountMap? @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([contactId])
+  @@index([customerId])
+  @@index([projectId])
+  @@index([serviceId])
+  @@index([accountId])
+}

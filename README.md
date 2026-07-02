@@ -117,6 +117,25 @@ Same fingerprint ⇒ the alert is updated and an `AlertEvent` is appended.
 `count` increments **only** on a transition **into** FIRING, and Slack fires on
 that same transition (skipped if `SLACK_WEBHOOK_URL` is unset).
 
+## Org model & admin (Phase 2a)
+
+`/admin` manages the multi-tenant master data (see `docs/org-model.md` for the
+full design):
+
+```
+Customer(고객사) > Project > Service > AwsAccountMap(accountId, environment)
+Contact(사람 마스터)  +  Assignment(사람 × 스코프 × 정/부/멤버)
+```
+
+- Ownership attaches to **any** level; resolution is "closest wins with
+  inheritance" (account → service → project → customer), so each customer's
+  management style (project-led, service-led, mixed) is just data.
+- Attach/detach = add/remove an Assignment row via dropdown chips; each scope
+  page shows a **roster rollup** (direct people + people from descendants).
+- The `AwsAccountMap.accountId` matches the account id parsed from incoming
+  alarm ARNs — Phase 2b enriches alerts with the resolved chain + owner
+  snapshot and adds dashboard filters.
+
 ## Tests
 
 ```bash
