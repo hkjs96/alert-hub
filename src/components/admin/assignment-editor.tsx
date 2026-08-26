@@ -1,5 +1,6 @@
 import { addAssignment, removeAssignment } from "@/server/org-actions";
 import { getContactChoices, getDirectAssignments } from "@/server/org";
+import { NewContactInline } from "@/components/admin/new-contact-inline";
 import type { ScopeLevel } from "@/lib/org/resolve";
 
 /**
@@ -97,13 +98,16 @@ export async function AssignmentEditor({
         </form>
       ) : (
         <p className="text-xs text-slate-400">
-          이 고객사 / 내부 인원이 모두 등록되어 있습니다.{" "}
-          <a href="/admin/contacts" className="underline hover:text-blue-600">
-            멤버 관리
-          </a>
-          에서 인원을 먼저 등록하세요.
+          이 고객사 / 내부 인원이 모두 등록되어 있습니다.
         </p>
       )}
+
+      <NewContactInline
+        level={level}
+        scopeId={scopeId}
+        customerId={customerId}
+        back={back}
+      />
     </div>
   );
 }

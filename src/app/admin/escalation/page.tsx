@@ -7,6 +7,7 @@ import {
   getInheritedOrder,
 } from "@/server/org";
 import { addAssignment, moveAssignment, removeAssignment } from "@/server/org-actions";
+import { NewContactInline } from "@/components/admin/new-contact-inline";
 
 export const dynamic = "force-dynamic";
 
@@ -327,6 +328,22 @@ export default async function EscalationPage({
             </button>
           </form>
         )}
+
+        <div
+          className={
+            available.length > 0
+              ? "mt-3"
+              : "mt-3 border-t border-slate-100 pt-3"
+          }
+        >
+          <NewContactInline
+            level={level}
+            scopeId={scopeId}
+            customerId={customer.id}
+            customerName={customer.name}
+            back={back}
+          />
+        </div>
       </section>
     </div>
   );

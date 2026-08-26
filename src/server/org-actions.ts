@@ -182,6 +182,15 @@ export async function addAssignment(formData: FormData) {
   const level = requireString(formData, "level") as ScopeLevel;
   const scopeId = requireString(formData, "scopeId");
   const contactId = requireString(formData, "contactId");
+  await appendToScope(level, scopeId, contactId);
+  revalidateBack(formData, "/admin/customers");
+}
+
+async function appendToScope(
+  level: ScopeLevel,
+  scopeId: string,
+  contactId: string,
+) {
   const field = scopeField(level);
 
   const existing = await prisma.assignment.findFirst({
@@ -207,7 +216,39 @@ export async function addAssignment(formData: FormData) {
       if ((e as { code?: string }).code !== "P2002") throw e;
     }
   }
+}
+
+/**
+ * "+ 새 인원 등록" 인라인 (§6.3/6.4): create the person AND put them at the
+ * end of this scope's list in one submit, so registering a brand-new contact
+ * doesn't require a round-trip through 멤버 관리.
+ *
+ * 소속 is an explicit choice (이 고객사 or 내부) because it decides tenant
+ * isolation: a customer-affiliated contact only ever appears in that
+ * customer's dropdowns.
+ */
+export async function createContactAndAssign(formData: FormData) {
+  const level = requireString(formData, "level") as ScopeLevel;
+  const scopeId = requireString(formData, "scopeId");
+  scopeField(level); // validate early, before creating the contact
+
+  const affiliation = requireString(formData, "affiliation");
+  if (affiliation !== "customer" && affiliation !== "internal") {
+    throw new Error(`bad affiliation: ${affiliation}`);
+  }
+
+  const contact = await prisma.contact.create({
+    data: {
+      name: requireString(formData, "name"),
+      department: optionalString(formData, "department"),
+      email: optionalString(formData, "email"),
+      customerId:
+        affiliation === "customer" ? requireString(formData, "customerId") : null,
+    },
+  });
+  await appendToScope(level, scopeId, contact.id);
   revalidateBack(formData, "/admin/customers");
+  revalidatePath("/admin/contacts");
 }
 
 export async function removeAssignment(formData: FormData) {
