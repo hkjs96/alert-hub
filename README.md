@@ -33,6 +33,20 @@ Slack Incoming Webhook. API routes run on the Node.js runtime.
 
 ## Getting started
 
+가장 빠른 길 — Docker만 있으면 두 명령으로 화면까지 봅니다:
+
+```bash
+docker compose up -d db     # 로컬 Postgres 16
+npm install && npm run demo # .env 생성 → 스키마 → 시드 → dev 서버 → 샘플 알람 5건
+```
+
+`npm run demo`는 반복 실행해도 안전합니다(.env는 있으면 보존, 시드는 빈 DB에만,
+샘플 알람은 fingerprint dedup에 흡수). Docker가 없으면 아무 Postgres — 로컬
+설치든 Supabase 무료 티어든 — 를 쓰고 `.env`의 두 URL만 채운 뒤 같은 명령을
+실행하면 됩니다.
+
+수동으로 단계별로 하려면:
+
 ```bash
 npm install
 cp .env.example .env        # set DATABASE_URL + DIRECT_URL (and SLACK_WEBHOOK_URL)
