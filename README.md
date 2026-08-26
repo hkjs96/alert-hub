@@ -38,8 +38,34 @@ npm install
 cp .env.example .env        # set DATABASE_URL + DIRECT_URL (and SLACK_WEBHOOK_URL)
 npx prisma generate
 npx prisma db push          # create the tables in your Postgres
+npm run db:seed             # demo org data (only ever writes to an EMPTY db)
 npm run dev                 # http://localhost:3000
 ```
+
+### Try the 2b flow in two minutes
+
+The seed creates the org tree and assignments but **no alerts** — fire those
+through the real webhook so ingest, dedup, the fire-time ownership snapshot,
+and Slack (if configured) all run:
+
+```bash
+# mapped account → resolves to 결제서비스's order (최민서 1순위), snapshot frozen
+curl -X POST localhost:3000/api/webhooks/cloudwatch -H 'content-type: application/json' -d '{
+  "AlarmName": "SEV-1 CPU 사용률 90% 초과", "NewStateValue": "ALARM",
+  "AlarmArn": "arn:aws:cloudwatch:ap-northeast-2:123456789012:alarm:cpu-high",
+  "NewStateReason": "Threshold Crossed" }'
+
+# unmapped account → ⚠ 매핑 필요 badge + dashboard banner
+curl -X POST localhost:3000/api/webhooks/cloudwatch -H 'content-type: application/json' -d '{
+  "AlarmName": "SEV-2 신규 계정 알람", "NewStateValue": "ALARM",
+  "AlarmArn": "arn:aws:cloudwatch:ap-northeast-2:999999999999:alarm:mystery" }'
+```
+
+Then, on the dashboard: the first alert shows 담당 최민서 (service order beats
+the customer default), the second shows the unmapped banner. Open the first
+alert, reorder the team on 알람 처리 순서 — the alert keeps showing the
+frozen snapshot with a "현재 등록 기준과 다릅니다" hint, until the alarm
+re-fires (OK → ALARM) and freezes the new order.
 
 PoC setup is **local dev + Supabase free Postgres**. Supabase ships a built-in
 connection pooler (Supavisor), so the runtime uses the **pooled** URL
