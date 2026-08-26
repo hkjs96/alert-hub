@@ -51,6 +51,14 @@ model Alert {
 
   raw Json?
 
+  // 수신 시점 담당 스냅샷 (BR-05): the chain + ordered assignees in effect when
+  // the alert was received (refreshed on each transition INTO FIRING, i.e. the
+  // order that was actually notified). Display prefers this over the live
+  // resolution so reordering a team later doesn't rewrite who was responsible
+  // for past alerts. Names are denormalized so the record survives renames and
+  // deletions. JSON on purpose — an append-style audit shape, never joined.
+  ownershipSnapshot Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

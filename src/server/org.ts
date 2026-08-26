@@ -340,3 +340,71 @@ export async function getOwnershipByAwsAccount(
   const map = await getOwnershipByAccountIds([awsAccountId]);
   return map.get(awsAccountId) ?? null;
 }
+
+// --- 수신 시점 스냅샷 (BR-05) ------------------------------------------------
+
+/**
+ * What gets frozen onto an Alert when it is received / re-fires. Ids keep the
+ * links clickable while they exist; names are denormalized so the record still
+ * reads correctly after renames or deletions. Stored as JSON — audit shape,
+ * never queried relationally.
+ */
+export interface OwnershipSnapshot {
+  capturedAt: string;
+  level: ScopeLevel | null;
+  chain: {
+    customerId: string;
+    customerName: string;
+    projectId: string;
+    projectName: string;
+    serviceId: string;
+    serviceName: string;
+    accountMapId: string;
+    accountAlias: string | null;
+    environment: string | null;
+  };
+  order: { contactId: string; name: string; department: string | null }[];
+}
+
+export function buildOwnershipSnapshot(info: OwnershipInfo): OwnershipSnapshot {
+  return {
+    capturedAt: new Date().toISOString(),
+    level: info.responsibility.level,
+    chain: {
+      customerId: info.chain.customer.id,
+      customerName: info.chain.customer.name,
+      projectId: info.chain.project.id,
+      projectName: info.chain.project.name,
+      serviceId: info.chain.service.id,
+      serviceName: info.chain.service.name,
+      accountMapId: info.chain.account.id,
+      accountAlias: info.chain.account.alias,
+      environment: info.chain.account.environment,
+    },
+    order: info.contacts.map((c) => ({
+      contactId: c.id,
+      name: c.name,
+      department: c.department,
+    })),
+  };
+}
+
+/**
+ * Defensive read of the stored JSON — old rows predate the column and a
+ * malformed value must degrade to "no snapshot", never crash a page.
+ */
+export function parseOwnershipSnapshot(raw: unknown): OwnershipSnapshot | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const s = raw as Record<string, unknown>;
+  const chain = s.chain as Record<string, unknown> | undefined;
+  if (
+    typeof chain !== "object" ||
+    chain === null ||
+    typeof chain.customerName !== "string" ||
+    typeof chain.serviceName !== "string" ||
+    !Array.isArray(s.order)
+  ) {
+    return null;
+  }
+  return s as unknown as OwnershipSnapshot;
+}

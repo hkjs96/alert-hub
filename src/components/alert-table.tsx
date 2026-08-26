@@ -1,12 +1,16 @@
 import Link from "next/link";
 import type { getAlerts } from "@/server/alerts";
-import type { OwnershipInfo } from "@/server/org";
+import { parseOwnershipSnapshot, type OwnershipInfo } from "@/server/org";
 import { levelLabel } from "@/lib/org/resolve";
 import { SeverityBadge, StatusBadge } from "@/components/badges";
 
 type AlertRow = Awaited<ReturnType<typeof getAlerts>>[number];
 
-/** 담당 cell: resolved 1순위, or one of the two "can't resolve" states. */
+/**
+ * 담당 cell. Priority: the fire-time snapshot (who was actually notified),
+ * then the live resolution (legacy rows / received-while-unassigned), then the
+ * two "can't resolve" states.
+ */
 function OwnerCell({
   alert,
   ownership,
@@ -14,6 +18,23 @@ function OwnerCell({
   alert: AlertRow;
   ownership: Map<string, OwnershipInfo>;
 }) {
+  const snap = parseOwnershipSnapshot(alert.ownershipSnapshot);
+  if (snap && snap.order.length > 0) {
+    return (
+      <span
+        className="text-slate-800"
+        title={`수신 시점 스냅샷 · ${levelLabel(snap.level)} 단계 · ${snap.order
+          .map((o) => o.name)
+          .join(" → ")}`}
+      >
+        {snap.order[0].name}
+        {snap.order.length > 1 ? (
+          <span className="text-slate-400"> +{snap.order.length - 1}</span>
+        ) : null}
+      </span>
+    );
+  }
+
   if (!alert.accountId) {
     return (
       <span className="text-slate-300" title="페이로드에 AWS 계정 정보가 없는 알람입니다">

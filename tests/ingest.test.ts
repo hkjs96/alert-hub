@@ -23,7 +23,12 @@ vi.mock("@/lib/prisma", () => ({
 
 vi.mock("@/lib/notify", () => ({ notifyAll: mocks.notifyAll }));
 
-vi.mock("@/server/org", () => ({ getOwnershipByAwsAccount: mocks.ownership }));
+vi.mock("@/server/org", async (importOriginal) => ({
+  // buildOwnershipSnapshot은 순수 함수라 실제 구현을 쓴다 — 스냅샷 형태까지
+  // 테스트가 검증하게 된다. DB를 만지는 조회만 모킹.
+  ...(await importOriginal<typeof import("@/server/org")>()),
+  getOwnershipByAwsAccount: mocks.ownership,
+}));
 
 import { ingestAlert } from "@/server/alerts";
 
@@ -165,18 +170,25 @@ describe("ingestAlert — update path", () => {
   });
 });
 
+const OWNERSHIP = {
+  chain: {
+    customer: { id: "cust1", name: "네오위즈" },
+    project: { id: "proj1", name: "게임플랫폼" },
+    service: { id: "svc1", name: "결제서비스" },
+    account: { id: "acc1", accountId: "123456789012", alias: "payment-prod", environment: "prd" },
+  },
+  responsibility: { level: "service" as const, order: ["c1", "c2"], primaryId: "c1" },
+  contacts: [
+    { id: "c1", name: "최민서", department: "인프라팀", slackId: "U123" },
+    { id: "c2", name: "김도윤", department: "SRE팀", slackId: null },
+  ],
+};
+
 describe("ingestAlert — FIRING 통지에 담당 순서를 싣는다", () => {
   it("계정이 체인으로 해석되면 순서대로 assignees가 전달된다", async () => {
     mocks.findUnique.mockResolvedValue(null);
     mocks.create.mockResolvedValue({ id: "a1" });
-    mocks.ownership.mockResolvedValue({
-      chain: {},
-      responsibility: { level: "service", order: ["c1", "c2"], primaryId: "c1" },
-      contacts: [
-        { id: "c1", name: "최민서", department: "인프라팀", slackId: "U123" },
-        { id: "c2", name: "김도윤", department: "SRE팀", slackId: null },
-      ],
-    });
+    mocks.ownership.mockResolvedValue(OWNERSHIP);
 
     await ingestAlert(alert({ accountId: "123456789012" }));
 
@@ -208,5 +220,73 @@ describe("ingestAlert — FIRING 통지에 담당 순서를 싣는다", () => {
 
     expect(mocks.notifyAll).toHaveBeenCalledOnce();
     expect(mocks.notifyAll.mock.calls[0][1]).toEqual({ alertId: "a1" });
+  });
+});
+
+describe("ingestAlert — 수신 시점 스냅샷 (BR-05)", () => {
+  it("신규 생성 시 체인+순서가 스냅샷으로 얼려진다", async () => {
+    mocks.findUnique.mockResolvedValue(null);
+    mocks.create.mockResolvedValue({ id: "a1" });
+    mocks.ownership.mockResolvedValue(OWNERSHIP);
+
+    await ingestAlert(alert({ accountId: "123456789012" }));
+
+    const snap = mocks.create.mock.calls[0][0].data.ownershipSnapshot;
+    expect(snap.level).toBe("service");
+    expect(snap.chain.customerName).toBe("네오위즈");
+    expect(snap.chain.serviceName).toBe("결제서비스");
+    expect(snap.order.map((o: { name: string }) => o.name)).toEqual([
+      "최민서",
+      "김도윤",
+    ]);
+    expect(typeof snap.capturedAt).toBe("string");
+  });
+
+  it("FIRING이 아닌 신규 접수도 스냅샷은 저장하고 통지만 건너뛴다", async () => {
+    mocks.findUnique.mockResolvedValue(null);
+    mocks.create.mockResolvedValue({ id: "a1" });
+    mocks.ownership.mockResolvedValue(OWNERSHIP);
+
+    await ingestAlert(alert({ status: "RESOLVED", accountId: "123456789012" }));
+
+    expect(mocks.create.mock.calls[0][0].data.ownershipSnapshot).toBeDefined();
+    expect(mocks.notifyAll).not.toHaveBeenCalled();
+  });
+
+  it("재발화(FIRING 전환) 승자는 스냅샷을 그때의 순서로 갱신한다", async () => {
+    mocks.findUnique.mockResolvedValue({ id: "a1" });
+    mocks.updateMany.mockResolvedValue({ count: 1 }); // 전환 가드 매치
+    mocks.ownership.mockResolvedValue(OWNERSHIP);
+
+    await ingestAlert(alert({ accountId: "123456789012" }));
+
+    // 1번째 updateMany = 본문 갱신(count++), 2번째 = 스냅샷 갱신
+    expect(mocks.updateMany).toHaveBeenCalledTimes(2);
+    const snapCall = mocks.updateMany.mock.calls[1][0];
+    expect(snapCall.data.ownershipSnapshot.order[0].name).toBe("최민서");
+    expect(mocks.notifyAll).toHaveBeenCalledOnce();
+  });
+
+  it("이미 FIRING인 중복 수신은 스냅샷을 건드리지 않는다", async () => {
+    mocks.findUnique.mockResolvedValue({ id: "a1" });
+    mocks.updateMany.mockResolvedValue({ count: 0 }); // 전환 아님
+    mocks.ownership.mockResolvedValue(OWNERSHIP);
+
+    await ingestAlert(alert({ accountId: "123456789012" }));
+
+    expect(mocks.ownership).not.toHaveBeenCalled();
+    expect(
+      mocks.updateMany.mock.calls.some((c) => c[0].data.ownershipSnapshot),
+    ).toBe(false);
+  });
+
+  it("미매핑 계정은 스냅샷 없이 저장된다", async () => {
+    mocks.findUnique.mockResolvedValue(null);
+    mocks.create.mockResolvedValue({ id: "a1" });
+    mocks.ownership.mockResolvedValue(null);
+
+    await ingestAlert(alert({ accountId: "999999999999" }));
+
+    expect(mocks.create.mock.calls[0][0].data.ownershipSnapshot).toBeUndefined();
   });
 });

@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAlert } from "@/server/alerts";
-import { getOwnershipByAwsAccount, type OwnershipInfo } from "@/server/org";
+import {
+  getOwnershipByAwsAccount,
+  parseOwnershipSnapshot,
+  type OwnershipInfo,
+  type OwnershipSnapshot,
+} from "@/server/org";
 import { levelLabel } from "@/lib/org/resolve";
 import { SeverityBadge, StatusBadge } from "@/components/badges";
 
@@ -22,10 +27,125 @@ function Field({ label, value }: { label: string; value?: string | null }) {
 }
 
 /**
- * 담당 · 조직 패널 — the people side of the alert. Reads the CURRENT
- * assignment (no fire-time snapshot yet, see docs/org-model.md), so reordering
- * upstream changes what past alerts display too.
+ * 담당 · 조직 패널 — the people side of the alert.
+ *
+ * A fire-time snapshot, when present, is the authority: it shows who was
+ * actually notified, and reordering the team later must not rewrite it. The
+ * live resolution is rendered as a secondary "현재 등록" hint only when it
+ * differs. Rows without a snapshot (legacy, or received while unassigned)
+ * fall back to the live resolution.
  */
+function SnapshotPanel({
+  snapshot,
+  current,
+}: {
+  snapshot: OwnershipSnapshot;
+  current: OwnershipInfo | null;
+}) {
+  const { chain } = snapshot;
+  const escalationHref = `/admin/escalation?customerId=${chain.customerId}&projectId=${chain.projectId}&serviceId=${chain.serviceId}&level=${snapshot.level === "account" ? "service" : (snapshot.level ?? "service")}`;
+
+  const currentIds = current ? current.contacts.map((c) => c.id).join(",") : null;
+  const snapIds = snapshot.order.map((o) => o.contactId).join(",");
+  const driftsFromCurrent =
+    !current ||
+    current.responsibility.level !== snapshot.level ||
+    currentIds !== snapIds;
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
+        담당 · 조직 <span className="font-normal normal-case">(수신 시점 스냅샷)</span>
+      </h2>
+
+      <div className="flex flex-wrap items-center gap-1 text-sm text-slate-600">
+        <Link
+          href={`/admin/customers/${chain.customerId}`}
+          className="font-medium text-slate-800 hover:text-blue-600 hover:underline"
+        >
+          {chain.customerName}
+        </Link>
+        <span className="text-slate-300">/</span>
+        <Link
+          href={`/admin/projects/${chain.projectId}`}
+          className="hover:text-blue-600 hover:underline"
+        >
+          {chain.projectName}
+        </Link>
+        <span className="text-slate-300">/</span>
+        <Link
+          href={`/admin/services/${chain.serviceId}`}
+          className="hover:text-blue-600 hover:underline"
+        >
+          {chain.serviceName}
+        </Link>
+        {chain.accountAlias ? (
+          <>
+            <span className="text-slate-300">/</span>
+            <span className="font-mono text-xs">{chain.accountAlias}</span>
+          </>
+        ) : null}
+        {chain.environment ? (
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">
+            {chain.environment}
+          </span>
+        ) : null}
+      </div>
+
+      <p className="mb-2 mt-4 text-xs text-slate-400">
+        {levelLabel(snapshot.level)} 단계의 순서 · 알람이 접수/재발화됐을 때 통지된
+        기준입니다 ({formatTime(new Date(snapshot.capturedAt))})
+      </p>
+      <ol className="space-y-1.5">
+        {snapshot.order.map((o, i) => (
+          <li key={o.contactId} className="flex items-center gap-2 text-sm">
+            <span
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-xs font-semibold tabular-nums ${
+                i === 0 ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              {i + 1}
+            </span>
+            <span className={i === 0 ? "font-medium text-slate-900" : "text-slate-700"}>
+              {o.name}
+            </span>
+            {o.department ? (
+              <span className="text-xs text-slate-400">{o.department}</span>
+            ) : null}
+            {i === 0 ? (
+              <span className="text-xs font-medium text-blue-600">1순위</span>
+            ) : null}
+          </li>
+        ))}
+      </ol>
+
+      {driftsFromCurrent ? (
+        <p className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500">
+          {current ? (
+            <>
+              현재 등록 기준과 다릅니다 — 지금은{" "}
+              {current.contacts.length > 0 ? (
+                <span className="text-slate-700">
+                  {current.contacts.map((c) => c.name).join(" → ")} (
+                  {levelLabel(current.responsibility.level)} 단계)
+                </span>
+              ) : (
+                <span className="text-slate-700">담당자 미등록</span>
+              )}{" "}
+              ·{" "}
+              <Link href={escalationHref} className="underline hover:text-blue-600">
+                순서 편집
+              </Link>
+            </>
+          ) : (
+            <>현재 이 계정은 어느 서비스에도 매핑되어 있지 않습니다.</>
+          )}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 function OwnershipPanel({
   accountId,
   info,
@@ -151,6 +271,7 @@ export default async function AlertDetailPage({
   const ownership = alert.accountId
     ? await getOwnershipByAwsAccount(alert.accountId)
     : null;
+  const snapshot = parseOwnershipSnapshot(alert.ownershipSnapshot);
 
   return (
     <div className="space-y-6">
@@ -168,7 +289,9 @@ export default async function AlertDetailPage({
         <p className="text-slate-600">{alert.description}</p>
       ) : null}
 
-      {alert.accountId ? (
+      {snapshot && snapshot.order.length > 0 ? (
+        <SnapshotPanel snapshot={snapshot} current={ownership} />
+      ) : alert.accountId ? (
         <OwnershipPanel accountId={alert.accountId} info={ownership} />
       ) : null}
 

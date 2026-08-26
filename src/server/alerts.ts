@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { notifyAll, type NotifyContext } from "@/lib/notify";
-import { getOwnershipByAwsAccount } from "@/server/org";
+import { buildOwnershipSnapshot, getOwnershipByAwsAccount } from "@/server/org";
 import type { AlertStatus, NormalizedAlert } from "@/lib/types";
 
 // Columns written when an alert is first created. Optional fields land as
@@ -64,29 +64,42 @@ function isUniqueViolation(err: unknown): boolean {
 }
 
 /**
- * Notify context for a FIRING transition: the alert id plus, when the
- * account resolves to a chain with an assignment, the ordered assignees so
- * Slack can name 1순위. Resolution errors are logged and swallowed — a broken
- * org lookup must never cost the notification itself. (No snapshot yet: this
- * reads the CURRENT assignment, see docs/org-model.md.)
+ * One resolution, two consumers: the Slack context (who to name) and the
+ * 수신 시점 스냅샷 frozen onto the Alert row (BR-05). Resolution errors are
+ * logged and swallowed — a broken org lookup must never cost the notification
+ * or the ingest itself.
  */
-async function notifyContextFor(
+interface IngestOwnership {
+  assignees?: NonNullable<NotifyContext["assignees"]>;
+  snapshot?: Prisma.InputJsonValue;
+}
+
+async function resolveIngestOwnership(
   n: NormalizedAlert,
-  alertId: string,
-): Promise<NotifyContext> {
-  const ctx: NotifyContext = { alertId };
-  if (!n.accountId) return ctx;
+): Promise<IngestOwnership> {
+  if (!n.accountId) return {};
   try {
     const ownership = await getOwnershipByAwsAccount(n.accountId);
-    if (ownership && ownership.contacts.length > 0) {
-      ctx.assignees = ownership.contacts.map((c) => ({
+    if (!ownership) return {}; // unmapped — nothing to freeze
+    const out: IngestOwnership = {
+      snapshot: buildOwnershipSnapshot(ownership) as unknown as Prisma.InputJsonValue,
+    };
+    if (ownership.contacts.length > 0) {
+      out.assignees = ownership.contacts.map((c) => ({
         name: c.name,
         slackId: c.slackId,
       }));
     }
+    return out;
   } catch (err) {
     console.error("[ingest] ownership resolution failed", err);
+    return {};
   }
+}
+
+function toNotifyContext(alertId: string, own: IngestOwnership): NotifyContext {
+  const ctx: NotifyContext = { alertId };
+  if (own.assignees) ctx.assignees = own.assignees;
   return ctx;
 }
 
@@ -124,14 +137,20 @@ export async function ingestAlert(n: NormalizedAlert): Promise<IngestResult> {
   });
 
   if (!existing) {
+    // 첫 접수 시점의 담당을 함께 얼린다 — 이 순서가 화면의 "담당"이 된다.
+    const own = await resolveIngestOwnership(n);
     try {
       const alert = await prisma.alert.create({
-        data: { ...toCreateData(n), events: { create: eventData } },
+        data: {
+          ...toCreateData(n),
+          ownershipSnapshot: own.snapshot,
+          events: { create: eventData },
+        },
         select: { id: true },
       });
       const firedTransition = n.status === "FIRING";
       if (firedTransition) {
-        await notifyAll(n, await notifyContextFor(n, alert.id));
+        await notifyAll(n, toNotifyContext(alert.id, own));
       }
       return { alertId: alert.id, status: n.status, firedTransition, created: true };
     } catch (err) {
@@ -182,7 +201,16 @@ async function updateExisting(
   await prisma.alertEvent.create({ data: { alertId, ...eventData } });
 
   if (firedTransition) {
-    await notifyAll(n, await notifyContextFor(n, alertId));
+    const own = await resolveIngestOwnership(n);
+    if (own.snapshot) {
+      // Re-fire refreshes the snapshot: the frozen order is whichever list was
+      // actually notified for the current incident, not the very first one.
+      await prisma.alert.updateMany({
+        where: { fingerprint: n.fingerprint },
+        data: { ownershipSnapshot: own.snapshot },
+      });
+    }
+    await notifyAll(n, toNotifyContext(alertId, own));
   }
 
   return { alertId, status: n.status, firedTransition, created: false };
