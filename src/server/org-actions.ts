@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import type { ScopeLevel } from "@/lib/org/resolve";
 
@@ -102,6 +103,10 @@ export async function createAccountMap(formData: FormData) {
     },
   });
   revalidateBack(formData, "/admin/customers");
+  // 대시보드의 인라인 매핑 화면은 매핑 후 원래 자리로 돌아간다; 서비스 상세의
+  // 매핑 폼은 redirectTo 없이 제자리에 머문다.
+  const to = optionalString(formData, "redirectTo");
+  if (to && to.startsWith("/")) redirect(to);
 }
 
 export async function deleteAccountMap(formData: FormData) {

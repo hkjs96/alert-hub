@@ -46,9 +46,9 @@ function OwnerCell({
   if (!info) {
     return (
       <Link
-        href="/admin/customers"
+        href={`/admin/map-account?accountId=${alert.accountId}`}
         className="font-medium text-amber-700 hover:underline"
-        title="이 계정이 어느 서비스에도 매핑되어 있지 않습니다 — 서비스 페이지에서 매핑하세요"
+        title="이 계정이 어느 서비스에도 매핑되어 있지 않습니다 — 눌러서 바로 매핑하세요"
       >
         ⚠ 매핑 필요
       </Link>
@@ -75,6 +75,31 @@ function OwnerCell({
 
 function formatTime(date: Date) {
   return new Date(date).toISOString().replace("T", " ").slice(0, 19) + "Z";
+}
+
+/**
+ * 제목 밑 조직 체인 보조라인 + 환경 (§6.1 테이블 요구). Live chain first;
+ * the fire-time snapshot keeps both readable after the mapping is deleted.
+ */
+function chainFacts(
+  alert: AlertRow,
+  ownership: Map<string, OwnershipInfo>,
+): { chain: string | null; environment: string | null } {
+  const info = alert.accountId ? ownership.get(alert.accountId) : undefined;
+  if (info) {
+    return {
+      chain: `${info.chain.customer.name} / ${info.chain.project.name} / ${info.chain.service.name}`,
+      environment: info.chain.account.environment,
+    };
+  }
+  const snap = parseOwnershipSnapshot(alert.ownershipSnapshot);
+  if (snap) {
+    return {
+      chain: `${snap.chain.customerName} / ${snap.chain.projectName} / ${snap.chain.serviceName}`,
+      environment: snap.chain.environment ?? null,
+    };
+  }
+  return { chain: null, environment: null };
 }
 
 export function AlertTable({
@@ -104,17 +129,23 @@ export function AlertTable({
             <th className="px-4 py-3 font-medium">Severity</th>
             <th className="px-4 py-3 font-medium">Status</th>
             <th className="px-4 py-3 font-medium">Title</th>
-            <th className="px-4 py-3 font-medium">Source</th>
             <th className="px-4 py-3 font-medium">Resource</th>
+            <th className="px-4 py-3 font-medium">환경</th>
             <th className="px-4 py-3 font-medium">담당</th>
             <th className="px-4 py-3 font-medium text-right">Count</th>
             <th className="px-4 py-3 font-medium">Last seen</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {alerts.map((a) => (
+          {alerts.map((a) => {
+            const { chain, environment } = chainFacts(a, ownership);
+            return (
             <tr key={a.id} className="hover:bg-slate-50">
-              <td className="px-4 py-3">
+              <td
+                className={`border-l-[3px] px-4 py-3 ${
+                  a.status === "FIRING" ? "border-l-red-500" : "border-l-transparent"
+                }`}
+              >
                 <SeverityBadge severity={a.severity} />
               </td>
               <td className="px-4 py-3">
@@ -127,9 +158,20 @@ export function AlertTable({
                 >
                   {a.title}
                 </Link>
+                {chain ? (
+                  <div className="mt-0.5 text-xs text-slate-400">{chain}</div>
+                ) : null}
               </td>
-              <td className="px-4 py-3 text-slate-600">{a.source}</td>
               <td className="px-4 py-3 text-slate-600">{a.resource ?? "—"}</td>
+              <td className="px-4 py-3">
+                {environment ? (
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                    {environment}
+                  </span>
+                ) : (
+                  <span className="text-slate-300">—</span>
+                )}
+              </td>
               <td className="px-4 py-3 whitespace-nowrap">
                 <OwnerCell alert={a} ownership={ownership} />
               </td>
@@ -140,7 +182,8 @@ export function AlertTable({
                 {formatTime(a.lastSeenAt)}
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>
