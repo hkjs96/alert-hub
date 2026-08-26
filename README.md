@@ -83,6 +83,9 @@ handled. Locally, point both URLs at the same Postgres.
 | `SLACK_WEBHOOK_URL` | no       | Slack Incoming Webhook. Unset ⇒ Slack notifications skipped. |
 | `APP_URL`           | no       | Public base URL; adds an alert deep link to notifications.   |
 | `INGEST_TOKEN`      | no       | If set, requests must carry the token (see below).            |
+| `SMTP_HOST` `SMTP_FROM` | no   | Enable the email notifier. `SMTP_PORT`/`SMTP_SECURE`/`SMTP_USER`/`SMTP_PASS` refine it. |
+| `CRON_SECRET`       | no       | Enables `GET /api/cron/escalate` (자동 에스컬레이션). Unset ⇒ endpoint answers 503. |
+| `ESCALATION_ACK_MINUTES` | no  | 미ack 에스컬레이션 창(분). Default 10.                        |
 
 When `INGEST_TOKEN` is set, senders authenticate with **either** the
 `x-webhook-token: <token>` header **or** a `?token=<token>` query parameter.
@@ -140,8 +143,26 @@ Alerts upsert on `fingerprint`:
 - Generic → `<source>:<title>:<resource>`
 
 Same fingerprint ⇒ the alert is updated and an `AlertEvent` is appended.
-`count` increments **only** on a transition **into** FIRING, and Slack fires on
-that same transition (skipped if `SLACK_WEBHOOK_URL` is unset).
+`count` increments **only** on a transition **into** FIRING, and notifications
+(Slack + email, whichever is configured) fire on that same transition.
+While an alert is ACKNOWLEDGED, provider re-sends of the still-firing alarm
+neither flip the status back nor re-notify — only a resolve/OK does.
+
+## 자동 에스컬레이션 (Phase 3)
+
+`GET /api/cron/escalate` walks every FIRING alert: if nobody acked within
+`ESCALATION_ACK_MINUTES` (default 10) since the fire (or the previous
+escalation), the **next person** in the alert's frozen 수신 시점 스냅샷 order is
+notified via the same channels, and an `ESCALATED` event lands on the timeline.
+The endpoint requires `CRON_SECRET` (`Authorization: Bearer …` or `?secret=`)
+and must be driven by an external scheduler, e.g.:
+
+```cron
+* * * * * curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<host>/api/cron/escalate
+```
+
+Ack(또는 resolve) 하는 순간 사다리는 멈춘다. 재발화는 새 인시던트로 취급되어
+1순위부터 다시 시작한다.
 
 ## Org model & admin (Phase 2a)
 

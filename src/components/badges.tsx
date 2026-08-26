@@ -4,6 +4,8 @@ const STATUS_STYLES: Record<string, string> = {
   FIRING: "bg-red-100 text-red-800 ring-red-600/20",
   RESOLVED: "bg-green-100 text-green-800 ring-green-600/20",
   ACKNOWLEDGED: "bg-blue-100 text-blue-800 ring-blue-600/20",
+  // AlertEvent-only marker written by the escalation cron; never an Alert.status.
+  ESCALATED: "bg-orange-100 text-orange-800 ring-orange-600/20",
   INSUFFICIENT_DATA: "bg-gray-100 text-gray-700 ring-gray-500/20",
 };
 

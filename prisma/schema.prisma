@@ -51,6 +51,13 @@ model Alert {
 
   raw Json?
 
+  // 자동 에스컬레이션 (Phase 3): how many people of the frozen order have been
+  // notified for the current incident (1 = 1순위 only, right after firing) and
+  // when the last escalation went out. Both reset on each transition INTO
+  // FIRING; the cron walks step → step+1 while the alert stays un-acked.
+  escalationStep Int       @default(1)
+  escalatedAt    DateTime?
+
   // 수신 시점 담당 스냅샷 (BR-05): the chain + ordered assignees in effect when
   // the alert was received (refreshed on each transition INTO FIRING, i.e. the
   // order that was actually notified). Display prefers this over the live

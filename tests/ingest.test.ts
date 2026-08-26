@@ -139,6 +139,9 @@ describe("ingestAlert — update path", () => {
     const call = mocks.updateMany.mock.calls[0][0];
     expect(call.where.status).toEqual({ notIn: ["FIRING", "ACKNOWLEDGED"] });
     expect(call.data.count).toEqual({ increment: 1 });
+    // 재발화 = 새 인시던트: 에스컬레이션 사다리도 처음부터
+    expect(call.data.escalationStep).toBe(1);
+    expect(call.data.escalatedAt).toBeNull();
     expect(mocks.notifyAll).toHaveBeenCalledOnce();
   });
 

@@ -477,7 +477,7 @@ ul{margin:6px 0;padding-left:20px} li{margin:3px 0}
   <tr><td>2a · 조직 마스터</td><td>계층·인원·배정 모델 + 등록관리 골격</td><td class="done">✔ 완료 → <b>2a-rev</b>: 정/부/멤버 폐기→순서 모델, 데이터 격리, IA 3메뉴(처리순서 신규·멤버관리 확장), 인라인 신규등록</td></tr>
   <tr><td>2b · 알람↔조직 연결</td><td>enrichment 스냅샷(순번 포함) · 대시보드 개편(다중토글/초기화/미매핑 토글·모달/담당 패널) · 상세(순번 스냅샷·변경 배지)</td><td class="done">✔ 완료</td></tr>
   <tr><td>2c · 액션</td><td>Ack/Resolve 버튼 + 이벤트 기록 · 1순위 통지 반영</td><td class="done">✔ 완료 (통지 반영은 2b에서 선행, ack 고착 규칙 추가)</td></tr>
-  <tr><td>3 · 사람 레이어</td><td>이메일 채널 → 시간 기반 자동 에스컬레이션(1순위 미ack N분→2순위) → Twilio 전화/SMS. order 데이터가 그대로 입력</td><td><span class="later">LATER</span></td></tr>
+  <tr><td>3 · 사람 레이어</td><td>이메일 채널 → 시간 기반 자동 에스컬레이션(1순위 미ack N분→2순위) → Twilio 전화/SMS. order 데이터가 그대로 입력</td><td>진행 중 — <span class="done">✔ 이메일(SMTP notifier)</span> · <span class="done">✔ 자동 에스컬레이션(cron 틱 + ESCALATED 이벤트)</span> · Twilio 전화/SMS <span class="later">LATER</span></td></tr>
 </table></div>
 <div class="card">
   <b>열린 이슈 (v0.2에서 이관, 답 포함)</b>

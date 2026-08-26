@@ -88,6 +88,7 @@ async function resolveIngestOwnership(
       out.assignees = ownership.contacts.map((c) => ({
         name: c.name,
         slackId: c.slackId,
+        email: c.email,
       }));
     }
     return out;
@@ -182,7 +183,8 @@ async function updateExisting(
         fingerprint: n.fingerprint,
         status: { notIn: ["FIRING", "ACKNOWLEDGED"] },
       },
-      data: { ...data, count: { increment: 1 } },
+      // 재발화는 새 인시던트: 에스컬레이션 사다리도 1순위부터 다시 시작한다.
+      data: { ...data, count: { increment: 1 }, escalationStep: 1, escalatedAt: null },
     });
     firedTransition = transitioned.count > 0;
     if (!firedTransition) {
