@@ -137,7 +137,7 @@ describe("ingestAlert — update path", () => {
 
     expect(res.firedTransition).toBe(true);
     const call = mocks.updateMany.mock.calls[0][0];
-    expect(call.where.status).toEqual({ not: "FIRING" });
+    expect(call.where.status).toEqual({ notIn: ["FIRING", "ACKNOWLEDGED"] });
     expect(call.data.count).toEqual({ increment: 1 });
     expect(mocks.notifyAll).toHaveBeenCalledOnce();
   });
@@ -154,6 +154,49 @@ describe("ingestAlert — update path", () => {
     const second = mocks.updateMany.mock.calls[1][0];
     expect(second.data.count).toBeUndefined();
     expect(mocks.notifyAll).not.toHaveBeenCalled();
+  });
+
+  it("ack는 끈끈하다 — FIRING 재수신이 ACKNOWLEDGED를 해제하지 않는다 (2c)", async () => {
+    // Prometheus/Grafana는 계속 firing인 알람을 주기적으로 재전송한다. 가드가
+    // ACKNOWLEDGED에 막혀 count 0 → fallback 갱신은 status를 건드리면 안 된다.
+    mocks.updateMany
+      .mockResolvedValueOnce({ count: 0 }) // guard: FIRING도 ACK도 매치 안 함
+      .mockResolvedValueOnce({ count: 1 });
+
+    const res = await ingestAlert(alert());
+
+    expect(res.firedTransition).toBe(false);
+    const fallback = mocks.updateMany.mock.calls[1][0];
+    expect(fallback.data.status).toBeUndefined(); // ACK 유지
+    expect(fallback.data.count).toBeUndefined(); // 재발화 아님
+    expect(mocks.notifyAll).not.toHaveBeenCalled(); // 재페이징 금지
+    // 수신 사실 자체는 이력에 남는다
+    expect(mocks.eventCreate.mock.calls[0][0].data.status).toBe("FIRING");
+  });
+
+  it("INSUFFICIENT_DATA 플랩도 ACKNOWLEDGED를 해제하지 않는다", async () => {
+    mocks.updateMany
+      .mockResolvedValueOnce({ count: 0 }) // guard: status not ACKNOWLEDGED 미매치
+      .mockResolvedValueOnce({ count: 1 });
+
+    await ingestAlert(alert({ status: "INSUFFICIENT_DATA" }));
+
+    const guard = mocks.updateMany.mock.calls[0][0];
+    expect(guard.where.status).toEqual({ not: "ACKNOWLEDGED" });
+    expect(guard.data.status).toBe("INSUFFICIENT_DATA");
+    const fallback = mocks.updateMany.mock.calls[1][0];
+    expect(fallback.data.status).toBeUndefined();
+  });
+
+  it("RESOLVED(OK) 수신은 ACKNOWLEDGED를 포함한 모든 상태에서 적용된다", async () => {
+    mocks.updateMany.mockResolvedValue({ count: 1 });
+
+    await ingestAlert(alert({ status: "RESOLVED" }));
+
+    expect(mocks.updateMany).toHaveBeenCalledOnce();
+    const call = mocks.updateMany.mock.calls[0][0];
+    expect(call.where.status).toBeUndefined(); // 상태 가드 없음
+    expect(call.data.status).toBe("RESOLVED");
   });
 
   it("always appends to the event history", async () => {

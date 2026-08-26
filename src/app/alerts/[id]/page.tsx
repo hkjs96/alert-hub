@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAlert } from "@/server/alerts";
+import { ackAlert, resolveAlert } from "@/server/alert-actions";
 import {
   getOwnershipByAwsAccount,
   parseOwnershipSnapshot,
@@ -23,6 +24,44 @@ function Field({ label, value }: { label: string; value?: string | null }) {
       <dt className="text-xs uppercase tracking-wide text-slate-400">{label}</dt>
       <dd className="mt-0.5 break-words text-sm text-slate-800">{value}</dd>
     </div>
+  );
+}
+
+/**
+ * Ack / Resolve (Phase 2c). Buttons are disabled — not hidden — outside their
+ * legal source states, so the state machine stays visible: ack only takes a
+ * FIRING alert, resolve takes FIRING or ACKNOWLEDGED, RESOLVED is terminal
+ * until the alarm re-fires. The actions are guarded server-side too, so a
+ * stale tab clicking an enabled button is still a no-op.
+ */
+function AlertActions({ id, status }: { id: string; status: string }) {
+  const canAck = status === "FIRING";
+  const canResolve = status === "FIRING" || status === "ACKNOWLEDGED";
+  return (
+    <span className="ml-auto flex items-center gap-2">
+      <form action={ackAlert}>
+        <input type="hidden" name="id" value={id} />
+        <button
+          disabled={!canAck}
+          title={canAck ? undefined : "FIRING 상태에서만 Ack할 수 있습니다"}
+          className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+        >
+          Acknowledge
+        </button>
+      </form>
+      <form action={resolveAlert}>
+        <input type="hidden" name="id" value={id} />
+        <button
+          disabled={!canResolve}
+          title={
+            canResolve ? undefined : "이미 종료되었거나 전이할 수 없는 상태입니다"
+          }
+          className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+        >
+          Resolve
+        </button>
+      </form>
+    </span>
   );
 }
 
@@ -283,6 +322,7 @@ export default async function AlertDetailPage({
         <h1 className="text-2xl font-semibold text-slate-900">{alert.title}</h1>
         <SeverityBadge severity={alert.severity} />
         <StatusBadge status={alert.status} />
+        <AlertActions id={alert.id} status={alert.status} />
       </div>
 
       {alert.description ? (

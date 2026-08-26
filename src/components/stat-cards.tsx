@@ -19,6 +19,13 @@ export function StatCards({ stats }: { stats: AlertStats }) {
       accent: "text-red-600",
     },
     {
+      key: "acknowledged",
+      label: "Acked",
+      value: stats.acknowledged,
+      href: "/?status=ACKNOWLEDGED",
+      accent: "text-blue-600",
+    },
+    {
       key: "resolved",
       label: "Resolved",
       value: stats.resolved,
@@ -42,7 +49,7 @@ export function StatCards({ stats }: { stats: AlertStats }) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
       {cards.map((c) => (
         <Link
           key={c.key}

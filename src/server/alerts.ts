@@ -171,18 +171,43 @@ async function updateExisting(
   let firedTransition = false;
 
   if (n.status === "FIRING") {
-    // Guarded update: only matches while the stored status is not FIRING, so
-    // the transition (count++ + notify) happens exactly once even when several
-    // FIRING events land concurrently.
+    // Guarded update: only matches while the stored status is neither FIRING
+    // nor ACKNOWLEDGED, so the transition (count++ + notify) happens exactly
+    // once even when several FIRING events land concurrently. ACKNOWLEDGED is
+    // excluded because an ack is sticky (2c): Prometheus/Grafana re-send a
+    // still-firing alarm on an interval, and each resend must not un-ack the
+    // incident or re-page — only resolve/OK moves it on.
     const transitioned = await prisma.alert.updateMany({
-      where: { fingerprint: n.fingerprint, status: { not: "FIRING" } },
+      where: {
+        fingerprint: n.fingerprint,
+        status: { notIn: ["FIRING", "ACKNOWLEDGED"] },
+      },
       data: { ...data, count: { increment: 1 } },
     });
     firedTransition = transitioned.count > 0;
     if (!firedTransition) {
-      await prisma.alert.updateMany({ where: { fingerprint: n.fingerprint }, data });
+      // Already FIRING (refresh fields) or ACKNOWLEDGED (keep the ack): the
+      // payload's fields still apply, the status does not.
+      await prisma.alert.updateMany({
+        where: { fingerprint: n.fingerprint },
+        data: { ...data, status: undefined },
+      });
+    }
+  } else if (n.status === "INSUFFICIENT_DATA") {
+    // NoData flaps must not clear a human's ack either.
+    const moved = await prisma.alert.updateMany({
+      where: { fingerprint: n.fingerprint, status: { not: "ACKNOWLEDGED" } },
+      data,
+    });
+    if (moved.count === 0) {
+      await prisma.alert.updateMany({
+        where: { fingerprint: n.fingerprint },
+        data: { ...data, status: undefined },
+      });
     }
   } else {
+    // RESOLVED (or a provider-side ACKNOWLEDGED, e.g. PagerDuty) applies from
+    // any state — resolve/OK is exactly what releases an ack.
     await prisma.alert.updateMany({ where: { fingerprint: n.fingerprint }, data });
   }
 
@@ -254,17 +279,19 @@ export async function getAlert(id: string) {
 
 export interface AlertStats {
   firing: number;
+  acknowledged: number;
   resolved: number;
   insufficient: number;
   total: number;
 }
 
 export async function getStats(): Promise<AlertStats> {
-  const [firing, resolved, insufficient, total] = await Promise.all([
+  const [firing, acknowledged, resolved, insufficient, total] = await Promise.all([
     prisma.alert.count({ where: { status: "FIRING" } }),
+    prisma.alert.count({ where: { status: "ACKNOWLEDGED" } }),
     prisma.alert.count({ where: { status: "RESOLVED" } }),
     prisma.alert.count({ where: { status: "INSUFFICIENT_DATA" } }),
     prisma.alert.count(),
   ]);
-  return { firing, resolved, insufficient, total };
+  return { firing, acknowledged, resolved, insufficient, total };
 }
