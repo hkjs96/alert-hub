@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   updateMany: vi.fn(),
   eventCreate: vi.fn(),
   notifyAll: vi.fn(),
+  ownership: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -21,6 +22,8 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 vi.mock("@/lib/notify", () => ({ notifyAll: mocks.notifyAll }));
+
+vi.mock("@/server/org", () => ({ getOwnershipByAwsAccount: mocks.ownership }));
 
 import { ingestAlert } from "@/server/alerts";
 
@@ -42,6 +45,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.eventCreate.mockResolvedValue({ id: "ev1" });
   mocks.notifyAll.mockResolvedValue(undefined);
+  mocks.ownership.mockResolvedValue(null); // 기본: 미매핑/미배정
 });
 
 describe("ingestAlert — create path", () => {
@@ -158,5 +162,51 @@ describe("ingestAlert — update path", () => {
       status: "RESOLVED",
       stateReason: "back to normal",
     });
+  });
+});
+
+describe("ingestAlert — FIRING 통지에 담당 순서를 싣는다", () => {
+  it("계정이 체인으로 해석되면 순서대로 assignees가 전달된다", async () => {
+    mocks.findUnique.mockResolvedValue(null);
+    mocks.create.mockResolvedValue({ id: "a1" });
+    mocks.ownership.mockResolvedValue({
+      chain: {},
+      responsibility: { level: "service", order: ["c1", "c2"], primaryId: "c1" },
+      contacts: [
+        { id: "c1", name: "최민서", department: "인프라팀", slackId: "U123" },
+        { id: "c2", name: "김도윤", department: "SRE팀", slackId: null },
+      ],
+    });
+
+    await ingestAlert(alert({ accountId: "123456789012" }));
+
+    expect(mocks.ownership).toHaveBeenCalledWith("123456789012");
+    const ctx = mocks.notifyAll.mock.calls[0][1];
+    expect(ctx.alertId).toBe("a1");
+    expect(ctx.assignees).toEqual([
+      { name: "최민서", slackId: "U123" },
+      { name: "김도윤", slackId: null },
+    ]);
+  });
+
+  it("계정이 없으면 해석을 시도하지 않는다", async () => {
+    mocks.findUnique.mockResolvedValue(null);
+    mocks.create.mockResolvedValue({ id: "a1" });
+
+    await ingestAlert(alert());
+
+    expect(mocks.ownership).not.toHaveBeenCalled();
+    expect(mocks.notifyAll.mock.calls[0][1]).toEqual({ alertId: "a1" });
+  });
+
+  it("해석이 죽어도 통지는 나간다", async () => {
+    mocks.findUnique.mockResolvedValue(null);
+    mocks.create.mockResolvedValue({ id: "a1" });
+    mocks.ownership.mockRejectedValue(new Error("db down"));
+
+    await ingestAlert(alert({ accountId: "123456789012" }));
+
+    expect(mocks.notifyAll).toHaveBeenCalledOnce();
+    expect(mocks.notifyAll.mock.calls[0][1]).toEqual({ alertId: "a1" });
   });
 });

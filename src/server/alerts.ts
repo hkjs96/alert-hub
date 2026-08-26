@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { notifyAll } from "@/lib/notify";
+import { notifyAll, type NotifyContext } from "@/lib/notify";
+import { getOwnershipByAwsAccount } from "@/server/org";
 import type { AlertStatus, NormalizedAlert } from "@/lib/types";
 
 // Columns written when an alert is first created. Optional fields land as
@@ -62,6 +63,33 @@ function isUniqueViolation(err: unknown): boolean {
   );
 }
 
+/**
+ * Notify context for a FIRING transition: the alert id plus, when the
+ * account resolves to a chain with an assignment, the ordered assignees so
+ * Slack can name 1순위. Resolution errors are logged and swallowed — a broken
+ * org lookup must never cost the notification itself. (No snapshot yet: this
+ * reads the CURRENT assignment, see docs/org-model.md.)
+ */
+async function notifyContextFor(
+  n: NormalizedAlert,
+  alertId: string,
+): Promise<NotifyContext> {
+  const ctx: NotifyContext = { alertId };
+  if (!n.accountId) return ctx;
+  try {
+    const ownership = await getOwnershipByAwsAccount(n.accountId);
+    if (ownership && ownership.contacts.length > 0) {
+      ctx.assignees = ownership.contacts.map((c) => ({
+        name: c.name,
+        slackId: c.slackId,
+      }));
+    }
+  } catch (err) {
+    console.error("[ingest] ownership resolution failed", err);
+  }
+  return ctx;
+}
+
 export interface IngestResult {
   alertId: string;
   status: AlertStatus;
@@ -103,7 +131,7 @@ export async function ingestAlert(n: NormalizedAlert): Promise<IngestResult> {
       });
       const firedTransition = n.status === "FIRING";
       if (firedTransition) {
-        await notifyAll(n, { alertId: alert.id });
+        await notifyAll(n, await notifyContextFor(n, alert.id));
       }
       return { alertId: alert.id, status: n.status, firedTransition, created: true };
     } catch (err) {
@@ -154,7 +182,7 @@ async function updateExisting(
   await prisma.alertEvent.create({ data: { alertId, ...eventData } });
 
   if (firedTransition) {
-    await notifyAll(n, { alertId });
+    await notifyAll(n, await notifyContextFor(n, alertId));
   }
 
   return { alertId, status: n.status, firedTransition, created: false };

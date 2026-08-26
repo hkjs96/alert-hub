@@ -96,3 +96,11 @@ export function inheritedOrderFor(
   }
   return EMPTY;
 }
+
+/** UI label for the level a resolution was adopted from. */
+export function levelLabel(level: ScopeLevel | null): string {
+  if (!level) return "미배정";
+  return { account: "계정", service: "서비스", project: "프로젝트", customer: "고객사" }[
+    level
+  ];
+}

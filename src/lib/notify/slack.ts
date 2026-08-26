@@ -24,6 +24,14 @@ function buildText(alert: NormalizedAlert, ctx: NotifyContext): string {
   if (alert.region) meta.push(`region: ${alert.region}`);
   lines.push(meta.join(" · "));
 
+  if (ctx.assignees && ctx.assignees.length > 0) {
+    const [first, ...rest] = ctx.assignees;
+    const who = first.slackId ? `<@${first.slackId}> (${first.name})` : first.name;
+    let line = `담당 1순위: ${who}`;
+    if (rest.length) line += ` · 다음 순서: ${rest.map((a) => a.name).join(" → ")}`;
+    lines.push(line);
+  }
+
   if (alert.stateReason) lines.push(`> ${alert.stateReason}`);
 
   // Deep link to the alert detail page when the app knows its public URL.

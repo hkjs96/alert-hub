@@ -216,3 +216,127 @@ export async function getContactsByIds(ids: string[]) {
   const byId = new Map(rows.map((c: any) => [c.id, c]));
   return ids.map((id) => byId.get(id)).filter(Boolean) as typeof rows;
 }
+
+// --- Alert-side ownership lookup --------------------------------------------
+
+export interface OwnershipContact {
+  id: string;
+  name: string;
+  department: string | null;
+  slackId: string | null;
+}
+
+export interface OwnershipInfo {
+  chain: ScopeChain;
+  responsibility: Responsibility;
+  /** responsibility.order resolved to people, same order — [0] is 1순위. */
+  contacts: OwnershipContact[];
+}
+
+/**
+ * Resolve ownership for many AWS account ids in three queries total (accounts
+ * with their chains, every assignment on any of those chains, the contacts) —
+ * the dashboard calls this once per page load, so per-alert lookups would be
+ * an N+1 on the hottest screen.
+ *
+ * An id missing from the returned map means the account is unmapped; the
+ * caller distinguishes that from an alert with no account id at all.
+ */
+export async function getOwnershipByAccountIds(
+  awsAccountIds: string[],
+): Promise<Map<string, OwnershipInfo>> {
+  const ids = [...new Set(awsAccountIds)].filter(Boolean);
+  if (!ids.length) return new Map();
+
+  const accounts = await prisma.awsAccountMap.findMany({
+    where: { accountId: { in: ids } },
+    include: {
+      service: { include: { project: { include: { customer: true } } } },
+    },
+  });
+  if (!accounts.length) return new Map();
+
+  const rows = await prisma.assignment.findMany({
+    where: {
+      OR: [
+        { accountId: { in: accounts.map((a: any) => a.id) } },
+        { serviceId: { in: [...new Set(accounts.map((a: any) => a.serviceId))] } },
+        { projectId: { in: [...new Set(accounts.map((a: any) => a.service.projectId))] } },
+        {
+          customerId: {
+            in: [...new Set(accounts.map((a: any) => a.service.project.customerId))],
+          },
+        },
+      ],
+    },
+  });
+
+  const contactIds = [...new Set(rows.map((r: any) => r.contactId))];
+  const contacts = contactIds.length
+    ? await prisma.contact.findMany({ where: { id: { in: contactIds } } })
+    : [];
+  const contactById = new Map(contacts.map((c: any) => [c.id, c]));
+
+  const map = new Map<string, OwnershipInfo>();
+  for (const account of accounts) {
+    const service = account.service;
+    const project = service.project;
+    const customer = project.customer;
+
+    // Only rows sitting on THIS chain — equality against the chain's own ids
+    // keeps another tenant's service/project rows out.
+    const lite: AssignmentLite[] = rows
+      .filter(
+        (r: any) =>
+          r.accountId === account.id ||
+          r.serviceId === service.id ||
+          r.projectId === project.id ||
+          r.customerId === customer.id,
+      )
+      .map((r: any) => ({
+        contactId: r.contactId,
+        order: r.order ?? 0,
+        level: (r.accountId
+          ? "account"
+          : r.serviceId
+            ? "service"
+            : r.projectId
+              ? "project"
+              : "customer") as ScopeLevel,
+      }));
+
+    const responsibility = resolveResponsibility(lite);
+    map.set(account.accountId, {
+      chain: {
+        account: {
+          id: account.id,
+          accountId: account.accountId,
+          alias: account.alias,
+          environment: account.environment,
+        },
+        service: { id: service.id, name: service.name },
+        project: { id: project.id, name: project.name },
+        customer: { id: customer.id, name: customer.name },
+      },
+      responsibility,
+      contacts: responsibility.order
+        .map((id) => contactById.get(id))
+        .filter(Boolean)
+        .map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          department: c.department,
+          slackId: c.slackId,
+        })),
+    });
+  }
+  return map;
+}
+
+/** Single-account form of getOwnershipByAccountIds. null = unmapped. */
+export async function getOwnershipByAwsAccount(
+  awsAccountId: string,
+): Promise<OwnershipInfo | null> {
+  const map = await getOwnershipByAccountIds([awsAccountId]);
+  return map.get(awsAccountId) ?? null;
+}

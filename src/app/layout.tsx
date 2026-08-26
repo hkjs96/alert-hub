@@ -22,7 +22,7 @@ export default function RootLayout({
             </Link>
             <div className="flex items-center gap-4">
               <Link href="/admin" className="text-sm text-slate-600 hover:text-blue-600">
-                관리
+                등록관리
               </Link>
               <span className="text-sm text-slate-400">event plane · MVP</span>
             </div>

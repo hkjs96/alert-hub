@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAlert } from "@/server/alerts";
+import { getOwnershipByAwsAccount, type OwnershipInfo } from "@/server/org";
+import { levelLabel } from "@/lib/org/resolve";
 import { SeverityBadge, StatusBadge } from "@/components/badges";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +21,125 @@ function Field({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
+/**
+ * 담당 · 조직 패널 — the people side of the alert. Reads the CURRENT
+ * assignment (no fire-time snapshot yet, see docs/org-model.md), so reordering
+ * upstream changes what past alerts display too.
+ */
+function OwnershipPanel({
+  accountId,
+  info,
+}: {
+  accountId: string;
+  info: OwnershipInfo | null;
+}) {
+  if (!info) {
+    return (
+      <section className="rounded-lg border border-amber-200 bg-amber-50 p-6">
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-amber-700">
+          담당 · 조직
+        </h2>
+        <p className="text-sm text-amber-800">
+          계정{" "}
+          <code className="rounded bg-white px-1 py-0.5 font-mono text-xs">
+            {accountId}
+          </code>
+          이(가) 어느 서비스에도 매핑되어 있지 않아 담당을 결정할 수 없습니다.{" "}
+          <Link href="/admin/customers" className="font-medium underline">
+            조직 · 담당자 관리
+          </Link>
+          의 서비스 페이지에서 이 계정을 매핑하면 담당이 잡힙니다.
+        </p>
+      </section>
+    );
+  }
+
+  const { chain, responsibility, contacts } = info;
+  const escalationHref = `/admin/escalation?customerId=${chain.customer.id}&projectId=${chain.project.id}&serviceId=${chain.service.id}&level=${responsibility.level === "account" ? "service" : (responsibility.level ?? "service")}`;
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
+        담당 · 조직
+      </h2>
+
+      <div className="flex flex-wrap items-center gap-1 text-sm text-slate-600">
+        <Link
+          href={`/admin/customers/${chain.customer.id}`}
+          className="font-medium text-slate-800 hover:text-blue-600 hover:underline"
+        >
+          {chain.customer.name}
+        </Link>
+        <span className="text-slate-300">/</span>
+        <Link
+          href={`/admin/projects/${chain.project.id}`}
+          className="hover:text-blue-600 hover:underline"
+        >
+          {chain.project.name}
+        </Link>
+        <span className="text-slate-300">/</span>
+        <Link
+          href={`/admin/services/${chain.service.id}`}
+          className="hover:text-blue-600 hover:underline"
+        >
+          {chain.service.name}
+        </Link>
+        <span className="text-slate-300">/</span>
+        <span className="font-mono text-xs">
+          {chain.account.alias ?? chain.account.accountId}
+        </span>
+        {chain.account.environment ? (
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">
+            {chain.account.environment}
+          </span>
+        ) : null}
+      </div>
+
+      {contacts.length === 0 ? (
+        <p className="mt-4 text-sm text-slate-400">
+          체인 어느 단계에도 담당자가 등록되어 있지 않습니다 —{" "}
+          <Link href={escalationHref} className="underline hover:text-blue-600">
+            알람 처리 순서
+          </Link>
+          에서 등록하세요.
+        </p>
+      ) : (
+        <>
+          <p className="mb-2 mt-4 text-xs text-slate-400">
+            {levelLabel(responsibility.level)} 단계의 순서가 적용됩니다 (현재 등록
+            기준) ·{" "}
+            <Link href={escalationHref} className="underline hover:text-blue-600">
+              순서 편집
+            </Link>
+          </p>
+          <ol className="space-y-1.5">
+            {contacts.map((c, i) => (
+              <li key={c.id} className="flex items-center gap-2 text-sm">
+                <span
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-xs font-semibold tabular-nums ${
+                    i === 0 ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500"
+                  }`}
+                >
+                  {i + 1}
+                </span>
+                <span className={i === 0 ? "font-medium text-slate-900" : "text-slate-700"}>
+                  {c.name}
+                </span>
+                {c.department ? (
+                  <span className="text-xs text-slate-400">{c.department}</span>
+                ) : null}
+                {i === 0 ? (
+                  <span className="text-xs font-medium text-blue-600">1순위</span>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+    </section>
+  );
+}
+
 export default async function AlertDetailPage({
   params,
 }: {
@@ -26,6 +147,10 @@ export default async function AlertDetailPage({
 }) {
   const alert = await getAlert(params.id);
   if (!alert) notFound();
+
+  const ownership = alert.accountId
+    ? await getOwnershipByAwsAccount(alert.accountId)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -41,6 +166,10 @@ export default async function AlertDetailPage({
 
       {alert.description ? (
         <p className="text-slate-600">{alert.description}</p>
+      ) : null}
+
+      {alert.accountId ? (
+        <OwnershipPanel accountId={alert.accountId} info={ownership} />
       ) : null}
 
       <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">

@@ -5,6 +5,12 @@ import { slackNotifier } from "@/lib/notify/slack";
 export interface NotifyContext {
   /** DB id of the stored alert, for building dashboard deep links. */
   alertId?: string;
+  /**
+   * Notification order resolved at fire time — [0] is 1순위. Absent when the
+   * alert's account is unmapped, unassigned, or resolution failed; notifiers
+   * must degrade to the plain message.
+   */
+  assignees?: { name: string; slackId?: string | null }[];
 }
 
 // A Notifier is any channel that can deliver an alert. Today there is exactly
