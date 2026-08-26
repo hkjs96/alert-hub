@@ -286,6 +286,16 @@ export default async function EscalationPage({
           ))}
         </ol>
 
+        {available.length === 0 && assignments.length === 0 && (
+          <p className="border-t border-slate-100 pt-3 text-xs text-slate-400">
+            추가할 수 있는 인원이 없습니다.{" "}
+            <Link href="/admin/contacts" className="underline hover:text-blue-600">
+              멤버 관리
+            </Link>
+            에서 이 고객사 소속 또는 내부 인원을 먼저 등록하세요.
+          </p>
+        )}
+
         {available.length > 0 && (
           <form
             action={addAssignment}

@@ -188,6 +188,13 @@ model Assignment {
 
   createdAt DateTime @default(now())
 
+  // One person holds at most one position per scope. Postgres treats NULLs as
+  // distinct, so each pair only bites for rows attached to that level —
+  // together with the app-level check this closes the add/add race.
+  @@unique([contactId, customerId])
+  @@unique([contactId, projectId])
+  @@unique([contactId, serviceId])
+  @@unique([contactId, accountId])
   @@index([contactId])
   @@index([customerId])
   @@index([projectId])

@@ -13,6 +13,17 @@ function backPath(formData: FormData, fallback: string): string {
   return typeof raw === "string" && raw.startsWith("/") ? raw : fallback;
 }
 
+/**
+ * revalidatePath ignores a path that carries a query string, which silently
+ * leaves the router cache stale — the escalation page's `back` includes its
+ * scope selection as a query, so strip it before revalidating.
+ */
+function revalidateBack(formData: FormData, fallback: string) {
+  const back = backPath(formData, fallback);
+  const q = back.indexOf("?");
+  revalidatePath(q === -1 ? back : back.slice(0, q));
+}
+
 function requireString(formData: FormData, key: string): string {
   const v = formData.get(key);
   if (typeof v !== "string" || !v.trim()) throw new Error(`missing ${key}`);
@@ -50,12 +61,12 @@ export async function createProject(formData: FormData) {
       customerId: requireString(formData, "customerId"),
     },
   });
-  revalidatePath(backPath(formData, "/admin/customers"));
+  revalidateBack(formData, "/admin/customers");
 }
 
 export async function deleteProject(formData: FormData) {
   await prisma.project.delete({ where: { id: requireString(formData, "id") } });
-  revalidatePath(backPath(formData, "/admin/customers"));
+  revalidateBack(formData, "/admin/customers");
 }
 
 // --- Services ------------------------------------------------------------------
@@ -67,12 +78,12 @@ export async function createService(formData: FormData) {
       projectId: requireString(formData, "projectId"),
     },
   });
-  revalidatePath(backPath(formData, "/admin/customers"));
+  revalidateBack(formData, "/admin/customers");
 }
 
 export async function deleteService(formData: FormData) {
   await prisma.service.delete({ where: { id: requireString(formData, "id") } });
-  revalidatePath(backPath(formData, "/admin/customers"));
+  revalidateBack(formData, "/admin/customers");
 }
 
 // --- AWS account mappings --------------------------------------------------------
@@ -90,14 +101,14 @@ export async function createAccountMap(formData: FormData) {
       serviceId: requireString(formData, "serviceId"),
     },
   });
-  revalidatePath(backPath(formData, "/admin/customers"));
+  revalidateBack(formData, "/admin/customers");
 }
 
 export async function deleteAccountMap(formData: FormData) {
   await prisma.awsAccountMap.delete({
     where: { id: requireString(formData, "id") },
   });
-  revalidatePath(backPath(formData, "/admin/customers"));
+  revalidateBack(formData, "/admin/customers");
 }
 
 // --- Contacts ------------------------------------------------------------------
@@ -177,21 +188,36 @@ export async function addAssignment(formData: FormData) {
       orderBy: { order: "desc" },
       select: { order: true },
     });
-    await prisma.assignment.create({
-      data: {
-        contactId,
-        [field]: scopeId,
-        order: last ? last.order + 1 : 0,
-      },
-    });
+    try {
+      await prisma.assignment.create({
+        data: {
+          contactId,
+          [field]: scopeId,
+          order: last ? last.order + 1 : 0,
+        },
+      });
+    } catch (e) {
+      // Unique(contactId, scope) race — someone attached the same person
+      // between our check and the insert. Already there, so nothing to do.
+      if ((e as { code?: string }).code !== "P2002") throw e;
+    }
   }
-  revalidatePath(backPath(formData, "/admin/customers"));
+  revalidateBack(formData, "/admin/customers");
 }
 
 export async function removeAssignment(formData: FormData) {
-  const row = await prisma.assignment.delete({
-    where: { id: requireString(formData, "id") },
-  });
+  let row;
+  try {
+    row = await prisma.assignment.delete({
+      where: { id: requireString(formData, "id") },
+    });
+  } catch (e) {
+    // P2025: already gone (double submit or a concurrent remove) — the desired
+    // end state is reached, so just refresh the page.
+    if ((e as { code?: string }).code !== "P2025") throw e;
+    revalidateBack(formData, "/admin/customers");
+    return;
+  }
   const field = row.customerId
     ? "customerId"
     : row.projectId
@@ -201,7 +227,7 @@ export async function removeAssignment(formData: FormData) {
         : "accountId";
   const scopeId = row[field];
   if (scopeId) await renumber(field, scopeId);
-  revalidatePath(backPath(formData, "/admin/customers"));
+  revalidateBack(formData, "/admin/customers");
 }
 
 /**
@@ -216,7 +242,11 @@ export async function moveAssignment(formData: FormData) {
   }
 
   const row = await prisma.assignment.findUnique({ where: { id } });
-  if (!row) throw new Error("assignment not found");
+  if (!row) {
+    // Removed concurrently — nothing to move.
+    revalidateBack(formData, "/admin/escalation");
+    return;
+  }
 
   const field = row.customerId
     ? "customerId"
@@ -245,5 +275,5 @@ export async function moveAssignment(formData: FormData) {
       ),
     );
   }
-  revalidatePath(backPath(formData, "/admin/escalation"));
+  revalidateBack(formData, "/admin/escalation");
 }
