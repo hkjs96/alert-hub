@@ -121,7 +121,11 @@ export async function deleteContact(formData: FormData) {
   revalidatePath("/admin/contacts");
 }
 
-// --- Assignments (붙였다뗐다) ------------------------------------------------------
+// --- Assignments (등록: 붙였다뗐다) -------------------------------------------
+//
+// A scope holds an ordered list with no role labels. Registering appends to the
+// end; the 알람 처리 순서 screen is what moves people around. Both screens write
+// the same rows — they just expose different decisions.
 
 const SCOPE_FIELD: Record<ScopeLevel, "customerId" | "projectId" | "serviceId" | "accountId"> = {
   customer: "customerId",
@@ -130,42 +134,116 @@ const SCOPE_FIELD: Record<ScopeLevel, "customerId" | "projectId" | "serviceId" |
   account: "accountId",
 };
 
+function scopeField(level: ScopeLevel) {
+  const field = SCOPE_FIELD[level];
+  if (!field) throw new Error(`bad scope level: ${level}`);
+  return field;
+}
+
+/** Rewrite a scope's rows to 0..n-1 so gaps never accumulate. */
+async function renumber(
+  field: "customerId" | "projectId" | "serviceId" | "accountId",
+  scopeId: string,
+) {
+  const rows = await prisma.assignment.findMany({
+    where: { [field]: scopeId },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    select: { id: true },
+  });
+  await prisma.$transaction(
+    rows.map((r: { id: string }, i: number) =>
+      prisma.assignment.update({ where: { id: r.id }, data: { order: i } }),
+    ),
+  );
+}
+
 /**
- * Attach a contact to a scope. OWNER uses replace semantics (a scope keeps at
- * most one OWNER); DEPUTY/MEMBER just add rows. Duplicate person+kind on the
- * same scope is a no-op.
+ * Attach a contact to a scope at the end of its list. Re-adding someone who is
+ * already on the scope is a no-op rather than a duplicate row — a person can
+ * only hold one position in one list.
  */
 export async function addAssignment(formData: FormData) {
   const level = requireString(formData, "level") as ScopeLevel;
   const scopeId = requireString(formData, "scopeId");
   const contactId = requireString(formData, "contactId");
-  const kind = requireString(formData, "kind");
-  const field = SCOPE_FIELD[level];
-  if (!field) throw new Error(`bad scope level: ${level}`);
+  const field = scopeField(level);
 
-  if (kind === "OWNER") {
-    await prisma.assignment.deleteMany({
-      where: { [field]: scopeId, kind: "OWNER" },
-    });
-  } else {
-    const dup = await prisma.assignment.findMany({
-      where: { [field]: scopeId, kind, contactId },
-    });
-    if (dup.length) {
-      revalidatePath(backPath(formData, "/admin/customers"));
-      return;
-    }
-  }
-
-  await prisma.assignment.create({
-    data: { kind, contactId, [field]: scopeId },
+  const existing = await prisma.assignment.findFirst({
+    where: { [field]: scopeId, contactId },
   });
+  if (!existing) {
+    const last = await prisma.assignment.findFirst({
+      where: { [field]: scopeId },
+      orderBy: { order: "desc" },
+      select: { order: true },
+    });
+    await prisma.assignment.create({
+      data: {
+        contactId,
+        [field]: scopeId,
+        order: last ? last.order + 1 : 0,
+      },
+    });
+  }
   revalidatePath(backPath(formData, "/admin/customers"));
 }
 
 export async function removeAssignment(formData: FormData) {
-  await prisma.assignment.delete({
+  const row = await prisma.assignment.delete({
     where: { id: requireString(formData, "id") },
   });
+  const field = row.customerId
+    ? "customerId"
+    : row.projectId
+      ? "projectId"
+      : row.serviceId
+        ? "serviceId"
+        : "accountId";
+  const scopeId = row[field];
+  if (scopeId) await renumber(field, scopeId);
   revalidatePath(backPath(formData, "/admin/customers"));
+}
+
+/**
+ * Move one person up or down within their scope's list by swapping with the
+ * neighbour. Bounds are a no-op so a double-submit at the edge is harmless.
+ */
+export async function moveAssignment(formData: FormData) {
+  const id = requireString(formData, "id");
+  const direction = requireString(formData, "direction");
+  if (direction !== "up" && direction !== "down") {
+    throw new Error(`bad direction: ${direction}`);
+  }
+
+  const row = await prisma.assignment.findUnique({ where: { id } });
+  if (!row) throw new Error("assignment not found");
+
+  const field = row.customerId
+    ? "customerId"
+    : row.projectId
+      ? "projectId"
+      : row.serviceId
+        ? "serviceId"
+        : "accountId";
+  const scopeId = row[field];
+  if (!scopeId) throw new Error("assignment has no scope");
+
+  const siblings = await prisma.assignment.findMany({
+    where: { [field]: scopeId },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    select: { id: true },
+  });
+  const index = siblings.findIndex((s: { id: string }) => s.id === id);
+  const target = direction === "up" ? index - 1 : index + 1;
+
+  if (index >= 0 && target >= 0 && target < siblings.length) {
+    const reordered = [...siblings];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    await prisma.$transaction(
+      reordered.map((r, i) =>
+        prisma.assignment.update({ where: { id: r.id }, data: { order: i } }),
+      ),
+    );
+  }
+  revalidatePath(backPath(formData, "/admin/escalation"));
 }

@@ -2,6 +2,11 @@
 // the assignment rows for a scope chain and this module decides who is
 // responsible. Kept pure so the conversation's ownership scenarios are unit-
 // testable without mocking Prisma.
+//
+// v0.3 model (see docs/requirements.html §4): 등록(who belongs) and
+// 순서(who is notified first) are separate concerns. There is no OWNER/DEPUTY/
+// MEMBER label — an assignment is just a contact sitting at one scope with an
+// `order`, and 1순위 is simply order[0].
 
 export type ScopeLevel = "account" | "service" | "project" | "customer";
 
@@ -15,80 +20,79 @@ export const SPECIFICITY: ScopeLevel[] = [
 
 export interface AssignmentLite {
   contactId: string;
-  kind: string; // OWNER | DEPUTY | MEMBER (extensible)
   level: ScopeLevel;
-  order?: number | null;
+  /** Position within its own level. 0 = 1순위. */
+  order: number;
 }
 
 export interface Responsibility {
-  /** Most specific OWNER on the chain, or null → "담당자 미지정". */
-  ownerId: string | null;
-  /** DEPUTYs at the most specific level that has any. */
-  deputyIds: string[];
-  /** MEMBER union across the whole chain, minus owner/deputies. */
-  memberIds: string[];
-  /** Everyone involved, deduped: owner → deputies → members. */
-  allIds: string[];
+  /**
+   * The level whose list was adopted, or null when nothing is registered
+   * anywhere on the chain ("담당자 미지정").
+   */
+  level: ScopeLevel | null;
+  /** Adopted level's contacts, in notification order. 1순위 first. */
+  order: string[];
+  /** order[0] — the person the dashboard shows as 담당 and Slack pings first. */
+  primaryId: string | null;
 }
 
-function sortByOrder(a: AssignmentLite, b: AssignmentLite): number {
-  const ao = a.order ?? Number.MAX_SAFE_INTEGER;
-  const bo = b.order ?? Number.MAX_SAFE_INTEGER;
-  return ao - bo;
-}
+const EMPTY: Responsibility = { level: null, order: [], primaryId: null };
 
-/** First level (most specific → least) that has an assignment of `kind`. */
-function mostSpecific(
-  assignments: AssignmentLite[],
-  kind: string,
-): AssignmentLite[] {
-  for (const level of SPECIFICITY) {
-    const hits = assignments
-      .filter((a) => a.level === level && a.kind === kind)
-      .sort(sortByOrder);
-    if (hits.length) return hits;
-  }
-  return [];
+function byOrder(a: AssignmentLite, b: AssignmentLite): number {
+  return a.order - b.order;
 }
 
 /**
  * Resolve who is responsible given every assignment attached anywhere on the
  * scope chain of one alert.
  *
- * - owner: closest OWNER wins (account → service → project → customer);
- *   a project-level owner is inherited by services/accounts below it unless a
- *   more specific OWNER row overrides it.
- * - deputies: same independent walk for DEPUTY.
- * - members: union across all levels (a member registered at the project level
- *   is "involved" for every alert under that project).
+ * The rule is "최구체 직접등록 레벨 채택": walk account → service → project →
+ * customer and take the **whole ordered list** of the first level that has any
+ * rows. Levels are never merged — a service-level list fully replaces the
+ * customer-level one rather than appending to it, so a team that takes over a
+ * service does not silently inherit the parent's escalation tail.
  */
 export function resolveResponsibility(
   assignments: AssignmentLite[],
 ): Responsibility {
-  const ownerId = mostSpecific(assignments, "OWNER")[0]?.contactId ?? null;
+  for (const level of SPECIFICITY) {
+    const hits = assignments.filter((a) => a.level === level);
+    if (!hits.length) continue;
 
-  const deputyIds = mostSpecific(assignments, "DEPUTY")
-    .map((a) => a.contactId)
-    .filter((id) => id !== ownerId);
-
-  const seen = new Set<string>(
-    [ownerId, ...deputyIds].filter((v): v is string => Boolean(v)),
-  );
-  const memberIds: string[] = [];
-  for (const a of assignments
-    .filter((x) => x.kind === "MEMBER")
-    .sort(sortByOrder)) {
-    if (!seen.has(a.contactId)) {
-      seen.add(a.contactId);
-      memberIds.push(a.contactId);
-    }
+    const order = [...hits].sort(byOrder).map((a) => a.contactId);
+    // Same person registered twice at one level would double-notify.
+    const deduped = order.filter((id, i) => order.indexOf(id) === i);
+    return { level, order: deduped, primaryId: deduped[0] ?? null };
   }
+  return EMPTY;
+}
 
-  const allIds = [
-    ...(ownerId ? [ownerId] : []),
-    ...deputyIds,
-    ...memberIds,
-  ].filter((id, i, arr) => arr.indexOf(id) === i);
+/**
+ * The order that a level *would* inherit from above, for the "이 단계는 비어
+ * 있고 실제로는 이게 적용됩니다" hint on the escalation screen.
+ *
+ * Only ancestors are considered — inheritance flows downward only, so a
+ * project must never be shown its own services' or accounts' rows as if they
+ * were inherited.
+ */
+export function inheritedOrderFor(
+  level: Exclude<ScopeLevel, "account">,
+  assignments: AssignmentLite[],
+): Responsibility {
+  const ancestors: ScopeLevel[] =
+    level === "service"
+      ? ["project", "customer"]
+      : level === "project"
+        ? ["customer"]
+        : [];
 
-  return { ownerId, deputyIds, memberIds, allIds };
+  for (const ancestor of ancestors) {
+    const hits = assignments.filter((a) => a.level === ancestor);
+    if (!hits.length) continue;
+    const order = [...hits].sort(byOrder).map((a) => a.contactId);
+    const deduped = order.filter((id, i) => order.indexOf(id) === i);
+    return { level: ancestor, order: deduped, primaryId: deduped[0] ?? null };
+  }
+  return EMPTY;
 }

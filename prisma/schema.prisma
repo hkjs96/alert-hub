@@ -161,14 +161,19 @@ model Contact {
   assignments Assignment[]
 }
 
-// One person attached to one scope in one capacity. Exactly one of
+// One person attached to one scope. Exactly one of
 // customerId/projectId/serviceId/accountId is set (enforced in app code).
-// Attach = INSERT, detach = DELETE; OWNER is kept unique per scope by the
-// setter action (replace semantics).
+// Attach = INSERT, detach = DELETE.
+//
+// There is no role label (the v0.2 OWNER/DEPUTY/MEMBER axis was dropped in
+// v0.3): a scope holds an ordered list and 1순위 is simply order 0. Registering
+// someone (조직 · 담당자 관리) appends to the end; reordering (알람 처리 순서)
+// is a separate screen so the two decisions stay independent.
 model Assignment {
-  id        String  @id @default(cuid())
-  kind      String  @default("MEMBER") // OWNER(정, 1명) | DEPUTY(부) | MEMBER
-  order     Int? // null = unordered; set when sequence matters (P3 escalation)
+  id String @id @default(cuid())
+  // Position within this scope's list. 0 = 1순위 = first notified. Contiguous
+  // per scope; the actions renumber on remove/reorder.
+  order     Int     @default(0)
   contactId String
   contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
 

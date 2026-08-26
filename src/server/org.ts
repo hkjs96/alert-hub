@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import {
+  inheritedOrderFor,
   resolveResponsibility,
   type AssignmentLite,
   type Responsibility,
@@ -59,8 +60,7 @@ export async function resolveOwnership(
   });
   const lite: AssignmentLite[] = rows.map((r: any) => ({
     contactId: r.contactId,
-    kind: r.kind,
-    order: r.order,
+    order: r.order ?? 0,
     level: (r.accountId
       ? "account"
       : r.serviceId
@@ -77,7 +77,8 @@ export async function resolveOwnership(
 export interface RosterEntry {
   assignmentId: string;
   contact: { id: string; name: string; department: string | null };
-  kind: string;
+  /** Position within the scope the row is attached to. 0 = 1순위 there. */
+  order: number;
   /** Where the row is attached: this scope ("direct") or a descendant label. */
   via: string;
   direct: boolean;
@@ -119,7 +120,7 @@ export async function getRoster(
       service: true,
       account: true,
     },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
   });
 
   return rows.map((r: any) => {
@@ -140,7 +141,7 @@ export async function getRoster(
         name: r.contact.name,
         department: r.contact.department,
       },
-      kind: r.kind,
+      order: r.order ?? 0,
       via,
       direct,
     };
@@ -160,24 +161,58 @@ export async function getDirectAssignments(level: ScopeLevel, id: string) {
   return prisma.assignment.findMany({
     where,
     include: { contact: true },
-    orderBy: [{ kind: "asc" }, { createdAt: "asc" }],
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
   });
 }
 
 /**
- * Contact candidates for the assignment dropdown, grouped for the UX:
- * people from this customer + internal people first, then everyone else.
+ * Contact candidates for the assignment dropdown: internal (MSP) people plus
+ * this customer's own people, nothing else.
+ *
+ * v0.2 also offered a "다른 고객사 인원" group; v0.3 removed it so a customer's
+ * roster can't accidentally be filled with another tenant's staff.
  */
 export async function getContactChoices(customerId: string) {
   const contacts = await prisma.contact.findMany({
+    where: { OR: [{ customerId }, { customerId: null }] },
     orderBy: { name: "asc" },
     include: { customer: true },
   });
-  const near = contacts.filter(
-    (c: any) => c.customerId === customerId || c.customerId === null,
-  );
-  const far = contacts.filter(
-    (c: any) => c.customerId !== null && c.customerId !== customerId,
-  );
-  return { near, far };
+  return contacts;
+}
+
+/**
+ * The order a scope would inherit from its ancestors, for the escalation
+ * screen's "이 단계는 비어 있고 실제로는 이게 적용됩니다" hint. Returns an
+ * empty resolution for 고객사 (nothing above it) or when no ancestor has rows.
+ */
+export async function getInheritedOrder(
+  level: "customer" | "project" | "service",
+  scope: { customerId: string; projectId?: string },
+): Promise<Responsibility> {
+  if (level === "customer") return inheritedOrderFor("customer", []);
+
+  const rows = await prisma.assignment.findMany({
+    where: {
+      OR: [
+        { customerId: scope.customerId },
+        ...(scope.projectId ? [{ projectId: scope.projectId }] : []),
+      ],
+    },
+  });
+
+  const lite: AssignmentLite[] = rows.map((r: any) => ({
+    contactId: r.contactId,
+    order: r.order ?? 0,
+    level: (r.projectId ? "project" : "customer") as ScopeLevel,
+  }));
+  return inheritedOrderFor(level, lite);
+}
+
+/** Contacts by id, for rendering a resolved order as names. */
+export async function getContactsByIds(ids: string[]) {
+  if (!ids.length) return [];
+  const rows = await prisma.contact.findMany({ where: { id: { in: ids } } });
+  const byId = new Map(rows.map((c: any) => [c.id, c]));
+  return ids.map((id) => byId.get(id)).filter(Boolean) as typeof rows;
 }

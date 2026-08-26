@@ -15,9 +15,10 @@ export default async function ContactsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">연락처(인원)</h1>
+        <h1 className="text-xl font-semibold text-slate-900">멤버 관리</h1>
         <p className="mt-1 text-sm text-slate-500">
-          사람 마스터 — 한 번 등록하면 어느 고객사/프로젝트/서비스에든 드롭다운으로 배정할 수 있습니다.
+          전체 인원 마스터 — 고객사 담당자와 내부(MSP) 엔지니어를 함께 관리합니다.
+          한 번 등록하면 어느 고객사/프로젝트/서비스에든 드롭다운으로 배정할 수 있습니다.
         </p>
       </div>
 

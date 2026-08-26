@@ -1,14 +1,12 @@
 import { getRoster } from "@/server/org";
 
-const KIND_LABEL: Record<string, string> = {
-  OWNER: "정",
-  DEPUTY: "부",
-  MEMBER: "멤버",
-};
-
 /**
  * Rollup view: everyone involved with this scope — directly attached rows plus
  * rows attached to descendants ("프로젝트 A의 사람들 = 홍길동(직접) + 김또깡(↳ A.b)").
+ *
+ * The 순번 badge is the person's position in *their own* scope's list, which is
+ * why a rolled-up row can show 1 alongside a direct row that also shows 1 —
+ * they are 1순위 of different lists.
  */
 export async function Roster({
   level,
@@ -25,8 +23,11 @@ export async function Roster({
     <ul className="divide-y divide-slate-100 text-sm">
       {roster.map((r) => (
         <li key={r.assignmentId} className="flex items-center gap-2 py-1.5">
-          <span className="w-10 shrink-0 text-xs font-semibold text-slate-500">
-            {KIND_LABEL[r.kind] ?? r.kind}
+          <span
+            className="w-6 shrink-0 text-center text-xs font-semibold tabular-nums text-slate-500"
+            title={`${r.via === "직접" ? "이 단계" : r.via} ${r.order + 1}순위`}
+          >
+            {r.order + 1}
           </span>
           <span className="font-medium text-slate-800">{r.contact.name}</span>
           {r.contact.department ? (
