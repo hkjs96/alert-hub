@@ -10,7 +10,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:seed": "node prisma/seed.mjs",
-    "demo": "node scripts/demo.mjs"
+    "demo": "node scripts/demo.mjs",
+    "postinstall": "prisma generate",
+    "vercel-build": "prisma db push --skip-generate && node prisma/seed.mjs && next build"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",
