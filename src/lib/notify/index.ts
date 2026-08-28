@@ -1,6 +1,7 @@
 import type { NormalizedAlert } from "@/lib/types";
 import { slackNotifier } from "@/lib/notify/slack";
 import { emailNotifier } from "@/lib/notify/email";
+import { twilioNotifier } from "@/lib/notify/twilio";
 
 /** Extra context a notifier can use but must not require. */
 export interface NotifyContext {
@@ -11,7 +12,12 @@ export interface NotifyContext {
    * alert's account is unmapped, unassigned, or resolution failed; notifiers
    * must degrade to the plain message.
    */
-  assignees?: { name: string; slackId?: string | null; email?: string | null }[];
+  assignees?: {
+    name: string;
+    slackId?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  }[];
   /**
    * Set by the escalation cron (Phase 3): 1-based rank of the person being
    * paged now — assignees then holds just that person. Notifiers label the
@@ -30,7 +36,7 @@ export interface Notifier {
   notify(alert: NormalizedAlert, ctx?: NotifyContext): Promise<void>;
 }
 
-const notifiers: Notifier[] = [slackNotifier, emailNotifier];
+const notifiers: Notifier[] = [slackNotifier, emailNotifier, twilioNotifier];
 
 /**
  * Fan an alert out to every configured notifier. Failures are swallowed per

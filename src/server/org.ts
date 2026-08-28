@@ -225,6 +225,7 @@ export interface OwnershipContact {
   department: string | null;
   slackId: string | null;
   email: string | null;
+  phone: string | null;
 }
 
 export interface OwnershipInfo {
@@ -329,6 +330,7 @@ export async function getOwnershipByAccountIds(
           department: c.department,
           slackId: c.slackId,
           email: c.email,
+          phone: c.phone,
         })),
     });
   }

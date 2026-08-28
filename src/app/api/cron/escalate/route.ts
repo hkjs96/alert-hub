@@ -107,6 +107,7 @@ export async function GET(req: Request) {
       name: contact?.name ?? target.name,
       slackId: contact?.slackId ?? null,
       email: contact?.email ?? null,
+      phone: contact?.phone ?? null,
     };
 
     await prisma.alertEvent.create({

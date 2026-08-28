@@ -91,6 +91,7 @@ beforeEach(() => {
     name: "김도윤",
     slackId: "U2",
     email: "dy@corp.test",
+    phone: "+821012345678",
   });
 });
 
@@ -142,7 +143,7 @@ describe("escalation tick", () => {
     const [, ctx] = mocks.notifyAll.mock.calls[0];
     expect(ctx.escalationStep).toBe(2);
     expect(ctx.assignees).toEqual([
-      { name: "김도윤", slackId: "U2", email: "dy@corp.test" },
+      { name: "김도윤", slackId: "U2", email: "dy@corp.test", phone: "+821012345678" },
     ]);
   });
 
@@ -188,7 +189,7 @@ describe("escalation tick", () => {
 
     const [, ctx] = mocks.notifyAll.mock.calls[0];
     expect(ctx.assignees).toEqual([
-      { name: "김도윤", slackId: null, email: null },
+      { name: "김도윤", slackId: null, email: null, phone: null },
     ]);
   });
 });

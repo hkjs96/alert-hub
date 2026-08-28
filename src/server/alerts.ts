@@ -89,6 +89,7 @@ async function resolveIngestOwnership(
         name: c.name,
         slackId: c.slackId,
         email: c.email,
+        phone: c.phone,
       }));
     }
     return out;

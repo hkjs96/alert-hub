@@ -100,6 +100,7 @@ handled. Locally, point both URLs at the same Postgres.
 | `SMTP_HOST` `SMTP_FROM` | no   | Enable the email notifier. `SMTP_PORT`/`SMTP_SECURE`/`SMTP_USER`/`SMTP_PASS` refine it. |
 | `CRON_SECRET`       | no       | Enables `GET /api/cron/escalate` (자동 에스컬레이션). Unset ⇒ endpoint answers 503. |
 | `ESCALATION_ACK_MINUTES` | no  | 미ack 에스컬레이션 창(분). Default 10.                        |
+| `TWILIO_ACCOUNT_SID` `TWILIO_AUTH_TOKEN` `TWILIO_FROM` | no | Enable SMS on escalation (에스컬레이션 전용 — 최초 통지엔 침묵). `TWILIO_VOICE=true` adds a TTS call. |
 
 When `INGEST_TOKEN` is set, senders authenticate with **either** the
 `x-webhook-token: <token>` header **or** a `?token=<token>` query parameter.
@@ -177,6 +178,9 @@ and must be driven by an external scheduler, e.g.:
 
 Ack(또는 resolve) 하는 순간 사다리는 멈춘다. 재발화는 새 인시던트로 취급되어
 1순위부터 다시 시작한다.
+
+채널별 강도는 사다리를 따른다: 최초 FIRING은 Slack + email, 에스컬레이션부터는
+같은 두 채널에 더해 Twilio SMS(설정 시 전화까지)가 다음 순위 한 명에게 나간다.
 
 ## Org model & admin (Phase 2a)
 

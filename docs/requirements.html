@@ -150,7 +150,7 @@ ul{margin:6px 0;padding-left:20px} li{margin:3px 0}
   <tr><td>다중 소스 수집</td><td>Keep</td><td class="done">✔ 5종(CloudWatch/Grafana/Prometheus/PagerDuty/generic) + SNS 전송</td><td>provider 추가</td></tr>
   <tr><td>중복제거(dedup)</td><td>Keep/PD</td><td class="done">✔ fingerprint upsert, FIRING 전환 원자화</td><td>—</td></tr>
   <tr><td>조직 계층·담당 결정</td><td>PD의 우회를 1급으로</td><td class="done">✔ 모델·해석 구현</td><td>순서 기반으로 개편(§4)</td></tr>
-  <tr><td>통지</td><td>둘 다</td><td class="done">✔ Slack (notifier 인터페이스 뒤)</td><td>email → Twilio 전화/SMS</td></tr>
+  <tr><td>통지</td><td>둘 다</td><td class="done">✔ Slack · email · Twilio SMS/전화(에스컬레이션 전용) — 모두 notifier 인터페이스 뒤</td><td>—</td></tr>
   <tr><td>인시던트 액션(ack/resolve)</td><td>PD</td><td class="done">✔ 상세 버튼 + 이벤트 append (2c)</td><td>시간 기반 자동 에스컬레이션 (P3)</td></tr>
   <tr><td>알람 처리 순서(통지 우선순위)</td><td>PD 에스컬레이션의 토대</td><td>설계 확정(v0.2 피드백)</td><td>Phase 2a-rev 구현</td></tr>
   <tr><td>온콜/자동 에스컬레이션</td><td>PD</td><td>—</td><td><span class="later">LATER</span> Phase 3 (order 데이터가 입력)</td></tr>
@@ -477,7 +477,7 @@ ul{margin:6px 0;padding-left:20px} li{margin:3px 0}
   <tr><td>2a · 조직 마스터</td><td>계층·인원·배정 모델 + 등록관리 골격</td><td class="done">✔ 완료 → <b>2a-rev</b>: 정/부/멤버 폐기→순서 모델, 데이터 격리, IA 3메뉴(처리순서 신규·멤버관리 확장), 인라인 신규등록</td></tr>
   <tr><td>2b · 알람↔조직 연결</td><td>enrichment 스냅샷(순번 포함) · 대시보드 개편(다중토글/초기화/미매핑 토글·모달/담당 패널) · 상세(순번 스냅샷·변경 배지)</td><td class="done">✔ 완료</td></tr>
   <tr><td>2c · 액션</td><td>Ack/Resolve 버튼 + 이벤트 기록 · 1순위 통지 반영</td><td class="done">✔ 완료 (통지 반영은 2b에서 선행, ack 고착 규칙 추가)</td></tr>
-  <tr><td>3 · 사람 레이어</td><td>이메일 채널 → 시간 기반 자동 에스컬레이션(1순위 미ack N분→2순위) → Twilio 전화/SMS. order 데이터가 그대로 입력</td><td>진행 중 — <span class="done">✔ 이메일(SMTP notifier)</span> · <span class="done">✔ 자동 에스컬레이션(cron 틱 + ESCALATED 이벤트)</span> · Twilio 전화/SMS <span class="later">LATER</span></td></tr>
+  <tr><td>3 · 사람 레이어</td><td>이메일 채널 → 시간 기반 자동 에스컬레이션(1순위 미ack N분→2순위) → Twilio 전화/SMS. order 데이터가 그대로 입력</td><td class="done">✔ 완료 — 이메일(SMTP) · 자동 에스컬레이션(cron 틱 + ESCALATED 이벤트) · Twilio SMS/전화(에스컬레이션 전용)</td></tr>
 </table></div>
 <div class="card">
   <b>열린 이슈 (v0.2에서 이관, 답 포함)</b>
