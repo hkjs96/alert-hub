@@ -69,7 +69,8 @@ model Alert {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  events AlertEvent[]
+  events        AlertEvent[]
+  notifications NotificationLog[]
 
   @@index([status])
   @@index([severity])
@@ -84,6 +85,27 @@ model AlertEvent {
   status      String
   stateReason String?
   value       String?
+
+  createdAt DateTime @default(now())
+
+  @@index([alertId])
+}
+
+// 채널별 통지 결과 기록. AlertEvent가 "알람에 무슨 일이 있었나"라면 이건
+// "우리가 누구를 어떻게 불렀고 그게 나갔나"다 — 통지 실패는 조용히 삼켜지는
+// 대신 여기 남아서 상세 화면에 보인다. append-only.
+model NotificationLog {
+  id      String @id @default(cuid())
+  alertId String
+  alert   Alert  @relation(fields: [alertId], references: [id], onDelete: Cascade)
+
+  channel String // slack | email | twilio
+  // Who was addressed, human-readable ("최민서 외 1명").
+  target  String?
+  // null = 최초 FIRING 팬아웃, n = n순위 자동 에스컬레이션.
+  escalationStep Int?
+  ok      Boolean
+  error   String?
 
   createdAt DateTime @default(now())
 

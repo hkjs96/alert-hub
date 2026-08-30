@@ -63,7 +63,7 @@ export const slackNotifier: Notifier = {
 
   async notify(alert, ctx = {}) {
     const url = process.env.SLACK_WEBHOOK_URL;
-    if (!url) return;
+    if (!url) return "skipped";
 
     const res = await fetch(url, {
       method: "POST",
@@ -74,5 +74,6 @@ export const slackNotifier: Notifier = {
     if (!res.ok) {
       throw new Error(`Slack webhook returned ${res.status} ${res.statusText}`);
     }
+    return "sent";
   },
 };

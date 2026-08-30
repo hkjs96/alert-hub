@@ -366,6 +366,46 @@ export default async function AlertDetailPage({
         ) : null}
       </section>
 
+      {alert.notifications.length > 0 ? (
+        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
+            통지 이력
+          </h2>
+          <ul className="divide-y divide-slate-100 text-sm">
+            {alert.notifications.map((nlog) => (
+              <li key={nlog.id} className="flex flex-wrap items-center gap-2 py-2">
+                <span className="w-14 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-center font-mono text-xs text-slate-600">
+                  {nlog.channel}
+                </span>
+                {nlog.ok ? (
+                  <span className="text-xs font-medium text-green-700">발송됨</span>
+                ) : (
+                  <span className="text-xs font-medium text-red-700">실패</span>
+                )}
+                <span className="text-slate-700">
+                  {nlog.target ?? "채널 전체"}
+                </span>
+                {nlog.escalationStep ? (
+                  <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-800">
+                    {nlog.escalationStep}순위 에스컬레이션
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                    최초 통지
+                  </span>
+                )}
+                <time className="ml-auto text-xs text-slate-400">
+                  {formatTime(nlog.createdAt)}
+                </time>
+                {nlog.error ? (
+                  <p className="w-full pl-16 text-xs text-red-600">{nlog.error}</p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
           Event timeline

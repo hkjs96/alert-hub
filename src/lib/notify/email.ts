@@ -57,12 +57,12 @@ export const emailNotifier: Notifier = {
   async notify(alert, ctx = {}) {
     const from = process.env.SMTP_FROM;
     const host = process.env.SMTP_HOST;
-    if (!host || !from) return;
+    if (!host || !from) return "skipped";
 
     const recipients = (ctx.assignees ?? [])
       .map((a) => a.email)
       .filter((e): e is string => Boolean(e));
-    if (recipients.length === 0) return;
+    if (recipients.length === 0) return "skipped";
 
     const transport = nodemailer.createTransport({
       host,
@@ -81,5 +81,6 @@ export const emailNotifier: Notifier = {
       subject: buildSubject(alert, ctx),
       text: buildText(alert, ctx),
     });
+    return "sent";
   },
 };

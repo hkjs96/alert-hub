@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   updateMany: vi.fn(),
   eventCreate: vi.fn(),
   contactFindUnique: vi.fn(),
+  notifLogCreateMany: vi.fn(),
   notifyAll: vi.fn(),
 }));
 
@@ -16,6 +17,7 @@ vi.mock("@/lib/prisma", () => ({
     alert: { findMany: mocks.findMany, updateMany: mocks.updateMany },
     alertEvent: { create: mocks.eventCreate },
     contact: { findUnique: mocks.contactFindUnique },
+    notificationLog: { createMany: mocks.notifLogCreateMany },
   },
 }));
 
@@ -116,6 +118,7 @@ describe("auth", () => {
 describe("escalation tick", () => {
   it("N분 미ack FIRING을 다음 순위에게 넘긴다 — 선점·이벤트·통지까지", async () => {
     mocks.findMany.mockResolvedValue([firingAlert()]);
+    mocks.notifyAll.mockResolvedValue([{ channel: "slack", status: "sent" }]);
 
     const res = await call({ query: "s3cr3t" });
     expect(await res.json()).toMatchObject({ checked: 1, escalated: 1 });
@@ -145,6 +148,16 @@ describe("escalation tick", () => {
     expect(ctx.assignees).toEqual([
       { name: "김도윤", slackId: "U2", email: "dy@corp.test", phone: "+821012345678" },
     ]);
+
+    // 통지 이력에도 순위와 함께 남는다
+    const logRows = mocks.notifLogCreateMany.mock.calls[0][0].data;
+    expect(logRows[0]).toMatchObject({
+      alertId: "a1",
+      channel: "slack",
+      ok: true,
+      target: "김도윤",
+      escalationStep: 2,
+    });
   });
 
   it("아직 창이 안 지난 알람은 건드리지 않는다", async () => {
