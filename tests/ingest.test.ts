@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   create: vi.fn(),
   updateMany: vi.fn(),
   eventCreate: vi.fn(),
+  notifLogCreateMany: vi.fn(),
   notifyAll: vi.fn(),
   ownership: vi.fn(),
 }));
@@ -18,6 +19,7 @@ vi.mock("@/lib/prisma", () => ({
       updateMany: mocks.updateMany,
     },
     alertEvent: { create: mocks.eventCreate },
+    notificationLog: { createMany: mocks.notifLogCreateMany },
   },
 }));
 
@@ -266,6 +268,52 @@ describe("ingestAlert — FIRING 통지에 담당 순서를 싣는다", () => {
 
     expect(mocks.notifyAll).toHaveBeenCalledOnce();
     expect(mocks.notifyAll.mock.calls[0][1]).toEqual({ alertId: "a1" });
+  });
+});
+
+describe("ingestAlert — 통지 이력 (NotificationLog)", () => {
+  it("채널별 결과가 로그로 남는다 — skipped는 제외, 실패는 에러와 함께", async () => {
+    mocks.findUnique.mockResolvedValue(null);
+    mocks.create.mockResolvedValue({ id: "a1" });
+    mocks.ownership.mockResolvedValue(OWNERSHIP);
+    mocks.notifyAll.mockResolvedValue([
+      { channel: "slack", status: "sent" },
+      { channel: "email", status: "failed", error: "SMTP 530" },
+      { channel: "twilio", status: "skipped" },
+    ]);
+
+    await ingestAlert(alert({ accountId: "123456789012" }));
+
+    const rows = mocks.notifLogCreateMany.mock.calls[0][0].data;
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({
+      alertId: "a1",
+      channel: "slack",
+      ok: true,
+      target: "최민서 외 1명",
+      escalationStep: null,
+    });
+    expect(rows[1]).toMatchObject({ channel: "email", ok: false, error: "SMTP 530" });
+  });
+
+  it("전부 skipped면 로그 행을 만들지 않는다", async () => {
+    mocks.findUnique.mockResolvedValue(null);
+    mocks.create.mockResolvedValue({ id: "a1" });
+    mocks.notifyAll.mockResolvedValue([{ channel: "twilio", status: "skipped" }]);
+
+    await ingestAlert(alert());
+
+    expect(mocks.notifLogCreateMany).not.toHaveBeenCalled();
+  });
+
+  it("로그 기록이 죽어도 ingest는 성공한다", async () => {
+    mocks.findUnique.mockResolvedValue(null);
+    mocks.create.mockResolvedValue({ id: "a1" });
+    mocks.notifyAll.mockResolvedValue([{ channel: "slack", status: "sent" }]);
+    mocks.notifLogCreateMany.mockRejectedValue(new Error("db down"));
+
+    const res = await ingestAlert(alert());
+    expect(res.firedTransition).toBe(true);
   });
 });
 

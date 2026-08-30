@@ -60,11 +60,11 @@ export const twilioNotifier: Notifier = {
 
   async notify(alert: NormalizedAlert, ctx: NotifyContext = {}) {
     const { sid, token, from, voice } = creds();
-    if (!sid || !token || !from) return;
+    if (!sid || !token || !from) return "skipped";
     // 에스컬레이션 전용: 최초 통지에는 침묵한다.
-    if (!ctx.escalationStep) return;
+    if (!ctx.escalationStep) return "skipped";
     const target = ctx.assignees?.[0];
-    if (!target?.phone) return;
+    if (!target?.phone) return "skipped";
 
     const appUrl = process.env.APP_URL?.replace(/\/+$/, "");
     const link = appUrl && ctx.alertId ? ` ${appUrl}/alerts/${ctx.alertId}` : "";
@@ -85,5 +85,6 @@ export const twilioNotifier: Notifier = {
         Twiml: `<Response><Say language="ko-KR">${say}</Say></Response>`,
       });
     }
+    return "sent";
   },
 };

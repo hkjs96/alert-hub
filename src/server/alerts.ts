@@ -1,6 +1,10 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { notifyAll, type NotifyContext } from "@/lib/notify";
+import {
+  notifyAll,
+  type NotifyContext,
+  type NotifyOutcome,
+} from "@/lib/notify";
 import { buildOwnershipSnapshot, getOwnershipByAwsAccount } from "@/server/org";
 import type { AlertStatus, NormalizedAlert } from "@/lib/types";
 
@@ -105,6 +109,39 @@ function toNotifyContext(alertId: string, own: IngestOwnership): NotifyContext {
   return ctx;
 }
 
+/**
+ * Persist the per-channel outcomes of one fan-out as NotificationLog rows.
+ * skipped 채널(수신자 없음, 해당 없음)은 기록하지 않는다 — 로그는 "나갔다"와
+ * "나가려다 실패했다"만 담는다. 로그 실패가 통지나 ingest를 죽여선 안 되므로
+ * 여기서 삼킨다.
+ */
+export async function recordNotifications(
+  alertId: string,
+  ctx: NotifyContext,
+  outcomes: NotifyOutcome[] | undefined,
+): Promise<void> {
+  const rows = (outcomes ?? [])
+    .filter((o) => o.status !== "skipped")
+    .map((o) => ({
+      alertId,
+      channel: o.channel,
+      target: ctx.assignees?.length
+        ? `${ctx.assignees[0].name}${
+            ctx.assignees.length > 1 ? ` 외 ${ctx.assignees.length - 1}명` : ""
+          }`
+        : null,
+      escalationStep: ctx.escalationStep ?? null,
+      ok: o.status === "sent",
+      error: o.error ?? null,
+    }));
+  if (!rows.length) return;
+  try {
+    await prisma.notificationLog.createMany({ data: rows });
+  } catch (err) {
+    console.error("[notify] failed to record delivery log", err);
+  }
+}
+
 export interface IngestResult {
   alertId: string;
   status: AlertStatus;
@@ -152,7 +189,9 @@ export async function ingestAlert(n: NormalizedAlert): Promise<IngestResult> {
       });
       const firedTransition = n.status === "FIRING";
       if (firedTransition) {
-        await notifyAll(n, toNotifyContext(alert.id, own));
+        const ctx = toNotifyContext(alert.id, own);
+        const outcomes = await notifyAll(n, ctx);
+        await recordNotifications(alert.id, ctx, outcomes);
       }
       return { alertId: alert.id, status: n.status, firedTransition, created: true };
     } catch (err) {
@@ -238,7 +277,9 @@ async function updateExisting(
         data: { ownershipSnapshot: own.snapshot },
       });
     }
-    await notifyAll(n, toNotifyContext(alertId, own));
+    const ctx = toNotifyContext(alertId, own);
+    const outcomes = await notifyAll(n, ctx);
+    await recordNotifications(alertId, ctx, outcomes);
   }
 
   return { alertId, status: n.status, firedTransition, created: false };
@@ -276,6 +317,7 @@ export async function getAlert(id: string) {
     where: { id },
     include: {
       events: { orderBy: { createdAt: "desc" } },
+      notifications: { orderBy: { createdAt: "desc" } },
     },
   });
 }
