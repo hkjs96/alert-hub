@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { getAlerts, getStats } from "@/server/alerts";
+import { getAlerts } from "@/server/alerts";
 import {
   getOwnershipByAccountIds,
   parseOwnershipSnapshot,
@@ -85,8 +85,7 @@ export default async function DashboardPage({
     unmapped: searchParams.unmapped === "1",
   };
 
-  const [stats, allAlerts, customers, envRows] = await Promise.all([
-    getStats(),
+  const [allAlerts, customers, envRows] = await Promise.all([
     getAlerts(),
     prisma.customer.findMany({ orderBy: { name: "asc" } }),
     prisma.awsAccountMap.findMany({
@@ -117,10 +116,28 @@ export default async function DashboardPage({
 
   const rows = allAlerts.map((a) => ({ a, facts: factsOf(a, ownership) }));
 
+  // 스탯 타일은 "상태를 제외한 현재 필터" 기준이다 (페르소나 검증 P1: 필터를
+  // 걸었는데 타일이 전체 수치를 보여줘 오독). 상태만 빼는 이유는 타일 자체가
+  // 상태 토글이라서 — 담당 패널이 assignee를 빼고 세는 것과 같은 원리.
+  const tileBase = rows.filter((r) =>
+    matchesFilters(r.facts, { ...f, statuses: [] }),
+  );
+  const countOf = (s: AlertStatus) =>
+    tileBase.filter((r) => r.a.status === s).length;
+  const stats = {
+    firing: countOf("FIRING"),
+    acknowledged: countOf("ACKNOWLEDGED"),
+    resolved: countOf("RESOLVED"),
+    insufficient: countOf("INSUFFICIENT_DATA"),
+    total: tileBase.length,
+  };
+
   // Unmapped = the alert carries an account id but no AwsAccountMap row knows
   // it. An alert with no account id at all is a different state (계정 정보 없음).
-  const unmappedCount = rows.filter(
-    (r) => r.facts.accountId && !r.facts.chain,
+  // 배너도 현재 필터 시야를 존중한다 — 고객사 필터가 걸려 있으면 조직 미상인
+  // 미매핑 알람은 그 시야 밖이므로 배너가 사라진다 (페르소나 검증 P2).
+  const unmappedCount = rows.filter((r) =>
+    matchesFilters(r.facts, { ...f, unmapped: true }),
   ).length;
 
   // 담당 패널 건수는 assignee를 뺀 나머지 필터 기준으로 계산: 한 명을 골라도
@@ -308,7 +325,12 @@ export default async function DashboardPage({
 
       <div className="flex flex-col gap-6 lg:flex-row">
         <div className="min-w-0 flex-1">
-          <AlertTable alerts={visible} ownership={ownership} />
+          <AlertTable
+            alerts={visible}
+            ownership={ownership}
+            filtered={anyFilterActive(f)}
+            backHref={dashboardHref(f)}
+          />
         </div>
 
         <aside className="w-full shrink-0 lg:w-64">

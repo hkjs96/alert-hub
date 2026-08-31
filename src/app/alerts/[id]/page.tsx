@@ -366,11 +366,19 @@ export default async function AlertDetailPage({
         ) : null}
       </section>
 
-      {alert.notifications.length > 0 ? (
-        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
-            통지 이력
-          </h2>
+      <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          통지 이력
+        </h2>
+        {/* 빈 상태도 명시한다 — "통지가 안 나간 것"과 "기록이 없는 것"을
+            구분할 수 없으면 고객사 입장에서 신뢰가 깎인다 (페르소나 검증 P2). */}
+        {alert.notifications.length === 0 ? (
+          <p className="text-sm text-slate-400">
+            이 알람에 대해 발송된 통지가 없습니다 — 통지 채널이 설정되지
+            않았거나, 담당자에게 연락 수단이 없거나, 통지 이력 도입 이전의
+            알람입니다.
+          </p>
+        ) : (
           <ul className="divide-y divide-slate-100 text-sm">
             {alert.notifications.map((nlog) => (
               <li key={nlog.id} className="flex flex-wrap items-center gap-2 py-2">
@@ -403,8 +411,8 @@ export default async function AlertDetailPage({
               </li>
             ))}
           </ul>
-        </section>
-      ) : null}
+        )}
+      </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">

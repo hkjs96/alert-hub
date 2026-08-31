@@ -322,21 +322,13 @@ export async function getAlert(id: string) {
   });
 }
 
+// 스탯 타일 수치. 대시보드가 "현재 필터 기준"으로 메모리에서 계산한다 —
+// 전역 count 쿼리를 쓰면 필터 뷰에서 전체 수치가 보여 오독을 낳는다는 것이
+// 페르소나 검증에서 확인됐다.
 export interface AlertStats {
   firing: number;
   acknowledged: number;
   resolved: number;
   insufficient: number;
   total: number;
-}
-
-export async function getStats(): Promise<AlertStats> {
-  const [firing, acknowledged, resolved, insufficient, total] = await Promise.all([
-    prisma.alert.count({ where: { status: "FIRING" } }),
-    prisma.alert.count({ where: { status: "ACKNOWLEDGED" } }),
-    prisma.alert.count({ where: { status: "RESOLVED" } }),
-    prisma.alert.count({ where: { status: "INSUFFICIENT_DATA" } }),
-    prisma.alert.count(),
-  ]);
-  return { firing, acknowledged, resolved, insufficient, total };
 }
