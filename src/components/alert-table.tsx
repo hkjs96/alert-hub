@@ -14,9 +14,12 @@ type AlertRow = Awaited<ReturnType<typeof getAlerts>>[number];
 function OwnerCell({
   alert,
   ownership,
+  backHref,
 }: {
   alert: AlertRow;
   ownership: Map<string, OwnershipInfo>;
+  /** 매핑 화면에서 돌아올 현재 대시보드 뷰 (필터 보존). */
+  backHref?: string;
 }) {
   const snap = parseOwnershipSnapshot(alert.ownershipSnapshot);
   if (snap && snap.order.length > 0) {
@@ -44,9 +47,10 @@ function OwnerCell({
   }
   const info = ownership.get(alert.accountId);
   if (!info) {
+    const back = backHref ? `&back=${encodeURIComponent(backHref)}` : "";
     return (
       <Link
-        href={`/admin/map-account?accountId=${alert.accountId}`}
+        href={`/admin/map-account?accountId=${alert.accountId}${back}`}
         className="font-medium text-amber-700 hover:underline"
         title="이 계정이 어느 서비스에도 매핑되어 있지 않습니다 — 눌러서 바로 매핑하세요"
       >
@@ -73,8 +77,9 @@ function OwnerCell({
   );
 }
 
+// 테이블은 좁다 — "08-30 11:13Z"면 충분하고, 초 단위 전체 시각은 상세에 있다.
 function formatTime(date: Date) {
-  return new Date(date).toISOString().replace("T", " ").slice(0, 19) + "Z";
+  return new Date(date).toISOString().replace("T", " ").slice(5, 16) + "Z";
 }
 
 /**
@@ -105,18 +110,36 @@ function chainFacts(
 export function AlertTable({
   alerts,
   ownership,
+  filtered = false,
+  backHref,
 }: {
   alerts: AlertRow[];
   ownership: Map<string, OwnershipInfo>;
+  /** True when any dashboard filter is active — switches the empty state. */
+  filtered?: boolean;
+  /** Current dashboard view href, for round-trips (인라인 매핑 복귀). */
+  backHref?: string;
 }) {
   if (alerts.length === 0) {
+    // "필터 결과 없음"과 "아직 데이터 없음"은 다른 상태다 (페르소나 검증 P2).
     return (
       <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-        No alerts yet. Send one to{" "}
-        <code className="rounded bg-slate-100 px-1 py-0.5 text-sm">
-          POST /api/webhooks/alarm
-        </code>
-        .
+        {filtered ? (
+          <>
+            현재 필터 조건에 맞는 알람이 없습니다.{" "}
+            <Link href="/" className="text-blue-600 underline">
+              필터 초기화
+            </Link>
+          </>
+        ) : (
+          <>
+            No alerts yet. Send one to{" "}
+            <code className="rounded bg-slate-100 px-1 py-0.5 text-sm">
+              POST /api/webhooks/alarm
+            </code>
+            .
+          </>
+        )}
       </div>
     );
   }
@@ -162,7 +185,14 @@ export function AlertTable({
                   <div className="mt-0.5 text-xs text-slate-400">{chain}</div>
                 ) : null}
               </td>
-              <td className="px-4 py-3 text-slate-600">{a.resource ?? "—"}</td>
+              <td className="px-4 py-3 text-slate-600">
+                <span
+                  className="block max-w-44 truncate"
+                  title={a.resource ?? undefined}
+                >
+                  {a.resource ?? "—"}
+                </span>
+              </td>
               <td className="px-4 py-3">
                 {environment ? (
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
@@ -173,7 +203,7 @@ export function AlertTable({
                 )}
               </td>
               <td className="px-4 py-3 whitespace-nowrap">
-                <OwnerCell alert={a} ownership={ownership} />
+                <OwnerCell alert={a} ownership={ownership} backHref={backHref} />
               </td>
               <td className="px-4 py-3 text-right tabular-nums text-slate-600">
                 {a.count}
