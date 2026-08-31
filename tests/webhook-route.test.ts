@@ -29,6 +29,10 @@ const fetchMock = vi.fn(async () => new Response("ok"));
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("fetch", fetchMock);
+  // 이 파일의 SNS 봉투 픽스처는 서명이 없다 — 봉투 처리 자체를 검증하는
+  // 테스트라 서명 검증은 끈다. 검증 동작은 webhook-verify.test.ts와 아래
+  // "SNS 서명 검증" describe가 다룬다.
+  vi.stubEnv("SNS_VERIFY", "false");
   mocks.ingestAlerts.mockImplementation(async (alerts: unknown[]) =>
     alerts.map((_, i) => ({ alertId: `a${i}`, created: true })),
   );
@@ -173,5 +177,70 @@ describe("SNS envelope", () => {
     });
     expect(unsub.status).toBe(200);
     expect((await unsub.json()).ignored).toBe("UnsubscribeConfirmation");
+  });
+});
+
+describe("SNS 서명 검증 (기본 켜짐)", () => {
+  it("서명 없는 SNS 봉투는 401 — SubscribeURL fetch도 하지 않는다", async () => {
+    vi.stubEnv("SNS_VERIFY", ""); // 기본값(켜짐)으로 복원
+    const res = await post("cloudwatch", {
+      Type: "SubscriptionConfirmation",
+      TopicArn: "arn:aws:sns:us-east-1:123:t",
+      SubscribeURL: "https://sns.us-east-1.amazonaws.com/?Action=Confirm",
+    });
+    expect(res.status).toBe(401);
+    expect((await res.json()).error).toBe("invalid SNS signature");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(mocks.ingestAlerts).not.toHaveBeenCalled();
+  });
+
+  it("SigningCertURL이 SNS가 아니면 인증서를 fetch하지 않고 거절한다", async () => {
+    vi.stubEnv("SNS_VERIFY", "");
+    const res = await post("cloudwatch", {
+      Type: "Notification",
+      TopicArn: "arn:aws:sns:us-east-1:123:t",
+      Message: "{}",
+      MessageId: "m1",
+      Timestamp: "2026-08-30T00:00:00Z",
+      Signature: "aaaa",
+      SignatureVersion: "1",
+      SigningCertURL: "https://evil.example.com/cert.pem",
+    });
+    expect(res.status).toBe(401);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("PagerDuty HMAC (PAGERDUTY_WEBHOOK_SECRET 설정 시)", () => {
+  const body = JSON.stringify({
+    event: { id: "e1", event_type: "incident.triggered", data: { id: "i1", title: "t" } },
+  });
+
+  it("서명이 없거나 틀리면 401", async () => {
+    vi.stubEnv("PAGERDUTY_WEBHOOK_SECRET", "pd-secret");
+    const none = await post("pagerduty", body);
+    expect(none.status).toBe(401);
+
+    const wrong = await post("pagerduty", body, {
+      headers: { "x-pagerduty-signature": "v1=deadbeef" },
+    });
+    expect(wrong.status).toBe(401);
+  });
+
+  it("올바른 v1 HMAC이면 통과한다 (로테이션 중 다중 서명 포함)", async () => {
+    vi.stubEnv("PAGERDUTY_WEBHOOK_SECRET", "pd-secret");
+    const { createHmac } = await import("node:crypto");
+    const good = createHmac("sha256", "pd-secret").update(body).digest("hex");
+
+    const res = await post("pagerduty", body, {
+      headers: { "x-pagerduty-signature": `v1=deadbeef,v1=${good}` },
+    });
+    expect(res.status).toBe(200);
+    expect(mocks.ingestAlerts).toHaveBeenCalledOnce();
+  });
+
+  it("비밀이 설정돼 있지 않으면 서명 검증은 하지 않는다 (토큰 계층은 별개)", async () => {
+    const res = await post("pagerduty", body);
+    expect(res.status).toBe(200);
   });
 });

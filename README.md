@@ -101,6 +101,8 @@ handled. Locally, point both URLs at the same Postgres.
 | `CRON_SECRET`       | no       | Enables `GET /api/cron/escalate` (자동 에스컬레이션). Unset ⇒ endpoint answers 503. |
 | `ESCALATION_ACK_MINUTES` | no  | 미ack 에스컬레이션 창(분). Default 10.                        |
 | `TWILIO_ACCOUNT_SID` `TWILIO_AUTH_TOKEN` `TWILIO_FROM` | no | Enable SMS on escalation (에스컬레이션 전용 — 최초 통지엔 침묵). `TWILIO_VOICE=true` adds a TTS call. |
+| `SNS_VERIFY`        | no       | SNS 봉투 서명 검증. Default **on**; `false`로만 해제.        |
+| `PAGERDUTY_WEBHOOK_SECRET` | no | Set ⇒ PagerDuty requests must carry a valid `X-PagerDuty-Signature` (v1 HMAC). |
 
 When `INGEST_TOKEN` is set, senders authenticate with **either** the
 `x-webhook-token: <token>` header **or** a `?token=<token>` query parameter.
@@ -141,11 +143,14 @@ is just adding a provider file — nothing downstream changes.
 > PagerDuty v3. Older generations (Grafana legacy `evalMatches`, PagerDuty v2
 > `messages[]`) are detected and parsed best-effort.
 >
-> **Auth:** `INGEST_TOKEN` (header or `?token=`) gates every route today.
-> `SubscribeURL` is validated to point at a real `sns.<region>.amazonaws.com`
-> host before it is fetched, and bodies over 1MB are rejected. Per-source
-> signature verification (SNS message signatures, PagerDuty
-> `X-PagerDuty-Signature`) is the next step.
+> **Auth:** three independent layers. `INGEST_TOKEN` (header or `?token=`)
+> gates every route when set. SNS envelopes are **signature-verified by
+> default** (`SNS_VERIFY=false` to opt out) — the signing cert must come from
+> `sns.<region>.amazonaws.com` and nothing in the envelope (SubscribeURL
+> included) is trusted before the signature checks out. With
+> `PAGERDUTY_WEBHOOK_SECRET` set, PagerDuty requests must carry a valid
+> `X-PagerDuty-Signature` (v1 HMAC over the raw body). Bodies over 1MB are
+> rejected.
 
 ### Deduplication
 

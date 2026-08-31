@@ -2,6 +2,10 @@ import { createHash, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { isRecord } from "@/lib/normalize";
 import { AUTO_DETECT, isKnownProvider, normalizeWith } from "@/lib/providers";
+import {
+  verifyPagerDutySignature,
+  verifySnsMessage,
+} from "@/lib/webhook-verify";
 import { ingestAlerts } from "@/server/alerts";
 
 // Needs Node APIs (Prisma, crypto) and must never be statically cached.
@@ -48,12 +52,15 @@ function isSnsSubscribeUrl(raw: string): boolean {
  *        /grafana /prometheus /pagerduty /cloudwatch /generic  → that parser
  *        /alarm                                                → auto-detect
  *
- * Auth: when INGEST_TOKEN is set, requests must carry it either in the
- * `x-webhook-token` header or as a `?token=` query parameter. The query form
- * exists because SNS and PagerDuty cannot attach custom headers — put the
- * token in the subscription/webhook URL instead. (Per-source signature
- * verification — SNS message signatures, PagerDuty X-PagerDuty-Signature — is
- * a later step.)
+ * Auth, three independent layers:
+ *   - INGEST_TOKEN (set ⇒ required): shared secret in the `x-webhook-token`
+ *     header or `?token=` query (SNS/PagerDuty can't set custom headers —
+ *     bake it into the subscription/webhook URL).
+ *   - SNS 서명 검증 (default ON, `SNS_VERIFY=false`로만 해제): SNS 봉투는
+ *     SigningCertURL의 AWS 인증서로 서명을 확인한 뒤에만 처리한다 — 위조
+ *     봉투로 가짜 알람을 넣거나 SubscribeURL fetch를 유도할 수 없다.
+ *   - PAGERDUTY_WEBHOOK_SECRET (set ⇒ required): PagerDuty 요청은 원문
+ *     바디의 HMAC(X-PagerDuty-Signature v1)이 맞아야 한다.
  */
 export async function POST(
   req: Request,
@@ -83,6 +90,22 @@ export async function POST(
     return NextResponse.json({ error: "payload too large" }, { status: 413 });
   }
 
+  // PagerDuty HMAC — 원문 바디 기준이라 JSON 파싱 전에 본다. 비밀이 설정된
+  // 경우: /pagerduty 경로는 서명이 필수고, 다른 경로라도 서명 헤더가 실려
+  // 왔다면 맞아야 한다 (자동감지 /alarm으로 들어오는 PD 웹훅).
+  const pdSecret = process.env.PAGERDUTY_WEBHOOK_SECRET;
+  const pdHeader = req.headers.get("x-pagerduty-signature");
+  if (pdSecret && (provider === "pagerduty" || pdHeader)) {
+    const pd = verifyPagerDutySignature(rawText, pdHeader, pdSecret);
+    if (!pd.ok) {
+      console.error("[webhook] PagerDuty signature rejected:", pd.reason);
+      return NextResponse.json(
+        { error: "invalid PagerDuty signature" },
+        { status: 401 },
+      );
+    }
+  }
+
   let body: unknown;
   try {
     body = JSON.parse(rawText);
@@ -101,6 +124,19 @@ export async function POST(
   if (isRecord(body) && typeof body.Type === "string" && "TopicArn" in body) {
     fromSns = true;
     const type = body.Type;
+
+    // 서명부터 — 확인 전에는 봉투의 어떤 내용도 믿지 않는다 (SubscribeURL
+    // fetch 포함). 로컬 테스트용 해제는 SNS_VERIFY=false.
+    if (process.env.SNS_VERIFY !== "false") {
+      const sig = await verifySnsMessage(body);
+      if (!sig.ok) {
+        console.error("[webhook] SNS signature rejected:", sig.reason);
+        return NextResponse.json(
+          { error: "invalid SNS signature" },
+          { status: 401 },
+        );
+      }
+    }
 
     if (type === "SubscriptionConfirmation") {
       const subscribeUrl = body.SubscribeURL;
