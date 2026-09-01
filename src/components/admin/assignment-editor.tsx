@@ -37,7 +37,7 @@ export async function AssignmentEditor({
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-1.5">
         {assignments.length === 0 ? (
-          <span className="text-sm text-slate-400">
+          <span className="text-sm text-stone-400">
             담당 미지정 (상위에서 상속)
           </span>
         ) : (
@@ -45,7 +45,7 @@ export async function AssignmentEditor({
             <form key={a.id} action={removeAssignment} className="inline-flex">
               <input type="hidden" name="id" value={a.id} />
               <input type="hidden" name="back" value={back} />
-              <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700">
+              <span className="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-white px-2.5 py-0.5 text-xs font-medium text-stone-700">
                 {a.contact.name}
                 {a.contact.department ? (
                   <span className="opacity-60">· {a.contact.department}</span>
@@ -75,7 +75,7 @@ export async function AssignmentEditor({
             name="contactId"
             required
             aria-label="담당자 선택"
-            className="rounded-md border border-slate-300 bg-white px-2 py-1"
+            className="rounded-md border border-stone-300 bg-white px-2 py-1"
             defaultValue=""
           >
             <option value="" disabled>
@@ -91,13 +91,13 @@ export async function AssignmentEditor({
           </select>
           <button
             type="submit"
-            className="rounded-md bg-slate-900 px-2.5 py-1 text-white hover:bg-slate-700"
+            className="rounded-md bg-stone-900 px-2.5 py-1 text-white hover:bg-stone-700"
           >
             + 추가
           </button>
         </form>
       ) : (
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-stone-400">
           이 고객사 / 내부 인원이 모두 등록되어 있습니다.
         </p>
       )}

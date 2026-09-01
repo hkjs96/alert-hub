@@ -39,8 +39,8 @@ export default async function MapAccountPage({
   return (
     <div className="max-w-xl space-y-5">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">AWS 계정 매핑</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-xl font-semibold text-stone-900">AWS 계정 매핑</h1>
+        <p className="mt-1 text-sm text-stone-500">
           이 계정에서 오는 알람이 어느 서비스의 것인지 지정합니다. 매핑되는 즉시
           대시보드 필터와 담당 해석이 이 계정의 알람에도 적용됩니다.
         </p>
@@ -59,9 +59,9 @@ export default async function MapAccountPage({
           </Link>
         </div>
       ) : services.length === 0 ? (
-        <p className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
+        <p className="rounded-lg border border-stone-200 bg-white p-4 text-sm text-stone-500">
           아직 서비스가 없습니다.{" "}
-          <Link href="/admin/customers" className="underline hover:text-blue-600">
+          <Link href="/admin/customers" className="underline hover:text-indigo-600">
             조직 · 담당자 관리
           </Link>
           에서 고객사/프로젝트/서비스를 먼저 등록하세요.
@@ -69,12 +69,12 @@ export default async function MapAccountPage({
       ) : (
         <form
           action={createAccountMap}
-          className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 text-sm"
+          className="space-y-3 rounded-lg border border-stone-200 bg-white p-4 text-sm"
         >
           <input type="hidden" name="back" value={back} />
           <input type="hidden" name="redirectTo" value={back} />
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-slate-500">
+            <span className="mb-1 block text-xs font-medium text-stone-500">
               AWS 계정 ID (12자리)
             </span>
             <input
@@ -83,18 +83,18 @@ export default async function MapAccountPage({
               required
               pattern="\d{12}"
               inputMode="numeric"
-              className="w-full rounded-md border border-slate-300 px-2 py-1 font-mono"
+              className="w-full rounded-md border border-stone-300 px-2 py-1 font-mono"
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-slate-500">
+            <span className="mb-1 block text-xs font-medium text-stone-500">
               서비스
             </span>
             <select
               name="serviceId"
               required
               defaultValue=""
-              className="w-full rounded-md border border-slate-300 bg-white px-2 py-1"
+              className="w-full rounded-md border border-stone-300 bg-white px-2 py-1"
             >
               <option value="" disabled>
                 서비스 선택…
@@ -108,24 +108,24 @@ export default async function MapAccountPage({
           </label>
           <div className="flex gap-3">
             <label className="block flex-1">
-              <span className="mb-1 block text-xs font-medium text-slate-500">
+              <span className="mb-1 block text-xs font-medium text-stone-500">
                 별칭 (선택)
               </span>
               <input
                 name="alias"
                 placeholder="payment-prod"
-                className="w-full rounded-md border border-slate-300 px-2 py-1"
+                className="w-full rounded-md border border-stone-300 px-2 py-1"
               />
             </label>
             <label className="block w-32">
-              <span className="mb-1 block text-xs font-medium text-slate-500">
+              <span className="mb-1 block text-xs font-medium text-stone-500">
                 환경 (선택)
               </span>
               <input
                 name="environment"
                 placeholder="prd"
                 list="env-suggestions"
-                className="w-full rounded-md border border-slate-300 px-2 py-1"
+                className="w-full rounded-md border border-stone-300 px-2 py-1"
               />
               <datalist id="env-suggestions">
                 <option value="prd" />
@@ -135,10 +135,10 @@ export default async function MapAccountPage({
             </label>
           </div>
           <div className="flex items-center gap-3 pt-1">
-            <button className="rounded-md bg-slate-900 px-3 py-1.5 font-medium text-white hover:bg-slate-700">
+            <button className="rounded-md bg-stone-900 px-3 py-1.5 font-medium text-white hover:bg-stone-700">
               매핑하고 돌아가기
             </button>
-            <Link href={back} className="text-slate-500 hover:underline">
+            <Link href={back} className="text-stone-500 hover:underline">
               취소
             </Link>
           </div>

@@ -21,8 +21,8 @@ function Field({ label, value }: { label: string; value?: string | null }) {
   if (value === null || value === undefined || value === "") return null;
   return (
     <div className="flex flex-col">
-      <dt className="text-xs uppercase tracking-wide text-slate-400">{label}</dt>
-      <dd className="mt-0.5 break-words text-sm text-slate-800">{value}</dd>
+      <dt className="text-xs uppercase tracking-wide text-stone-400">{label}</dt>
+      <dd className="mt-0.5 break-words text-sm text-stone-800">{value}</dd>
     </div>
   );
 }
@@ -44,7 +44,7 @@ function AlertActions({ id, status }: { id: string; status: string }) {
         <button
           disabled={!canAck}
           title={canAck ? undefined : "FIRING 상태에서만 Ack할 수 있습니다"}
-          className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400"
         >
           Acknowledge
         </button>
@@ -56,7 +56,7 @@ function AlertActions({ id, status }: { id: string; status: string }) {
           title={
             canResolve ? undefined : "이미 종료되었거나 전이할 수 없는 상태입니다"
           }
-          className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+          className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 hover:bg-stone-50 disabled:cursor-not-allowed disabled:border-stone-200 disabled:bg-stone-100 disabled:text-stone-400"
         >
           Resolve
         </button>
@@ -92,46 +92,46 @@ function SnapshotPanel({
     currentIds !== snapIds;
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
+    <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-stone-500">
         담당 · 조직 <span className="font-normal normal-case">(수신 시점 스냅샷)</span>
       </h2>
 
-      <div className="flex flex-wrap items-center gap-1 text-sm text-slate-600">
+      <div className="flex flex-wrap items-center gap-1 text-sm text-stone-600">
         <Link
           href={`/admin/customers/${chain.customerId}`}
-          className="font-medium text-slate-800 hover:text-blue-600 hover:underline"
+          className="font-medium text-stone-800 hover:text-indigo-600 hover:underline"
         >
           {chain.customerName}
         </Link>
-        <span className="text-slate-300">/</span>
+        <span className="text-stone-300">/</span>
         <Link
           href={`/admin/projects/${chain.projectId}`}
-          className="hover:text-blue-600 hover:underline"
+          className="hover:text-indigo-600 hover:underline"
         >
           {chain.projectName}
         </Link>
-        <span className="text-slate-300">/</span>
+        <span className="text-stone-300">/</span>
         <Link
           href={`/admin/services/${chain.serviceId}`}
-          className="hover:text-blue-600 hover:underline"
+          className="hover:text-indigo-600 hover:underline"
         >
           {chain.serviceName}
         </Link>
         {chain.accountAlias ? (
           <>
-            <span className="text-slate-300">/</span>
+            <span className="text-stone-300">/</span>
             <span className="font-mono text-xs">{chain.accountAlias}</span>
           </>
         ) : null}
         {chain.environment ? (
-          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">
+          <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs">
             {chain.environment}
           </span>
         ) : null}
       </div>
 
-      <p className="mb-2 mt-4 text-xs text-slate-400">
+      <p className="mb-2 mt-4 text-xs text-stone-400">
         {levelLabel(snapshot.level)} 단계의 순서 · 알람이 접수/재발화됐을 때 통지된
         기준입니다 ({formatTime(new Date(snapshot.capturedAt))})
       </p>
@@ -140,39 +140,39 @@ function SnapshotPanel({
           <li key={o.contactId} className="flex items-center gap-2 text-sm">
             <span
               className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-xs font-semibold tabular-nums ${
-                i === 0 ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500"
+                i === 0 ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-500"
               }`}
             >
               {i + 1}
             </span>
-            <span className={i === 0 ? "font-medium text-slate-900" : "text-slate-700"}>
+            <span className={i === 0 ? "font-medium text-stone-900" : "text-stone-700"}>
               {o.name}
             </span>
             {o.department ? (
-              <span className="text-xs text-slate-400">{o.department}</span>
+              <span className="text-xs text-stone-400">{o.department}</span>
             ) : null}
             {i === 0 ? (
-              <span className="text-xs font-medium text-blue-600">1순위</span>
+              <span className="text-xs font-medium text-indigo-600">1순위</span>
             ) : null}
           </li>
         ))}
       </ol>
 
       {driftsFromCurrent ? (
-        <p className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500">
+        <p className="mt-4 border-t border-stone-100 pt-3 text-xs text-stone-500">
           {current ? (
             <>
               현재 등록 기준과 다릅니다 — 지금은{" "}
               {current.contacts.length > 0 ? (
-                <span className="text-slate-700">
+                <span className="text-stone-700">
                   {current.contacts.map((c) => c.name).join(" → ")} (
                   {levelLabel(current.responsibility.level)} 단계)
                 </span>
               ) : (
-                <span className="text-slate-700">담당자 미등록</span>
+                <span className="text-stone-700">담당자 미등록</span>
               )}{" "}
               ·{" "}
-              <Link href={escalationHref} className="underline hover:text-blue-600">
+              <Link href={escalationHref} className="underline hover:text-indigo-600">
                 순서 편집
               </Link>
             </>
@@ -217,57 +217,57 @@ function OwnershipPanel({
   const escalationHref = `/admin/escalation?customerId=${chain.customer.id}&projectId=${chain.project.id}&serviceId=${chain.service.id}&level=${responsibility.level === "account" ? "service" : (responsibility.level ?? "service")}`;
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
+    <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-stone-500">
         담당 · 조직
       </h2>
 
-      <div className="flex flex-wrap items-center gap-1 text-sm text-slate-600">
+      <div className="flex flex-wrap items-center gap-1 text-sm text-stone-600">
         <Link
           href={`/admin/customers/${chain.customer.id}`}
-          className="font-medium text-slate-800 hover:text-blue-600 hover:underline"
+          className="font-medium text-stone-800 hover:text-indigo-600 hover:underline"
         >
           {chain.customer.name}
         </Link>
-        <span className="text-slate-300">/</span>
+        <span className="text-stone-300">/</span>
         <Link
           href={`/admin/projects/${chain.project.id}`}
-          className="hover:text-blue-600 hover:underline"
+          className="hover:text-indigo-600 hover:underline"
         >
           {chain.project.name}
         </Link>
-        <span className="text-slate-300">/</span>
+        <span className="text-stone-300">/</span>
         <Link
           href={`/admin/services/${chain.service.id}`}
-          className="hover:text-blue-600 hover:underline"
+          className="hover:text-indigo-600 hover:underline"
         >
           {chain.service.name}
         </Link>
-        <span className="text-slate-300">/</span>
+        <span className="text-stone-300">/</span>
         <span className="font-mono text-xs">
           {chain.account.alias ?? chain.account.accountId}
         </span>
         {chain.account.environment ? (
-          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">
+          <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs">
             {chain.account.environment}
           </span>
         ) : null}
       </div>
 
       {contacts.length === 0 ? (
-        <p className="mt-4 text-sm text-slate-400">
+        <p className="mt-4 text-sm text-stone-400">
           체인 어느 단계에도 담당자가 등록되어 있지 않습니다 —{" "}
-          <Link href={escalationHref} className="underline hover:text-blue-600">
+          <Link href={escalationHref} className="underline hover:text-indigo-600">
             알람 처리 순서
           </Link>
           에서 등록하세요.
         </p>
       ) : (
         <>
-          <p className="mb-2 mt-4 text-xs text-slate-400">
+          <p className="mb-2 mt-4 text-xs text-stone-400">
             {levelLabel(responsibility.level)} 단계의 순서가 적용됩니다 (현재 등록
             기준) ·{" "}
-            <Link href={escalationHref} className="underline hover:text-blue-600">
+            <Link href={escalationHref} className="underline hover:text-indigo-600">
               순서 편집
             </Link>
           </p>
@@ -276,19 +276,19 @@ function OwnershipPanel({
               <li key={c.id} className="flex items-center gap-2 text-sm">
                 <span
                   className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-xs font-semibold tabular-nums ${
-                    i === 0 ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500"
+                    i === 0 ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-500"
                   }`}
                 >
                   {i + 1}
                 </span>
-                <span className={i === 0 ? "font-medium text-slate-900" : "text-slate-700"}>
+                <span className={i === 0 ? "font-medium text-stone-900" : "text-stone-700"}>
                   {c.name}
                 </span>
                 {c.department ? (
-                  <span className="text-xs text-slate-400">{c.department}</span>
+                  <span className="text-xs text-stone-400">{c.department}</span>
                 ) : null}
                 {i === 0 ? (
-                  <span className="text-xs font-medium text-blue-600">1순위</span>
+                  <span className="text-xs font-medium text-indigo-600">1순위</span>
                 ) : null}
               </li>
             ))}
@@ -314,19 +314,19 @@ export default async function AlertDetailPage({
 
   return (
     <div className="space-y-6">
-      <Link href="/" className="text-sm text-blue-600 hover:underline">
+      <Link href="/" className="text-sm text-indigo-600 hover:underline">
         ← Back to alerts
       </Link>
 
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold text-slate-900">{alert.title}</h1>
+        <h1 className="text-2xl font-semibold text-stone-900">{alert.title}</h1>
         <SeverityBadge severity={alert.severity} />
         <StatusBadge status={alert.status} />
         <AlertActions id={alert.id} status={alert.status} />
       </div>
 
       {alert.description ? (
-        <p className="text-slate-600">{alert.description}</p>
+        <p className="text-stone-600">{alert.description}</p>
       ) : null}
 
       {snapshot && snapshot.order.length > 0 ? (
@@ -335,8 +335,8 @@ export default async function AlertDetailPage({
         <OwnershipPanel accountId={alert.accountId} info={ownership} />
       ) : null}
 
-      <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
+      <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-stone-500">
           Details
         </h2>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
@@ -357,32 +357,32 @@ export default async function AlertDetailPage({
           <Field label="Last seen" value={formatTime(alert.lastSeenAt)} />
         </dl>
         {alert.stateReason ? (
-          <div className="mt-4 border-t border-slate-100 pt-4">
-            <dt className="text-xs uppercase tracking-wide text-slate-400">
+          <div className="mt-4 border-t border-stone-100 pt-4">
+            <dt className="text-xs uppercase tracking-wide text-stone-400">
               State reason
             </dt>
-            <dd className="mt-0.5 text-sm text-slate-700">{alert.stateReason}</dd>
+            <dd className="mt-0.5 text-sm text-stone-700">{alert.stateReason}</dd>
           </div>
         ) : null}
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
+      <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-stone-500">
           통지 이력
         </h2>
         {/* 빈 상태도 명시한다 — "통지가 안 나간 것"과 "기록이 없는 것"을
             구분할 수 없으면 고객사 입장에서 신뢰가 깎인다 (페르소나 검증 P2). */}
         {alert.notifications.length === 0 ? (
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-stone-400">
             이 알람에 대해 발송된 통지가 없습니다 — 통지 채널이 설정되지
             않았거나, 담당자에게 연락 수단이 없거나, 통지 이력 도입 이전의
             알람입니다.
           </p>
         ) : (
-          <ul className="divide-y divide-slate-100 text-sm">
+          <ul className="divide-y divide-stone-100 text-sm">
             {alert.notifications.map((nlog) => (
               <li key={nlog.id} className="flex flex-wrap items-center gap-2 py-2">
-                <span className="w-14 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-center font-mono text-xs text-slate-600">
+                <span className="w-14 shrink-0 rounded bg-stone-100 px-1.5 py-0.5 text-center font-mono text-xs text-stone-600">
                   {nlog.channel}
                 </span>
                 {nlog.ok ? (
@@ -390,7 +390,7 @@ export default async function AlertDetailPage({
                 ) : (
                   <span className="text-xs font-medium text-red-700">실패</span>
                 )}
-                <span className="text-slate-700">
+                <span className="text-stone-700">
                   {nlog.target ?? "채널 전체"}
                 </span>
                 {nlog.escalationStep ? (
@@ -398,11 +398,11 @@ export default async function AlertDetailPage({
                     {nlog.escalationStep}순위 에스컬레이션
                   </span>
                 ) : (
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                  <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-500">
                     최초 통지
                   </span>
                 )}
-                <time className="ml-auto text-xs text-slate-400">
+                <time className="ml-auto text-xs text-stone-400">
                   {formatTime(nlog.createdAt)}
                 </time>
                 {nlog.error ? (
@@ -414,25 +414,25 @@ export default async function AlertDetailPage({
         )}
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
+      <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-stone-500">
           Event timeline
         </h2>
-        <ol className="relative space-y-4 border-l border-slate-200 pl-6">
+        <ol className="relative space-y-4 border-l border-stone-200 pl-6">
           {alert.events.map((ev) => (
             <li key={ev.id} className="relative">
-              <span className="absolute -left-[27px] top-1.5 h-2.5 w-2.5 rounded-full bg-slate-400 ring-4 ring-white" />
+              <span className="absolute -left-[27px] top-1.5 h-2.5 w-2.5 rounded-full bg-stone-400 ring-4 ring-white" />
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge status={ev.status} />
-                <time className="text-xs text-slate-400">
+                <time className="text-xs text-stone-400">
                   {formatTime(ev.createdAt)}
                 </time>
               </div>
               {ev.stateReason ? (
-                <p className="mt-1 text-sm text-slate-600">{ev.stateReason}</p>
+                <p className="mt-1 text-sm text-stone-600">{ev.stateReason}</p>
               ) : null}
               {ev.value ? (
-                <p className="mt-0.5 text-xs text-slate-400">value: {ev.value}</p>
+                <p className="mt-0.5 text-xs text-stone-400">value: {ev.value}</p>
               ) : null}
             </li>
           ))}

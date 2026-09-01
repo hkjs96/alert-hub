@@ -174,8 +174,8 @@ export default async function DashboardPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Alerts</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-2xl font-semibold text-stone-900">Alerts</h1>
+        <p className="mt-1 text-sm text-stone-500">
           Fired alarms received via the webhook, deduplicated by fingerprint.
         </p>
       </div>
@@ -247,7 +247,7 @@ export default async function DashboardPage({
             name="customer"
             aria-label="고객사"
             defaultValue={f.customer ?? ""}
-            className="rounded-md border border-slate-300 bg-white px-2 py-1"
+            className="rounded-md border border-stone-300 bg-white px-2 py-1"
           >
             <option value="">전체 고객사</option>
             {customers.map((c) => (
@@ -261,7 +261,7 @@ export default async function DashboardPage({
             aria-label="프로젝트"
             defaultValue={f.project ?? ""}
             disabled={!f.customer}
-            className="rounded-md border border-slate-300 bg-white px-2 py-1 disabled:text-slate-300"
+            className="rounded-md border border-stone-300 bg-white px-2 py-1 disabled:text-stone-300"
             title={f.customer ? undefined : "고객사를 먼저 선택하고 적용하세요"}
           >
             <option value="">전체 프로젝트</option>
@@ -275,7 +275,7 @@ export default async function DashboardPage({
             name="env"
             aria-label="환경"
             defaultValue={f.env ?? ""}
-            className="rounded-md border border-slate-300 bg-white px-2 py-1"
+            className="rounded-md border border-stone-300 bg-white px-2 py-1"
           >
             <option value="">전체 환경</option>
             {envs.map((e) => (
@@ -290,9 +290,9 @@ export default async function DashboardPage({
             aria-label="검색"
             defaultValue={f.q ?? ""}
             placeholder="검색 (제목·리소스·메트릭·계정)"
-            className="w-56 rounded-md border border-slate-300 bg-white px-2 py-1"
+            className="w-56 rounded-md border border-stone-300 bg-white px-2 py-1"
           />
-          <button className="rounded-md border border-slate-300 px-2.5 py-1 hover:bg-slate-50">
+          <button className="rounded-md border border-stone-300 px-2.5 py-1 hover:bg-stone-50">
             적용
           </button>
         </form>
@@ -305,10 +305,10 @@ export default async function DashboardPage({
                 key={c.value}
                 href={toggleStatus(c.value)}
                 aria-pressed={active}
-                className={`rounded-full px-3 py-1 text-sm font-medium transition ${
+                className={`rounded-full px-3 py-1 text-sm font-medium ring-1 ring-inset transition ${
                   active
-                    ? "bg-slate-900 text-white"
-                    : "bg-white text-slate-600 ring-1 ring-inset ring-slate-200 hover:bg-slate-100"
+                    ? "bg-indigo-50 text-indigo-700 ring-indigo-200"
+                    : "bg-white text-stone-600 ring-stone-200 hover:bg-stone-50"
                 }`}
               >
                 {c.label}
@@ -316,7 +316,7 @@ export default async function DashboardPage({
             );
           })}
           {anyFilterActive(f) && (
-            <Link href="/" className="text-sm text-blue-600 hover:underline">
+            <Link href="/" className="text-sm text-indigo-600 hover:underline">
               ✕ 초기화
             </Link>
           )}
@@ -334,13 +334,13 @@ export default async function DashboardPage({
         </div>
 
         <aside className="w-full shrink-0 lg:w-64">
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-700">담당 인원</h2>
-            <p className="mb-3 text-xs text-slate-400">
+          <div className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
+            <h2 className="text-sm font-semibold text-stone-700">담당 인원</h2>
+            <p className="mb-3 text-xs text-stone-400">
               필터 결과 기준 1순위 담당별 건수 · 클릭하면 그 사람 알람만 봅니다
             </p>
             {panel.length === 0 ? (
-              <p className="text-sm text-slate-400">표시할 알람이 없습니다.</p>
+              <p className="text-sm text-stone-400">표시할 알람이 없습니다.</p>
             ) : (
               <ul className="space-y-1">
                 {panel.map((p) => {
@@ -352,20 +352,20 @@ export default async function DashboardPage({
                         aria-pressed={active}
                         className={`flex items-center justify-between rounded-md px-2 py-1.5 text-sm ${
                           active
-                            ? "bg-slate-900 text-white"
-                            : "text-slate-700 hover:bg-slate-50"
+                            ? "bg-indigo-50 font-medium text-indigo-700"
+                            : "text-stone-700 hover:bg-stone-50"
                         }`}
                       >
                         <span
                           className={
-                            p.id === UNASSIGNED && !active ? "text-slate-400" : ""
+                            p.id === UNASSIGNED && !active ? "text-stone-400" : ""
                           }
                         >
                           {p.name}
                         </span>
                         <span
                           className={`tabular-nums text-xs ${
-                            active ? "text-slate-300" : "text-slate-400"
+                            active ? "text-indigo-400" : "text-stone-400"
                           }`}
                         >
                           {p.count}

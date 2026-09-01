@@ -1,12 +1,20 @@
-import type { AlertStatus } from "@/lib/types";
-
+// B안(라이트 정밀): 진한 채움 대신 옅은 바탕 + 같은 계열 보더 — 배지가
+// 소리치지 않고도 구분된다. 라벨은 문장 케이스.
 const STATUS_STYLES: Record<string, string> = {
-  FIRING: "bg-red-100 text-red-800 ring-red-600/20",
-  RESOLVED: "bg-green-100 text-green-800 ring-green-600/20",
-  ACKNOWLEDGED: "bg-blue-100 text-blue-800 ring-blue-600/20",
+  FIRING: "bg-red-50 text-red-700 ring-red-200",
+  RESOLVED: "bg-green-50 text-green-700 ring-green-200",
+  ACKNOWLEDGED: "bg-blue-50 text-blue-700 ring-blue-200",
   // AlertEvent-only marker written by the escalation cron; never an Alert.status.
-  ESCALATED: "bg-orange-100 text-orange-800 ring-orange-600/20",
-  INSUFFICIENT_DATA: "bg-gray-100 text-gray-700 ring-gray-500/20",
+  ESCALATED: "bg-orange-50 text-orange-700 ring-orange-200",
+  INSUFFICIENT_DATA: "bg-stone-100 text-stone-600 ring-stone-300",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  FIRING: "Firing",
+  RESOLVED: "Resolved",
+  ACKNOWLEDGED: "Ack",
+  ESCALATED: "Escalated",
+  INSUFFICIENT_DATA: "No Data",
 };
 
 const SEVERITY_STYLES: Record<string, string> = {
@@ -15,7 +23,7 @@ const SEVERITY_STYLES: Record<string, string> = {
   "SEV-2": "bg-orange-500 text-white ring-orange-600/30",
   "SEV-3": "bg-amber-400 text-amber-950 ring-amber-500/30",
   "SEV-4": "bg-yellow-300 text-yellow-900 ring-yellow-500/30",
-  "SEV-5": "bg-slate-300 text-slate-800 ring-slate-400/30",
+  "SEV-5": "bg-stone-300 text-stone-800 ring-stone-400/30",
   // Word severities from Prometheus / Grafana / PagerDuty.
   CRITICAL: "bg-red-600 text-white ring-red-700/30",
   HIGH: "bg-orange-500 text-white ring-orange-600/30",
@@ -23,7 +31,7 @@ const SEVERITY_STYLES: Record<string, string> = {
   WARNING: "bg-amber-400 text-amber-950 ring-amber-500/30",
   LOW: "bg-yellow-300 text-yellow-900 ring-yellow-500/30",
   INFO: "bg-sky-200 text-sky-800 ring-sky-400/30",
-  UNKNOWN: "bg-slate-200 text-slate-600 ring-slate-400/30",
+  UNKNOWN: "bg-stone-200 text-stone-600 ring-stone-400/30",
 };
 
 function Pill({ label, className }: { label: string; className: string }) {
@@ -38,7 +46,7 @@ function Pill({ label, className }: { label: string; className: string }) {
 
 export function StatusBadge({ status }: { status: string }) {
   const style = STATUS_STYLES[status] ?? STATUS_STYLES.INSUFFICIENT_DATA;
-  const label = (status as AlertStatus) === "INSUFFICIENT_DATA" ? "NO DATA" : status;
+  const label = STATUS_LABELS[status] ?? status;
   return <Pill label={label} className={style} />;
 }
 

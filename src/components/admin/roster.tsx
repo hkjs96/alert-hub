@@ -17,24 +17,24 @@ export async function Roster({
 }) {
   const roster = await getRoster(level, id);
   if (roster.length === 0) {
-    return <p className="text-sm text-slate-400">관련 인원이 아직 없습니다.</p>;
+    return <p className="text-sm text-stone-400">관련 인원이 아직 없습니다.</p>;
   }
   return (
-    <ul className="divide-y divide-slate-100 text-sm">
+    <ul className="divide-y divide-stone-100 text-sm">
       {roster.map((r) => (
         <li key={r.assignmentId} className="flex items-center gap-2 py-1.5">
           <span
-            className="w-6 shrink-0 text-center text-xs font-semibold tabular-nums text-slate-500"
+            className="w-6 shrink-0 text-center text-xs font-semibold tabular-nums text-stone-500"
             title={`${r.via === "직접" ? "이 단계" : r.via} ${r.order + 1}순위`}
           >
             {r.order + 1}
           </span>
-          <span className="font-medium text-slate-800">{r.contact.name}</span>
+          <span className="font-medium text-stone-800">{r.contact.name}</span>
           {r.contact.department ? (
-            <span className="text-slate-400">{r.contact.department}</span>
+            <span className="text-stone-400">{r.contact.department}</span>
           ) : null}
           <span
-            className={`ml-auto text-xs ${r.direct ? "text-slate-400" : "text-blue-500"}`}
+            className={`ml-auto text-xs ${r.direct ? "text-stone-400" : "text-blue-500"}`}
           >
             {r.via}
           </span>
