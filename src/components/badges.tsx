@@ -17,21 +17,22 @@ const STATUS_LABELS: Record<string, string> = {
   INSUFFICIENT_DATA: "No Data",
 };
 
-const SEVERITY_STYLES: Record<string, string> = {
-  "SEV-0": "bg-red-600 text-white ring-red-700/30",
-  "SEV-1": "bg-red-500 text-white ring-red-600/30",
-  "SEV-2": "bg-orange-500 text-white ring-orange-600/30",
-  "SEV-3": "bg-amber-400 text-amber-950 ring-amber-500/30",
-  "SEV-4": "bg-yellow-300 text-yellow-900 ring-yellow-500/30",
-  "SEV-5": "bg-stone-300 text-stone-800 ring-stone-400/30",
-  // Word severities from Prometheus / Grafana / PagerDuty.
-  CRITICAL: "bg-red-600 text-white ring-red-700/30",
-  HIGH: "bg-orange-500 text-white ring-orange-600/30",
-  ERROR: "bg-orange-500 text-white ring-orange-600/30",
-  WARNING: "bg-amber-400 text-amber-950 ring-amber-500/30",
-  LOW: "bg-yellow-300 text-yellow-900 ring-yellow-500/30",
-  INFO: "bg-sky-200 text-sky-800 ring-sky-400/30",
-  UNKNOWN: "bg-stone-200 text-stone-600 ring-stone-400/30",
+// 심각도: 채운 칩 대신 색점 + 모노 라벨 — 행마다 원색 덩어리가 소리치지
+// 않으면서, 점 색·라벨 둘 다로 읽힌다.
+const SEVERITY_DOTS: Record<string, string> = {
+  "SEV-0": "bg-red-700",
+  "SEV-1": "bg-red-600",
+  "SEV-2": "bg-orange-500",
+  "SEV-3": "bg-amber-400",
+  "SEV-4": "bg-yellow-300",
+  "SEV-5": "bg-stone-300",
+  CRITICAL: "bg-red-600",
+  HIGH: "bg-orange-500",
+  ERROR: "bg-orange-500",
+  WARNING: "bg-amber-400",
+  LOW: "bg-yellow-300",
+  INFO: "bg-sky-400",
+  UNKNOWN: "bg-stone-300",
 };
 
 function Pill({ label, className }: { label: string; className: string }) {
@@ -51,6 +52,11 @@ export function StatusBadge({ status }: { status: string }) {
 }
 
 export function SeverityBadge({ severity }: { severity: string }) {
-  const style = SEVERITY_STYLES[severity] ?? SEVERITY_STYLES.UNKNOWN;
-  return <Pill label={severity} className={style} />;
+  const dot = SEVERITY_DOTS[severity] ?? SEVERITY_DOTS.UNKNOWN;
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap font-mono text-xs font-medium text-stone-700">
+      <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
+      {severity}
+    </span>
+  );
 }

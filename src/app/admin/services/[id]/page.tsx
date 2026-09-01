@@ -68,16 +68,16 @@ export default async function ServiceDetailPage({
             required
             pattern="\d{12}"
             placeholder="123456789012"
-            className="w-36 rounded-md border border-stone-300 px-2 py-1 font-mono"
+            className="w-36 h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400 font-mono"
           />
           <input
             name="alias"
             placeholder="별칭 (선택)"
-            className="rounded-md border border-stone-300 px-2 py-1"
+            className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
           />
           <select
             name="environment"
-            className="rounded-md border border-stone-300 bg-white px-2 py-1"
+            className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
             defaultValue=""
           >
             <option value="">환경 (선택)</option>
@@ -85,7 +85,7 @@ export default async function ServiceDetailPage({
             <option value="stg">stg</option>
             <option value="dev">dev</option>
           </select>
-          <button className="rounded-md bg-stone-900 px-3 py-1 text-white hover:bg-stone-700">
+          <button className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700">
             + 계정 매핑
           </button>
         </form>
