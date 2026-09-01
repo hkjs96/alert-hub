@@ -421,7 +421,19 @@ export default async function AlertDetailPage({
         <ol className="relative space-y-4 border-l border-stone-200 pl-6">
           {alert.events.map((ev) => (
             <li key={ev.id} className="relative">
-              <span className="absolute -left-[27px] top-1.5 h-2.5 w-2.5 rounded-full bg-stone-400 ring-4 ring-white" />
+              <span
+                className={`absolute -left-[27px] top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-white ${
+                  ev.status === "FIRING"
+                    ? "bg-red-500"
+                    : ev.status === "RESOLVED"
+                      ? "bg-green-500"
+                      : ev.status === "ACKNOWLEDGED"
+                        ? "bg-blue-500"
+                        : ev.status === "ESCALATED"
+                          ? "bg-orange-500"
+                          : "bg-stone-300"
+                }`}
+              />
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge status={ev.status} />
                 <time className="text-xs text-stone-400">

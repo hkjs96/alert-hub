@@ -10,3 +10,29 @@ body {
   background: var(--background);
   color: #1c1917;
 }
+
+@layer base {
+  /* 세련됨의 절반은 포커스 마감 — 모든 인터랙티브 요소에 인디고 링 */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid rgb(99 102 241 / 0.6);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  input:focus,
+  select:focus {
+    outline: none;
+    border-color: rgb(129 140 248);
+    box-shadow: 0 0 0 3px rgb(99 102 241 / 0.12);
+  }
+  input,
+  select {
+    accent-color: #4f46e5;
+  }
+  ::placeholder {
+    color: #a8a29e;
+  }
+}

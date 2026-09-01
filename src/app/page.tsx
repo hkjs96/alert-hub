@@ -247,7 +247,7 @@ export default async function DashboardPage({
             name="customer"
             aria-label="고객사"
             defaultValue={f.customer ?? ""}
-            className="rounded-md border border-stone-300 bg-white px-2 py-1"
+            className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
           >
             <option value="">전체 고객사</option>
             {customers.map((c) => (
@@ -261,7 +261,7 @@ export default async function DashboardPage({
             aria-label="프로젝트"
             defaultValue={f.project ?? ""}
             disabled={!f.customer}
-            className="rounded-md border border-stone-300 bg-white px-2 py-1 disabled:text-stone-300"
+            className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400 disabled:bg-stone-50 disabled:text-stone-300 disabled:hover:border-stone-300"
             title={f.customer ? undefined : "고객사를 먼저 선택하고 적용하세요"}
           >
             <option value="">전체 프로젝트</option>
@@ -275,7 +275,7 @@ export default async function DashboardPage({
             name="env"
             aria-label="환경"
             defaultValue={f.env ?? ""}
-            className="rounded-md border border-stone-300 bg-white px-2 py-1"
+            className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
           >
             <option value="">전체 환경</option>
             {envs.map((e) => (
@@ -290,9 +290,9 @@ export default async function DashboardPage({
             aria-label="검색"
             defaultValue={f.q ?? ""}
             placeholder="검색 (제목·리소스·메트릭·계정)"
-            className="w-56 rounded-md border border-stone-300 bg-white px-2 py-1"
+            className="w-56 h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
           />
-          <button className="rounded-md border border-stone-300 px-2.5 py-1 hover:bg-stone-50">
+          <button className="inline-flex h-8 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50">
             적용
           </button>
         </form>

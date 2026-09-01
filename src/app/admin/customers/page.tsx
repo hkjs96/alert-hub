@@ -27,14 +27,14 @@ export default async function CustomersPage() {
           name="name"
           required
           placeholder="고객사 이름"
-          className="rounded-md border border-stone-300 px-2 py-1"
+          className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
         />
         <label className="flex items-center gap-1 text-stone-600">
           <input type="checkbox" name="isInternal" /> 내부(자사)
         </label>
         <button
           type="submit"
-          className="rounded-md bg-stone-900 px-3 py-1 text-white hover:bg-stone-700"
+          className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700"
         >
           + 고객사 등록
         </button>

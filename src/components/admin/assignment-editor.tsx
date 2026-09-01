@@ -75,7 +75,7 @@ export async function AssignmentEditor({
             name="contactId"
             required
             aria-label="담당자 선택"
-            className="rounded-md border border-stone-300 bg-white px-2 py-1"
+            className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
             defaultValue=""
           >
             <option value="" disabled>
@@ -91,7 +91,7 @@ export async function AssignmentEditor({
           </select>
           <button
             type="submit"
-            className="rounded-md bg-stone-900 px-2.5 py-1 text-white hover:bg-stone-700"
+            className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700"
           >
             + 추가
           </button>

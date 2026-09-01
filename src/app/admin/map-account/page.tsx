@@ -83,7 +83,7 @@ export default async function MapAccountPage({
               required
               pattern="\d{12}"
               inputMode="numeric"
-              className="w-full rounded-md border border-stone-300 px-2 py-1 font-mono"
+              className="w-full h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400 font-mono"
             />
           </label>
           <label className="block">
@@ -94,7 +94,7 @@ export default async function MapAccountPage({
               name="serviceId"
               required
               defaultValue=""
-              className="w-full rounded-md border border-stone-300 bg-white px-2 py-1"
+              className="w-full h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
             >
               <option value="" disabled>
                 서비스 선택…
@@ -114,7 +114,7 @@ export default async function MapAccountPage({
               <input
                 name="alias"
                 placeholder="payment-prod"
-                className="w-full rounded-md border border-stone-300 px-2 py-1"
+                className="w-full h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
               />
             </label>
             <label className="block w-32">
@@ -125,7 +125,7 @@ export default async function MapAccountPage({
                 name="environment"
                 placeholder="prd"
                 list="env-suggestions"
-                className="w-full rounded-md border border-stone-300 px-2 py-1"
+                className="w-full h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
               />
               <datalist id="env-suggestions">
                 <option value="prd" />
@@ -135,7 +135,7 @@ export default async function MapAccountPage({
             </label>
           </div>
           <div className="flex items-center gap-3 pt-1">
-            <button className="rounded-md bg-stone-900 px-3 py-1.5 font-medium text-white hover:bg-stone-700">
+            <button className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700">
               매핑하고 돌아가기
             </button>
             <Link href={back} className="text-stone-500 hover:underline">

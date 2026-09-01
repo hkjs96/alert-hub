@@ -38,31 +38,31 @@ export function NewContactInline({
           required
           placeholder="이름"
           aria-label="이름"
-          className="w-28 rounded-md border border-stone-300 px-2 py-1"
+          className="w-28 h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
         />
         <input
           name="department"
           placeholder="부서 (선택)"
           aria-label="부서"
-          className="w-28 rounded-md border border-stone-300 px-2 py-1"
+          className="w-28 h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
         />
         <input
           name="email"
           type="email"
           placeholder="이메일 (선택)"
           aria-label="이메일"
-          className="w-44 rounded-md border border-stone-300 px-2 py-1"
+          className="w-44 h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
         />
         <select
           name="affiliation"
           aria-label="소속"
           defaultValue="customer"
-          className="rounded-md border border-stone-300 bg-white px-2 py-1"
+          className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
         >
           <option value="customer">{customerName ?? "이 고객사"} 소속</option>
           <option value="internal">내부(MSP)</option>
         </select>
-        <button className="rounded-md bg-stone-900 px-2.5 py-1 text-white hover:bg-stone-700">
+        <button className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700">
           등록 + 배정
         </button>
       </form>

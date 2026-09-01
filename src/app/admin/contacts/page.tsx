@@ -30,22 +30,22 @@ export default async function ContactsPage() {
           name="name"
           required
           placeholder="이름"
-          className="rounded-md border border-stone-300 px-2 py-1"
+          className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
         />
         <input
           name="email"
           type="email"
           placeholder="이메일 (선택)"
-          className="rounded-md border border-stone-300 px-2 py-1"
+          className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
         />
         <input
           name="department"
           placeholder="부서 (선택)"
-          className="rounded-md border border-stone-300 px-2 py-1"
+          className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
         />
         <select
           name="customerId"
-          className="rounded-md border border-stone-300 bg-white px-2 py-1"
+          className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
           defaultValue=""
         >
           <option value="">내부(자사) 소속</option>
@@ -55,7 +55,7 @@ export default async function ContactsPage() {
             </option>
           ))}
         </select>
-        <button className="rounded-md bg-stone-900 px-3 py-1 text-white hover:bg-stone-700">
+        <button className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700">
           + 인원 등록
         </button>
       </form>

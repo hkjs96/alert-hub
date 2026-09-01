@@ -135,7 +135,7 @@ export default async function EscalationPage({
           name="customerId"
           aria-label="고객사"
           defaultValue={customer.id}
-          className="rounded-md border border-stone-300 bg-white px-2 py-1"
+          className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
         >
           {customers.map((c) => (
             <option key={c.id} value={c.id}>
@@ -149,7 +149,7 @@ export default async function EscalationPage({
           aria-label="프로젝트"
           defaultValue={project?.id ?? ""}
           disabled={projects.length === 0}
-          className="rounded-md border border-stone-300 bg-white px-2 py-1 disabled:text-stone-300"
+          className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400 disabled:bg-stone-50 disabled:text-stone-300 disabled:hover:border-stone-300"
         >
           {projects.length === 0 && <option value="">프로젝트 없음</option>}
           {projects.map((p) => (
@@ -164,7 +164,7 @@ export default async function EscalationPage({
           aria-label="서비스"
           defaultValue={service?.id ?? ""}
           disabled={services.length === 0}
-          className="rounded-md border border-stone-300 bg-white px-2 py-1 font-medium disabled:font-normal disabled:text-stone-300"
+          className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400 font-medium disabled:bg-stone-50 disabled:font-normal disabled:text-stone-300 disabled:hover:border-stone-300"
         >
           {services.length === 0 && <option value="">서비스 없음</option>}
           {services.map((s) => (
@@ -173,7 +173,7 @@ export default async function EscalationPage({
             </option>
           ))}
         </select>
-        <button className="rounded-md border border-stone-300 px-2.5 py-1 hover:bg-stone-50">
+        <button className="inline-flex h-8 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50">
           이동
         </button>
       </form>
@@ -255,7 +255,7 @@ export default async function EscalationPage({
                   <button
                     aria-label={`${a.contact.name} 순서 올리기`}
                     disabled={i === 0}
-                    className="rounded border border-stone-300 bg-white px-1.5 py-0.5 text-xs disabled:opacity-40"
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-stone-300 bg-white text-xs text-stone-600 transition-colors hover:bg-stone-50 disabled:opacity-35 disabled:hover:bg-white"
                   >
                     ↑
                   </button>
@@ -267,7 +267,7 @@ export default async function EscalationPage({
                   <button
                     aria-label={`${a.contact.name} 순서 내리기`}
                     disabled={i === assignments.length - 1}
-                    className="rounded border border-stone-300 bg-white px-1.5 py-0.5 text-xs disabled:opacity-40"
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-stone-300 bg-white text-xs text-stone-600 transition-colors hover:bg-stone-50 disabled:opacity-35 disabled:hover:bg-white"
                   >
                     ↓
                   </button>
@@ -310,7 +310,7 @@ export default async function EscalationPage({
               required
               aria-label="담당자 추가"
               defaultValue=""
-              className="rounded-md border border-stone-300 bg-white px-2 py-1"
+              className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
             >
               <option value="" disabled>
                 담당자 추가 (맨 뒤 순번으로)…
@@ -323,7 +323,7 @@ export default async function EscalationPage({
                 </option>
               ))}
             </select>
-            <button className="rounded-md bg-stone-900 px-2.5 py-1 text-white hover:bg-stone-700">
+            <button className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700">
               + 추가
             </button>
           </form>
