@@ -1,0 +1,129 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@500&family=Noto+Sans+KR:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: "Geist", "Noto Sans KR", ui-sans-serif, system-ui, "Apple SD Gothic Neo", sans-serif; }
+    a { color: #4f46e5; text-decoration: none; } a:hover { color: #4338ca; }
+  </style>
+</helmet>
+<div style="box-sizing: border-box; width: 1200px; background: #fafaf9; color: #1c1917; padding: 0 0 28px 0;">
+
+  <div style="display: flex; align-items: center; gap: 14px; background: #ffffff; border-bottom: 1px solid #e7e5e4; padding: 14px 28px;">
+    <span style="font-weight: 600; font-size: 15px; letter-spacing: -0.02em;">alert-hub</span>
+    <span style="margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 12.5px; color: #78716c;">
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 6px; height: 6px; border-radius: 99px; background: #16a34a;"></span>통지 정상</span>
+      <span>등록관리</span>
+    </span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 18px; padding: 24px 28px 0;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <span style="font-size: 19px; font-weight: 600; letter-spacing: -0.025em;">Alerts</span>
+      <span style="font-size: 12.5px; color: #a8a29e;">fingerprint dedup · UTC</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: #e7e5e4; border: 1px solid #e7e5e4; border-radius: 10px; overflow: hidden;">
+      <div style="background: #ffffff; padding: 14px 16px;">
+        <div style="font-size: 12px; font-weight: 500; color: #78716c;">Firing</div>
+        <div style="margin-top: 3px; font-size: 26px; font-weight: 600; letter-spacing: -0.03em; color: #dc2626; font-variant-numeric: tabular-nums;">4</div>
+        <div style="font-size: 11.5px; color: #a8a29e;">+ 뮤트 1</div>
+      </div>
+      <div style="background: #ffffff; padding: 14px 16px;">
+        <div style="font-size: 12px; font-weight: 500; color: #78716c;">Acked</div>
+        <div style="margin-top: 3px; font-size: 26px; font-weight: 600; letter-spacing: -0.03em; color: #1c1917; font-variant-numeric: tabular-nums;">1</div>
+        <div style="font-size: 11.5px; color: transparent;">.</div>
+      </div>
+      <div style="background: #ffffff; padding: 14px 16px;">
+        <div style="font-size: 12px; font-weight: 500; color: #78716c;">Resolved</div>
+        <div style="margin-top: 3px; font-size: 26px; font-weight: 600; letter-spacing: -0.03em; color: #1c1917; font-variant-numeric: tabular-nums;">3</div>
+        <div style="font-size: 11.5px; color: transparent;">.</div>
+      </div>
+      <div style="background: #ffffff; padding: 14px 16px;">
+        <div style="font-size: 12px; font-weight: 500; color: #78716c;">No Data</div>
+        <div style="margin-top: 3px; font-size: 26px; font-weight: 600; letter-spacing: -0.03em; color: #a8a29e; font-variant-numeric: tabular-nums;">0</div>
+        <div style="font-size: 11.5px; color: transparent;">.</div>
+      </div>
+      <div style="background: #ffffff; padding: 14px 16px;">
+        <div style="font-size: 12px; font-weight: 500; color: #78716c;">Total</div>
+        <div style="margin-top: 3px; font-size: 26px; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums;">9</div>
+        <div style="font-size: 11.5px; color: transparent;">.</div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 6px; font-size: 13px;">
+      <span style="border: 1px solid #d6d3d1; background: #ffffff; border-radius: 7px; padding: 4px 11px; color: #44403c;">전체 고객사 ▾</span>
+      <span style="border: 1px solid #d6d3d1; background: #ffffff; border-radius: 7px; padding: 4px 11px; color: #44403c;">전체 환경 ▾</span>
+      <span style="border: 1px solid #e7e5e4; background: #ffffff; border-radius: 7px; padding: 4px 11px; color: #a8a29e; width: 190px;">검색…</span>
+      <span style="margin-left: 8px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; border-radius: 999px; padding: 4px 12px; font-weight: 500;">Firing</span>
+      <span style="border: 1px solid #d6d3d1; background: #ffffff; border-radius: 999px; padding: 4px 12px; color: #57534e;">Acked</span>
+      <span style="border: 1px solid #d6d3d1; background: #ffffff; border-radius: 999px; padding: 4px 12px; color: #57534e;">Resolved</span>
+      <a href="#" style="margin-left: 4px; font-size: 12.5px;">✕ 초기화</a>
+    </div>
+
+    <div style="display: flex; gap: 16px;">
+      <div style="flex: 1 1 auto; background: #ffffff; border: 1px solid #e7e5e4; border-radius: 10px; overflow: hidden;">
+        <div style="display: grid; grid-template-columns: 60px 116px 1fr 60px 120px 46px 92px; padding: 10px 18px; border-bottom: 1px solid #e7e5e4; font-size: 11px; font-weight: 500; letter-spacing: 0.06em; color: #a8a29e;">
+          <div>SEV</div><div>STATUS</div><div>TITLE</div><div>ENV</div><div>담당</div><div>CNT</div><div>LAST</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 60px 116px 1fr 60px 120px 46px 92px; align-items: center; padding: 11px 18px 11px 15px; border-bottom: 1px solid #f5f5f4; border-left: 3px solid #dc2626; font-size: 13.5px;">
+          <div><span style="font-family: 'Geist Mono', monospace; font-size: 11.5px; font-weight: 500; color: #dc2626;">S1</span></div>
+          <div><span style="display: inline-flex; border-radius: 6px; padding: 2px 8px; font-size: 11.5px; font-weight: 500; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;">Firing</span></div>
+          <div>
+            <div style="font-weight: 500; letter-spacing: -0.015em;">prod-db CPUUtilization high</div>
+            <div style="margin-top: 1px; font-size: 11.5px; color: #a8a29e;">네오위즈 / 게임플랫폼 / 주문API</div>
+          </div>
+          <div style="font-size: 11.5px; color: #78716c;">prd</div>
+          <div style="color: #44403c;">최민서 <span style="color: #a8a29e;">+1</span></div>
+          <div style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #78716c;">3</div>
+          <div style="font-family: 'Geist Mono', monospace; font-size: 11.5px; color: #a8a29e;">11:13Z</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 60px 116px 1fr 60px 120px 46px 92px; align-items: center; padding: 11px 18px 11px 15px; border-bottom: 1px solid #f5f5f4; border-left: 3px solid #d6d3d1; background: #fafaf9; font-size: 13.5px;">
+          <div style="opacity: 0.5;"><span style="font-family: 'Geist Mono', monospace; font-size: 11.5px; font-weight: 500; color: #ea580c;">S2</span></div>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="display: inline-flex; width: fit-content; border-radius: 6px; padding: 2px 8px; font-size: 11.5px; font-weight: 500; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; opacity: 0.5;">Firing</span>
+            <span style="display: inline-flex; width: fit-content; border-radius: 999px; padding: 1px 8px; font-size: 10.5px; font-weight: 500; background: #f5f5f4; color: #78716c;">뮤트 ~23:00</span>
+          </div>
+          <div style="opacity: 0.5;">
+            <div style="font-weight: 500;">payment-api 5xx spike</div>
+            <div style="margin-top: 1px; font-size: 11.5px; color: #a8a29e;">네오위즈 / 게임플랫폼 / 결제서비스</div>
+          </div>
+          <div style="font-size: 11.5px; color: #78716c; opacity: 0.5;">prd</div>
+          <div style="opacity: 0.5;">최민서 <span style="color: #a8a29e;">+1</span></div>
+          <div style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #78716c; opacity: 0.5;">12</div>
+          <div style="font-family: 'Geist Mono', monospace; font-size: 11.5px; color: #a8a29e; opacity: 0.5;">21:04Z</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 60px 116px 1fr 60px 120px 46px 92px; align-items: center; padding: 11px 18px 11px 15px; border-left: 3px solid transparent; font-size: 13.5px;">
+          <div><span style="font-family: 'Geist Mono', monospace; font-size: 11.5px; font-weight: 500; color: #d97706;">S3</span></div>
+          <div><span style="display: inline-flex; border-radius: 6px; padding: 2px 8px; font-size: 11.5px; font-weight: 500; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">Ack</span></div>
+          <div>
+            <div style="font-weight: 500;">auth latency p99</div>
+            <div style="margin-top: 1px; font-size: 11.5px; color: #a8a29e;">네오위즈 / 게임플랫폼 / 로그인서비스</div>
+          </div>
+          <div style="font-size: 11.5px; color: #78716c;">prd</div>
+          <div style="color: #44403c;">김도윤 <span style="color: #a8a29e;">+1</span></div>
+          <div style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #78716c;">1</div>
+          <div style="font-family: 'Geist Mono', monospace; font-size: 11.5px; color: #a8a29e;">10:41Z</div>
+        </div>
+      </div>
+
+      <div style="flex: 0 0 210px; background: #ffffff; border: 1px solid #e7e5e4; border-radius: 10px; padding: 14px; height: fit-content;">
+        <div style="font-size: 11px; font-weight: 500; letter-spacing: 0.06em; color: #a8a29e; margin-bottom: 10px;">담당 인원</div>
+        <div style="display: flex; flex-direction: column; gap: 2px; font-size: 13px;">
+          <div style="display: flex; justify-content: space-between; padding: 5px 9px; border-radius: 7px; background: #eef2ff; color: #4338ca; font-weight: 500;"><span>최민서</span><span style="font-variant-numeric: tabular-nums; font-size: 12px;">3</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 5px 9px; color: #44403c;"><span>김도윤</span><span style="font-variant-numeric: tabular-nums; font-size: 12px; color: #a8a29e;">1</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 5px 9px; color: #a8a29e;"><span>미지정</span><span style="font-variant-numeric: tabular-nums; font-size: 12px;">1</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

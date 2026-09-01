@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+  <style>
+    body { margin: 0; font-family: "Archivo", "Noto Sans KR", ui-sans-serif, system-ui, "Apple SD Gothic Neo", sans-serif; }
+    a { color: #0f62fe; text-decoration: none; } a:hover { text-decoration: underline; }
+  </style>
+</helmet>
+<div style="box-sizing: border-box; width: 1200px; background: #f4f4f4; color: #161616; padding: 0 0 28px 0;">
+
+  <div style="display: flex; align-items: center; gap: 16px; background: #161616; color: #ffffff; padding: 12px 28px;">
+    <span style="font-weight: 700; font-size: 14px; letter-spacing: 0.02em;">ALERT-HUB</span>
+    <span style="margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 12px; color: #a8a8a8;">
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 8px; height: 8px; background: #42be65;"></span>통지 정상</span>
+      <span>등록관리</span>
+    </span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 0; padding: 24px 28px 0;">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px;">
+      <span style="font-size: 22px; font-weight: 700; letter-spacing: -0.01em;">Alerts</span>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6f6f6f;">UTC · FINGERPRINT DEDUP</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 2px solid #161616; border-bottom: 1px solid #c6c6c6; background: #ffffff;">
+      <div style="padding: 14px 16px; border-right: 1px solid #e0e0e0;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: #da1e28;">FIRING</div>
+        <div style="margin-top: 2px; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; color: #da1e28; font-variant-numeric: tabular-nums; line-height: 1.15;">4</div>
+        <div style="font-size: 11px; color: #6f6f6f;">+ 뮤트 1</div>
+      </div>
+      <div style="padding: 14px 16px; border-right: 1px solid #e0e0e0;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: #6f6f6f;">ACKED</div>
+        <div style="margin-top: 2px; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.15;">1</div>
+        <div style="font-size: 11px; color: transparent;">.</div>
+      </div>
+      <div style="padding: 14px 16px; border-right: 1px solid #e0e0e0;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: #6f6f6f;">RESOLVED</div>
+        <div style="margin-top: 2px; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.15;">3</div>
+        <div style="font-size: 11px; color: transparent;">.</div>
+      </div>
+      <div style="padding: 14px 16px; border-right: 1px solid #e0e0e0;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: #6f6f6f;">NO DATA</div>
+        <div style="margin-top: 2px; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; color: #a8a8a8; font-variant-numeric: tabular-nums; line-height: 1.15;">0</div>
+        <div style="font-size: 11px; color: transparent;">.</div>
+      </div>
+      <div style="padding: 14px 16px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: #6f6f6f;">TOTAL</div>
+        <div style="margin-top: 2px; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.15;">9</div>
+        <div style="font-size: 11px; color: transparent;">.</div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 14px 0;">
+      <span style="border: 1px solid #8d8d8d; background: #ffffff; padding: 5px 12px; color: #161616;">전체 고객사 ▾</span>
+      <span style="border: 1px solid #8d8d8d; background: #ffffff; padding: 5px 12px; color: #161616;">전체 환경 ▾</span>
+      <span style="border-bottom: 1px solid #8d8d8d; padding: 5px 12px; color: #6f6f6f; width: 180px;">검색…</span>
+      <span style="margin-left: 8px; background: #161616; color: #ffffff; padding: 5px 14px; font-weight: 500;">FIRING</span>
+      <span style="border: 1px solid #8d8d8d; background: #ffffff; padding: 5px 14px; color: #161616;">ACKED</span>
+      <span style="border: 1px solid #8d8d8d; background: #ffffff; padding: 5px 14px; color: #161616;">RESOLVED</span>
+      <a href="#" style="margin-left: 6px; font-size: 12.5px;">✕ 초기화</a>
+    </div>
+
+    <div style="display: flex; gap: 20px;">
+      <div style="flex: 1 1 auto; background: #ffffff; border-top: 2px solid #161616;">
+        <div style="display: grid; grid-template-columns: 14px 56px 100px 1fr 56px 116px 44px 90px; gap: 0 10px; padding: 9px 14px 9px 0; border-bottom: 1px solid #c6c6c6; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: #6f6f6f;">
+          <div></div><div>SEV</div><div>STATUS</div><div>TITLE</div><div>ENV</div><div>담당</div><div>CNT</div><div>LAST</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 14px 56px 100px 1fr 56px 116px 44px 90px; gap: 0 10px; align-items: center; padding: 12px 14px 12px 0; border-bottom: 1px solid #e0e0e0; font-size: 13.5px;">
+          <div style="align-self: stretch; background: #da1e28;"></div>
+          <div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600;">S1</span></div>
+          <div><span style="display: inline-flex; padding: 2px 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; background: #da1e28; color: #ffffff;">FIRING</span></div>
+          <div>
+            <div style="font-weight: 600; letter-spacing: -0.005em;">prod-db CPUUtilization high</div>
+            <div style="font-size: 11.5px; color: #6f6f6f;">네오위즈 › 게임플랫폼 › 주문API</div>
+          </div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">PRD</div>
+          <div>최민서 <span style="color: #a8a8a8;">+1</span></div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12.5px;">3</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #6f6f6f;">11:13Z</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 14px 56px 100px 1fr 56px 116px 44px 90px; gap: 0 10px; align-items: center; padding: 12px 14px 12px 0; border-bottom: 1px solid #e0e0e0; font-size: 13.5px; background: repeating-linear-gradient(-45deg, #f4f4f4, #f4f4f4 6px, #ffffff 6px, #ffffff 12px);">
+          <div style="align-self: stretch; background: #8d8d8d;"></div>
+          <div style="opacity: 0.55;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600;">S2</span></div>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="display: inline-flex; width: fit-content; padding: 2px 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; background: #ffffff; color: #da1e28; border: 1px solid #da1e28; opacity: 0.55;">FIRING</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #525252;">MUTED ~23:00Z</span>
+          </div>
+          <div style="opacity: 0.55;">
+            <div style="font-weight: 600;">payment-api 5xx spike</div>
+            <div style="font-size: 11.5px; color: #6f6f6f;">네오위즈 › 게임플랫폼 › 결제서비스</div>
+          </div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; opacity: 0.55;">PRD</div>
+          <div style="opacity: 0.55;">최민서 <span style="color: #a8a8a8;">+1</span></div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; opacity: 0.55;">12</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #6f6f6f; opacity: 0.55;">21:04Z</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 14px 56px 100px 1fr 56px 116px 44px 90px; gap: 0 10px; align-items: center; padding: 12px 14px 12px 0; border-bottom: 1px solid #e0e0e0; font-size: 13.5px;">
+          <div style="align-self: stretch; background: #0f62fe;"></div>
+          <div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600;">S3</span></div>
+          <div><span style="display: inline-flex; padding: 2px 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; background: #ffffff; color: #0f62fe; border: 1px solid #0f62fe;">ACK</span></div>
+          <div>
+            <div style="font-weight: 600;">auth latency p99</div>
+            <div style="font-size: 11.5px; color: #6f6f6f;">네오위즈 › 게임플랫폼 › 로그인서비스</div>
+          </div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">PRD</div>
+          <div>김도윤 <span style="color: #a8a8a8;">+1</span></div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12.5px;">1</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #6f6f6f;">10:41Z</div>
+        </div>
+      </div>
+
+      <div style="flex: 0 0 200px; background: #ffffff; border-top: 2px solid #161616; padding: 12px 14px; height: fit-content;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: #6f6f6f; margin-bottom: 10px;">담당 인원</div>
+        <div style="display: flex; flex-direction: column; font-size: 13px;">
+          <div style="display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #e0e0e0; font-weight: 600;"><span style="border-bottom: 2px solid #0f62fe; padding-bottom: 5px; margin-bottom: -8px;">최민서</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">3</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #e0e0e0;"><span>김도윤</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6f6f6f;">1</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 7px 0; color: #a8a8a8;"><span>미지정</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">1</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
