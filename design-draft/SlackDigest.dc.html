@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+    a { color: #1264a3; text-decoration: none; } a:hover { color: #0b4c8c; }
+  </style>
+</helmet>
+<div style="width: 560px; background: #ffffff; color: #1d1c1d; padding: 24px; display: flex; flex-direction: column; gap: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+
+  <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; color: #64748b;">SLACK — 통지 묶음 (60초 창)</div>
+
+  <div style="display: flex; gap: 10px;">
+    <div style="width: 36px; height: 36px; border-radius: 6px; background: #0f172a; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0;">AH</div>
+    <div style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.5;">
+      <div><b>alert-hub</b> <span style="background: #f1f5f9; border-radius: 3px; padding: 0 4px; font-size: 10px; color: #64748b; vertical-align: middle;">APP</span> <span style="color: #94a3b8; font-size: 12px;">21:05</span></div>
+      <div><b>🚨 결제서비스 알람 4건</b> — SEV-1 1 · SEV-2 3 (최근 60초)</div>
+      <div style="border-left: 4px solid #dc2626; padding-left: 10px; display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: #475569;">
+        <span><a href="#">SEV-1 payment-db CPUUtilization high</a> · 92.4 &gt; 90</span>
+        <span><a href="#">SEV-2 payment-api 5xx spike</a> · 5XXError &gt; 50</span>
+        <span><a href="#">SEV-2 payment-api p99 latency</a> · 1.8s &gt; 1s</span>
+        <span><a href="#">SEV-2 payment-queue depth</a> · 1.2k &gt; 1k</span>
+      </div>
+      <div>담당 1순위: <span style="background: #e8f5fa; color: #1264a3; border-radius: 3px; padding: 0 3px;">@최민서</span> · 다음 순서: 박준혁</div>
+      <div><a href="#">Open in alert-hub</a></div>
+    </div>
+  </div>
+
+  <div style="border-top: 1px solid #f1f5f9; padding-top: 16px; display: flex; gap: 10px;">
+    <div style="width: 36px; height: 36px; border-radius: 6px; background: #0f172a; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0;">AH</div>
+    <div style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.5;">
+      <div><b>alert-hub</b> <span style="background: #f1f5f9; border-radius: 3px; padding: 0 4px; font-size: 10px; color: #64748b; vertical-align: middle;">APP</span> <span style="color: #94a3b8; font-size: 12px;">23:02</span></div>
+      <div>🔇 <b>점검 창 종료: 결제서비스</b> (21:00 → 23:00, DB 마이그레이션)</div>
+      <div style="font-size: 13px; color: #475569;">뮤트 중 발생 7건 — 현재 FIRING 1 · 자체 해소 6. <a href="#">남은 1건 보기</a></div>
+    </div>
+  </div>
+
+  <div style="font-size: 12px; color: #94a3b8;">
+    같은 알람의 재발화는 30분 스로틀 — 상태·횟수는 갱신되고 통지만 침묵.
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
