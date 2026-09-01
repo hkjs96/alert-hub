@@ -1,0 +1,129 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+  <style>
+    body { margin: 0; font-family: "IBM Plex Sans KR", ui-sans-serif, system-ui, "Apple SD Gothic Neo", sans-serif; }
+    a { color: #8b93ff; text-decoration: none; } a:hover { color: #aab0ff; }
+  </style>
+</helmet>
+<div style="box-sizing: border-box; width: 1200px; background: #0b0d12; color: rgba(255,255,255,0.92); padding: 0 0 28px 0;">
+
+  <div style="display: flex; align-items: center; gap: 14px; border-bottom: 1px solid rgba(255,255,255,0.08); padding: 13px 24px;">
+    <span style="font-weight: 600; font-size: 14px; letter-spacing: -0.01em;">alert-hub</span>
+    <span style="margin-left: auto; display: flex; align-items: center; gap: 14px; font-size: 12px; color: rgba(255,255,255,0.45);">
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 6px; height: 6px; border-radius: 99px; background: #3fb970; box-shadow: 0 0 6px rgba(63,185,112,0.7);"></span>통지 정상</span>
+      <span>등록관리</span>
+    </span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 16px; padding: 20px 24px 0;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <span style="font-size: 17px; font-weight: 600; letter-spacing: -0.015em;">Alerts</span>
+      <span style="font-size: 12px; color: rgba(255,255,255,0.4);">fingerprint dedup · UTC</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px;">
+      <div style="background: #12151c; border: 1px solid rgba(255,84,84,0.35); border-radius: 8px; padding: 12px 14px;">
+        <div style="font-size: 11px; font-weight: 500; letter-spacing: 0.08em; color: #ff6b6b;">FIRING</div>
+        <div style="margin-top: 4px; font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 700; color: #ff6b6b; text-shadow: 0 0 14px rgba(255,90,90,0.4);">4</div>
+        <div style="font-size: 11px; color: rgba(255,255,255,0.38);">+ 뮤트 1</div>
+      </div>
+      <div style="background: #12151c; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px 14px;">
+        <div style="font-size: 11px; font-weight: 500; letter-spacing: 0.08em; color: rgba(255,255,255,0.45);">ACKED</div>
+        <div style="margin-top: 4px; font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 700; color: #58a6ff;">1</div>
+        <div style="font-size: 11px; color: transparent;">.</div>
+      </div>
+      <div style="background: #12151c; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px 14px;">
+        <div style="font-size: 11px; font-weight: 500; letter-spacing: 0.08em; color: rgba(255,255,255,0.45);">RESOLVED</div>
+        <div style="margin-top: 4px; font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 700; color: #3fb970;">3</div>
+        <div style="font-size: 11px; color: transparent;">.</div>
+      </div>
+      <div style="background: #12151c; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px 14px;">
+        <div style="font-size: 11px; font-weight: 500; letter-spacing: 0.08em; color: rgba(255,255,255,0.45);">NO DATA</div>
+        <div style="margin-top: 4px; font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 700; color: rgba(255,255,255,0.4);">0</div>
+        <div style="font-size: 11px; color: transparent;">.</div>
+      </div>
+      <div style="background: #12151c; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px 14px;">
+        <div style="font-size: 11px; font-weight: 500; letter-spacing: 0.08em; color: rgba(255,255,255,0.45);">TOTAL</div>
+        <div style="margin-top: 4px; font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 700;">9</div>
+        <div style="font-size: 11px; color: transparent;">.</div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+      <span style="border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; padding: 4px 10px; color: rgba(255,255,255,0.75);">전체 고객사 ▾</span>
+      <span style="border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; padding: 4px 10px; color: rgba(255,255,255,0.75);">전체 환경 ▾</span>
+      <span style="border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 4px 10px; color: rgba(255,255,255,0.35); width: 190px;">검색…</span>
+      <span style="margin-left: 8px; background: rgba(139,147,255,0.15); color: #aab0ff; border: 1px solid rgba(139,147,255,0.4); border-radius: 999px; padding: 4px 11px; font-weight: 500;">Firing</span>
+      <span style="border: 1px solid rgba(255,255,255,0.12); border-radius: 999px; padding: 4px 11px; color: rgba(255,255,255,0.55);">Acked</span>
+      <span style="border: 1px solid rgba(255,255,255,0.12); border-radius: 999px; padding: 4px 11px; color: rgba(255,255,255,0.55);">Resolved</span>
+      <a href="#" style="margin-left: 4px; font-size: 12px;">✕ 초기화</a>
+    </div>
+
+    <div style="display: flex; gap: 14px;">
+      <div style="flex: 1 1 auto; background: #12151c; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden;">
+        <div style="display: grid; grid-template-columns: 64px 110px 1fr 64px 120px 46px 96px; padding: 9px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 10px; font-weight: 600; letter-spacing: 0.1em; color: rgba(255,255,255,0.38);">
+          <div>SEV</div><div>STATUS</div><div>TITLE</div><div>ENV</div><div>담당</div><div>CNT</div><div>LAST</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 64px 110px 1fr 64px 120px 46px 96px; align-items: center; padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; background: linear-gradient(90deg, rgba(255,90,90,0.08), transparent 30%);">
+          <div><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: #ff6b6b;">S1</span></div>
+          <div><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 500; color: #ff6b6b;"><span style="width: 6px; height: 6px; border-radius: 99px; background: #ff5c5c; box-shadow: 0 0 8px rgba(255,90,90,0.8);"></span>FIRING</span></div>
+          <div>
+            <div style="font-weight: 500; letter-spacing: -0.01em;">prod-db CPUUtilization high</div>
+            <div style="font-size: 11px; color: rgba(255,255,255,0.35);">네오위즈 · 게임플랫폼 · 주문API</div>
+          </div>
+          <div style="font-size: 11px; color: rgba(255,255,255,0.5);">prd</div>
+          <div style="color: rgba(255,255,255,0.75);">최민서 <span style="color: rgba(255,255,255,0.35);">+1</span></div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(255,255,255,0.6);">3</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.45);">11:13Z</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 64px 110px 1fr 64px 120px 46px 96px; align-items: center; padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; opacity: 0.45;">
+          <div><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: #ffab5c;">S2</span></div>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 500; color: #ff6b6b;"><span style="width: 6px; height: 6px; border-radius: 99px; background: #ff5c5c;"></span>FIRING</span>
+            <span style="font-size: 10px; color: rgba(255,255,255,0.6);">뮤트 ~23:00</span>
+          </div>
+          <div>
+            <div style="font-weight: 500;">payment-api 5xx spike</div>
+            <div style="font-size: 11px; color: rgba(255,255,255,0.35);">네오위즈 · 게임플랫폼 · 결제서비스</div>
+          </div>
+          <div style="font-size: 11px; color: rgba(255,255,255,0.5);">prd</div>
+          <div>최민서 <span style="color: rgba(255,255,255,0.35);">+1</span></div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px;">12</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px;">21:04Z</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 64px 110px 1fr 64px 120px 46px 96px; align-items: center; padding: 10px 16px; font-size: 13px;">
+          <div><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: #e3c35c;">S3</span></div>
+          <div><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 500; color: #58a6ff;"><span style="width: 6px; height: 6px; border-radius: 99px; background: #58a6ff;"></span>ACK</span></div>
+          <div>
+            <div style="font-weight: 500;">auth latency p99</div>
+            <div style="font-size: 11px; color: rgba(255,255,255,0.35);">네오위즈 · 게임플랫폼 · 로그인서비스</div>
+          </div>
+          <div style="font-size: 11px; color: rgba(255,255,255,0.5);">prd</div>
+          <div style="color: rgba(255,255,255,0.75);">김도윤 <span style="color: rgba(255,255,255,0.35);">+1</span></div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(255,255,255,0.6);">1</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.45);">10:41Z</div>
+        </div>
+      </div>
+
+      <div style="flex: 0 0 210px; background: #12151c; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; height: fit-content;">
+        <div style="font-size: 10px; font-weight: 600; letter-spacing: 0.1em; color: rgba(255,255,255,0.38); margin-bottom: 10px;">담당 인원</div>
+        <div style="display: flex; flex-direction: column; gap: 2px; font-size: 13px;">
+          <div style="display: flex; justify-content: space-between; padding: 5px 8px; border-radius: 6px; background: rgba(139,147,255,0.12); color: #aab0ff;"><span>최민서</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px;">3</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 5px 8px; color: rgba(255,255,255,0.7);"><span>김도윤</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.4);">1</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 5px 8px; color: rgba(255,255,255,0.35);"><span>미지정</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px;">1</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
