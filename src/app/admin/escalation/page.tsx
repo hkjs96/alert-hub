@@ -41,10 +41,10 @@ export default async function EscalationPage({
   if (customers.length === 0) {
     return (
       <div className="space-y-2">
-        <h1 className="text-xl font-semibold text-slate-900">알람 처리 순서</h1>
-        <p className="text-sm text-slate-400">
+        <h1 className="text-xl font-semibold text-stone-900">알람 처리 순서</h1>
+        <p className="text-sm text-stone-400">
           아직 고객사가 없습니다.{" "}
-          <Link href="/admin/customers" className="underline hover:text-blue-600">
+          <Link href="/admin/customers" className="underline hover:text-indigo-600">
             조직 · 담당자 관리
           </Link>
           에서 먼저 등록하세요.
@@ -118,11 +118,11 @@ export default async function EscalationPage({
   return (
     <div className="max-w-3xl space-y-5">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">알람 처리 순서</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-xl font-semibold text-stone-900">알람 처리 순서</h1>
+        <p className="mt-1 text-sm text-stone-500">
           각 단계에 등록된 담당자를 알람이 통지되는 순서대로 정렬합니다. 순서 1번이
           가장 먼저 통지됩니다. 담당자 등록 자체는{" "}
-          <Link href="/admin/customers" className="underline hover:text-blue-600">
+          <Link href="/admin/customers" className="underline hover:text-indigo-600">
             조직 · 담당자 관리
           </Link>
           에서 합니다.
@@ -135,7 +135,7 @@ export default async function EscalationPage({
           name="customerId"
           aria-label="고객사"
           defaultValue={customer.id}
-          className="rounded-md border border-slate-300 bg-white px-2 py-1"
+          className="rounded-md border border-stone-300 bg-white px-2 py-1"
         >
           {customers.map((c) => (
             <option key={c.id} value={c.id}>
@@ -143,13 +143,13 @@ export default async function EscalationPage({
             </option>
           ))}
         </select>
-        <span className="text-slate-300">/</span>
+        <span className="text-stone-300">/</span>
         <select
           name="projectId"
           aria-label="프로젝트"
           defaultValue={project?.id ?? ""}
           disabled={projects.length === 0}
-          className="rounded-md border border-slate-300 bg-white px-2 py-1 disabled:text-slate-300"
+          className="rounded-md border border-stone-300 bg-white px-2 py-1 disabled:text-stone-300"
         >
           {projects.length === 0 && <option value="">프로젝트 없음</option>}
           {projects.map((p) => (
@@ -158,13 +158,13 @@ export default async function EscalationPage({
             </option>
           ))}
         </select>
-        <span className="text-slate-300">/</span>
+        <span className="text-stone-300">/</span>
         <select
           name="serviceId"
           aria-label="서비스"
           defaultValue={service?.id ?? ""}
           disabled={services.length === 0}
-          className="rounded-md border border-slate-300 bg-white px-2 py-1 font-medium disabled:font-normal disabled:text-slate-300"
+          className="rounded-md border border-stone-300 bg-white px-2 py-1 font-medium disabled:font-normal disabled:text-stone-300"
         >
           {services.length === 0 && <option value="">서비스 없음</option>}
           {services.map((s) => (
@@ -173,12 +173,12 @@ export default async function EscalationPage({
             </option>
           ))}
         </select>
-        <button className="rounded-md border border-slate-300 px-2.5 py-1 hover:bg-slate-50">
+        <button className="rounded-md border border-stone-300 px-2.5 py-1 hover:bg-stone-50">
           이동
         </button>
       </form>
 
-      <div className="flex w-fit gap-1 rounded-lg bg-slate-100 p-1 text-sm">
+      <div className="flex w-fit gap-1 rounded-lg bg-stone-100 p-1 text-sm">
         {LEVEL_TABS.map((t) => {
           const disabled =
             (t.level === "project" && !project) || (t.level === "service" && !service);
@@ -187,7 +187,7 @@ export default async function EscalationPage({
             return (
               <span
                 key={t.level}
-                className="cursor-not-allowed rounded-md px-3 py-1 text-slate-300"
+                className="cursor-not-allowed rounded-md px-3 py-1 text-stone-300"
               >
                 {t.label}
               </span>
@@ -200,8 +200,8 @@ export default async function EscalationPage({
               aria-current={active ? "page" : undefined}
               className={
                 active
-                  ? "rounded-md bg-white px-3 py-1 font-medium text-slate-900 shadow-sm"
-                  : "rounded-md px-3 py-1 text-slate-500 hover:text-slate-900"
+                  ? "rounded-md bg-white px-3 py-1 font-medium text-stone-900 shadow-sm"
+                  : "rounded-md px-3 py-1 text-stone-500 hover:text-stone-900"
               }
             >
               {t.label}
@@ -210,24 +210,24 @@ export default async function EscalationPage({
         })}
       </div>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <h2 className="text-sm font-semibold text-slate-700">{scopeName} 처리 순서</h2>
-        <p className="mb-3 text-xs text-slate-400">
+      <section className="rounded-lg border border-stone-200 bg-white p-4">
+        <h2 className="text-sm font-semibold text-stone-700">{scopeName} 처리 순서</h2>
+        <p className="mb-3 text-xs text-stone-400">
           이 단계에 직접 등록된 담당자의 알람 통지 순서입니다.
         </p>
 
         {assignments.length === 0 && (
-          <p className="py-2 text-sm text-slate-400">
+          <p className="py-2 text-sm text-stone-400">
             이 단계에 직접 등록된 담당자가 없습니다.
           </p>
         )}
 
         {inherited && inherited.order.length > 0 && (
-          <p className="mb-3 border-b border-slate-100 pb-3 text-xs text-slate-500">
+          <p className="mb-3 border-b border-stone-100 pb-3 text-xs text-stone-500">
             현재{" "}
             {inherited.level === "customer" ? "고객사" : "프로젝트"} 단계에서 상속된
             순서 (참고용, 이 단계에서 수정 불가):{" "}
-            <span className="text-slate-700">
+            <span className="text-stone-700">
               {inheritedContacts.map((c) => c.name).join(" → ")}
             </span>
           </p>
@@ -237,14 +237,14 @@ export default async function EscalationPage({
           {assignments.map((a, i) => (
             <li
               key={a.id}
-              className="flex items-center gap-2 rounded-md bg-slate-50 px-2.5 py-1.5 text-sm"
+              className="flex items-center gap-2 rounded-md bg-stone-50 px-2.5 py-1.5 text-sm"
             >
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-slate-900 text-xs font-semibold tabular-nums text-white">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-stone-900 text-xs font-semibold tabular-nums text-white">
                 {i + 1}
               </span>
-              <span className="font-medium text-slate-800">{a.contact.name}</span>
+              <span className="font-medium text-stone-800">{a.contact.name}</span>
               {a.contact.department ? (
-                <span className="text-xs text-slate-400">{a.contact.department}</span>
+                <span className="text-xs text-stone-400">{a.contact.department}</span>
               ) : null}
 
               <span className="ml-auto flex items-center gap-1">
@@ -255,7 +255,7 @@ export default async function EscalationPage({
                   <button
                     aria-label={`${a.contact.name} 순서 올리기`}
                     disabled={i === 0}
-                    className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs disabled:opacity-40"
+                    className="rounded border border-stone-300 bg-white px-1.5 py-0.5 text-xs disabled:opacity-40"
                   >
                     ↑
                   </button>
@@ -267,7 +267,7 @@ export default async function EscalationPage({
                   <button
                     aria-label={`${a.contact.name} 순서 내리기`}
                     disabled={i === assignments.length - 1}
-                    className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs disabled:opacity-40"
+                    className="rounded border border-stone-300 bg-white px-1.5 py-0.5 text-xs disabled:opacity-40"
                   >
                     ↓
                   </button>
@@ -277,7 +277,7 @@ export default async function EscalationPage({
                   <input type="hidden" name="back" value={back} />
                   <button
                     aria-label={`${a.contact.name} 제거`}
-                    className="px-1 text-slate-400 hover:text-red-600"
+                    className="px-1 text-stone-400 hover:text-red-600"
                   >
                     ×
                   </button>
@@ -288,9 +288,9 @@ export default async function EscalationPage({
         </ol>
 
         {available.length === 0 && assignments.length === 0 && (
-          <p className="border-t border-slate-100 pt-3 text-xs text-slate-400">
+          <p className="border-t border-stone-100 pt-3 text-xs text-stone-400">
             추가할 수 있는 인원이 없습니다.{" "}
-            <Link href="/admin/contacts" className="underline hover:text-blue-600">
+            <Link href="/admin/contacts" className="underline hover:text-indigo-600">
               멤버 관리
             </Link>
             에서 이 고객사 소속 또는 내부 인원을 먼저 등록하세요.
@@ -300,7 +300,7 @@ export default async function EscalationPage({
         {available.length > 0 && (
           <form
             action={addAssignment}
-            className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-3 text-sm"
+            className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-stone-100 pt-3 text-sm"
           >
             <input type="hidden" name="level" value={level} />
             <input type="hidden" name="scopeId" value={scopeId} />
@@ -310,7 +310,7 @@ export default async function EscalationPage({
               required
               aria-label="담당자 추가"
               defaultValue=""
-              className="rounded-md border border-slate-300 bg-white px-2 py-1"
+              className="rounded-md border border-stone-300 bg-white px-2 py-1"
             >
               <option value="" disabled>
                 담당자 추가 (맨 뒤 순번으로)…
@@ -323,7 +323,7 @@ export default async function EscalationPage({
                 </option>
               ))}
             </select>
-            <button className="rounded-md bg-slate-900 px-2.5 py-1 text-white hover:bg-slate-700">
+            <button className="rounded-md bg-stone-900 px-2.5 py-1 text-white hover:bg-stone-700">
               + 추가
             </button>
           </form>
@@ -333,7 +333,7 @@ export default async function EscalationPage({
           className={
             available.length > 0
               ? "mt-3"
-              : "mt-3 border-t border-slate-100 pt-3"
+              : "mt-3 border-t border-stone-100 pt-3"
           }
         >
           <NewContactInline

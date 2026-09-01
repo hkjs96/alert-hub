@@ -25,14 +25,14 @@ function OwnerCell({
   if (snap && snap.order.length > 0) {
     return (
       <span
-        className="text-slate-800"
+        className="text-stone-800"
         title={`수신 시점 스냅샷 · ${levelLabel(snap.level)} 단계 · ${snap.order
           .map((o) => o.name)
           .join(" → ")}`}
       >
         {snap.order[0].name}
         {snap.order.length > 1 ? (
-          <span className="text-slate-400"> +{snap.order.length - 1}</span>
+          <span className="text-stone-400"> +{snap.order.length - 1}</span>
         ) : null}
       </span>
     );
@@ -40,7 +40,7 @@ function OwnerCell({
 
   if (!alert.accountId) {
     return (
-      <span className="text-slate-300" title="페이로드에 AWS 계정 정보가 없는 알람입니다">
+      <span className="text-stone-300" title="페이로드에 AWS 계정 정보가 없는 알람입니다">
         —
       </span>
     );
@@ -60,18 +60,18 @@ function OwnerCell({
   }
   const first = info.contacts[0];
   if (!first) {
-    return <span className="text-slate-400">미배정</span>;
+    return <span className="text-stone-400">미배정</span>;
   }
   return (
     <span
-      className="text-slate-800"
+      className="text-stone-800"
       title={`${levelLabel(info.responsibility.level)} 단계 순서 적용 · ${info.contacts
         .map((c) => c.name)
         .join(" → ")}`}
     >
       {first.name}
       {info.contacts.length > 1 ? (
-        <span className="text-slate-400"> +{info.contacts.length - 1}</span>
+        <span className="text-stone-400"> +{info.contacts.length - 1}</span>
       ) : null}
     </span>
   );
@@ -123,18 +123,18 @@ export function AlertTable({
   if (alerts.length === 0) {
     // "필터 결과 없음"과 "아직 데이터 없음"은 다른 상태다 (페르소나 검증 P2).
     return (
-      <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
+      <div className="rounded-lg border border-dashed border-stone-300 bg-white p-10 text-center text-stone-500">
         {filtered ? (
           <>
             현재 필터 조건에 맞는 알람이 없습니다.{" "}
-            <Link href="/" className="text-blue-600 underline">
+            <Link href="/" className="text-indigo-600 underline">
               필터 초기화
             </Link>
           </>
         ) : (
           <>
             No alerts yet. Send one to{" "}
-            <code className="rounded bg-slate-100 px-1 py-0.5 text-sm">
+            <code className="rounded bg-stone-100 px-1 py-0.5 text-sm">
               POST /api/webhooks/alarm
             </code>
             .
@@ -145,47 +145,47 @@ export function AlertTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
-        <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+    <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white shadow-sm">
+      <table className="min-w-full divide-y divide-stone-200 text-sm">
+        <thead className="bg-stone-50 text-left text-xs uppercase tracking-wide text-stone-500">
           <tr>
-            <th className="px-4 py-3 font-medium">Severity</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3 font-medium">Title</th>
-            <th className="px-4 py-3 font-medium">Resource</th>
-            <th className="px-4 py-3 font-medium">환경</th>
-            <th className="px-4 py-3 font-medium">담당</th>
-            <th className="px-4 py-3 font-medium text-right">Count</th>
-            <th className="px-4 py-3 font-medium">Last seen</th>
+            <th className="px-3 py-3 font-medium">Severity</th>
+            <th className="px-3 py-3 font-medium">Status</th>
+            <th className="px-3 py-3 font-medium">Title</th>
+            <th className="px-3 py-3 font-medium">Resource</th>
+            <th className="px-3 py-3 font-medium">환경</th>
+            <th className="px-3 py-3 font-medium">담당</th>
+            <th className="px-3 py-3 font-medium text-right">Count</th>
+            <th className="px-3 py-3 font-medium">Last seen</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-stone-100">
           {alerts.map((a) => {
             const { chain, environment } = chainFacts(a, ownership);
             return (
-            <tr key={a.id} className="hover:bg-slate-50">
+            <tr key={a.id} className="hover:bg-stone-50">
               <td
-                className={`border-l-[3px] px-4 py-3 ${
-                  a.status === "FIRING" ? "border-l-red-500" : "border-l-transparent"
+                className={`border-l-[3px] px-3 py-3 ${
+                  a.status === "FIRING" ? "border-l-red-600" : "border-l-transparent"
                 }`}
               >
                 <SeverityBadge severity={a.severity} />
               </td>
-              <td className="px-4 py-3">
+              <td className="px-3 py-3">
                 <StatusBadge status={a.status} />
               </td>
-              <td className="px-4 py-3">
+              <td className="px-3 py-3">
                 <Link
                   href={`/alerts/${a.id}`}
-                  className="font-medium text-slate-900 hover:text-blue-600 hover:underline"
+                  className="font-medium text-stone-900 hover:text-indigo-600 hover:underline"
                 >
                   {a.title}
                 </Link>
                 {chain ? (
-                  <div className="mt-0.5 text-xs text-slate-400">{chain}</div>
+                  <div className="mt-0.5 text-xs text-stone-400">{chain}</div>
                 ) : null}
               </td>
-              <td className="px-4 py-3 text-slate-600">
+              <td className="px-3 py-3 text-stone-600">
                 <span
                   className="block max-w-44 truncate"
                   title={a.resource ?? undefined}
@@ -193,22 +193,22 @@ export function AlertTable({
                   {a.resource ?? "—"}
                 </span>
               </td>
-              <td className="px-4 py-3">
+              <td className="px-3 py-3">
                 {environment ? (
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                  <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
                     {environment}
                   </span>
                 ) : (
-                  <span className="text-slate-300">—</span>
+                  <span className="text-stone-300">—</span>
                 )}
               </td>
-              <td className="px-4 py-3 whitespace-nowrap">
+              <td className="px-3 py-3 whitespace-nowrap">
                 <OwnerCell alert={a} ownership={ownership} backHref={backHref} />
               </td>
-              <td className="px-4 py-3 text-right tabular-nums text-slate-600">
+              <td className="px-3 py-3 text-right font-mono text-xs tabular-nums text-stone-600">
                 {a.count}
               </td>
-              <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+              <td className="px-3 py-3 whitespace-nowrap font-mono text-xs text-stone-500">
                 {formatTime(a.lastSeenAt)}
               </td>
             </tr>

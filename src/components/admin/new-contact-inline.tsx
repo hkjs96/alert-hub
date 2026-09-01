@@ -22,7 +22,7 @@ export function NewContactInline({
 }) {
   return (
     <details className="text-sm">
-      <summary className="cursor-pointer text-xs text-slate-500 hover:text-blue-600">
+      <summary className="cursor-pointer text-xs text-stone-500 hover:text-indigo-600">
         + 새 인원 등록 (등록과 동시에 맨 뒤 순번으로 배정)
       </summary>
       <form
@@ -38,31 +38,31 @@ export function NewContactInline({
           required
           placeholder="이름"
           aria-label="이름"
-          className="w-28 rounded-md border border-slate-300 px-2 py-1"
+          className="w-28 rounded-md border border-stone-300 px-2 py-1"
         />
         <input
           name="department"
           placeholder="부서 (선택)"
           aria-label="부서"
-          className="w-28 rounded-md border border-slate-300 px-2 py-1"
+          className="w-28 rounded-md border border-stone-300 px-2 py-1"
         />
         <input
           name="email"
           type="email"
           placeholder="이메일 (선택)"
           aria-label="이메일"
-          className="w-44 rounded-md border border-slate-300 px-2 py-1"
+          className="w-44 rounded-md border border-stone-300 px-2 py-1"
         />
         <select
           name="affiliation"
           aria-label="소속"
           defaultValue="customer"
-          className="rounded-md border border-slate-300 bg-white px-2 py-1"
+          className="rounded-md border border-stone-300 bg-white px-2 py-1"
         >
           <option value="customer">{customerName ?? "이 고객사"} 소속</option>
           <option value="internal">내부(MSP)</option>
         </select>
-        <button className="rounded-md bg-slate-900 px-2.5 py-1 text-white hover:bg-slate-700">
+        <button className="rounded-md bg-stone-900 px-2.5 py-1 text-white hover:bg-stone-700">
           등록 + 배정
         </button>
       </form>

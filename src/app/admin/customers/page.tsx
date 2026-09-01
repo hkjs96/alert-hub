@@ -13,36 +13,36 @@ export default async function CustomersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">고객사</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-xl font-semibold text-stone-900">고객사</h1>
+        <p className="mt-1 text-sm text-stone-500">
           테넌트의 뿌리. 사내 시스템은 &ldquo;내부&rdquo; 고객사로 등록하세요.
         </p>
       </div>
 
       <form
         action={createCustomer}
-        className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-4 text-sm"
+        className="flex flex-wrap items-center gap-2 rounded-lg border border-stone-200 bg-white p-4 text-sm"
       >
         <input
           name="name"
           required
           placeholder="고객사 이름"
-          className="rounded-md border border-slate-300 px-2 py-1"
+          className="rounded-md border border-stone-300 px-2 py-1"
         />
-        <label className="flex items-center gap-1 text-slate-600">
+        <label className="flex items-center gap-1 text-stone-600">
           <input type="checkbox" name="isInternal" /> 내부(자사)
         </label>
         <button
           type="submit"
-          className="rounded-md bg-slate-900 px-3 py-1 text-white hover:bg-slate-700"
+          className="rounded-md bg-stone-900 px-3 py-1 text-white hover:bg-stone-700"
         >
           + 고객사 등록
         </button>
       </form>
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+      <div className="overflow-hidden rounded-lg border border-stone-200 bg-white">
+        <table className="min-w-full divide-y divide-stone-200 text-sm">
+          <thead className="bg-stone-50 text-left text-xs uppercase text-stone-500">
             <tr>
               <th className="px-4 py-2 font-medium">이름</th>
               <th className="px-4 py-2 font-medium">프로젝트</th>
@@ -50,25 +50,25 @@ export default async function CustomersPage() {
               <th className="px-4 py-2" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-stone-100">
             {customers.map((c: any) => (
-              <tr key={c.id} className="hover:bg-slate-50">
+              <tr key={c.id} className="hover:bg-stone-50">
                 <td className="px-4 py-2">
                   <Link
                     href={`/admin/customers/${c.id}`}
-                    className="font-medium text-slate-900 hover:text-blue-600 hover:underline"
+                    className="font-medium text-stone-900 hover:text-indigo-600 hover:underline"
                   >
                     {c.name}
                   </Link>
                 </td>
-                <td className="px-4 py-2 text-slate-500">{c.projects.length}개</td>
-                <td className="px-4 py-2 text-slate-500">
+                <td className="px-4 py-2 text-stone-500">{c.projects.length}개</td>
+                <td className="px-4 py-2 text-stone-500">
                   {c.isInternal ? "내부" : "고객"}
                 </td>
                 <td className="px-4 py-2 text-right">
                   <form action={deleteCustomer} className="inline">
                     <input type="hidden" name="id" value={c.id} />
-                    <button className="text-xs text-slate-400 hover:text-red-600">
+                    <button className="text-xs text-stone-400 hover:text-red-600">
                       삭제
                     </button>
                   </form>
@@ -77,7 +77,7 @@ export default async function CustomersPage() {
             ))}
             {customers.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={4} className="px-4 py-6 text-center text-stone-400">
                   아직 고객사가 없습니다. 위에서 등록하세요.
                 </td>
               </tr>

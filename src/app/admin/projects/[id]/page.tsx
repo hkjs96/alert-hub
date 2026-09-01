@@ -22,7 +22,7 @@ export default async function ProjectDetailPage({
   return (
     <div className="space-y-6">
       <div>
-        <div className="text-xs text-slate-400">
+        <div className="text-xs text-stone-400">
           <Link href="/admin/customers" className="hover:underline">
             고객사
           </Link>{" "}
@@ -32,12 +32,12 @@ export default async function ProjectDetailPage({
           </Link>{" "}
           / {project.name}
         </div>
-        <h1 className="text-xl font-semibold text-slate-900">{project.name}</h1>
+        <h1 className="text-xl font-semibold text-stone-900">{project.name}</h1>
       </div>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-slate-700">
-          프로젝트 담당 <span className="font-normal text-slate-400">(서비스에 별도 지정 없으면 여기로 상속)</span>
+      <section className="rounded-lg border border-stone-200 bg-white p-4">
+        <h2 className="mb-2 text-sm font-semibold text-stone-700">
+          프로젝트 담당 <span className="font-normal text-stone-400">(서비스에 별도 지정 없으면 여기로 상속)</span>
         </h2>
         <AssignmentEditor
           level="project"
@@ -47,8 +47,8 @@ export default async function ProjectDetailPage({
         />
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-slate-700">서비스</h2>
+      <section className="rounded-lg border border-stone-200 bg-white p-4">
+        <h2 className="mb-2 text-sm font-semibold text-stone-700">서비스</h2>
         <form action={createService} className="mb-3 flex flex-wrap gap-2 text-sm">
           <input type="hidden" name="projectId" value={project.id} />
           <input type="hidden" name="back" value={back} />
@@ -56,38 +56,38 @@ export default async function ProjectDetailPage({
             name="name"
             required
             placeholder="서비스 이름"
-            className="rounded-md border border-slate-300 px-2 py-1"
+            className="rounded-md border border-stone-300 px-2 py-1"
           />
-          <button className="rounded-md bg-slate-900 px-3 py-1 text-white hover:bg-slate-700">
+          <button className="rounded-md bg-stone-900 px-3 py-1 text-white hover:bg-stone-700">
             + 서비스
           </button>
         </form>
-        <ul className="divide-y divide-slate-100 text-sm">
+        <ul className="divide-y divide-stone-100 text-sm">
           {project.services.map((s: any) => (
             <li key={s.id} className="flex items-center gap-2 py-2">
               <Link
                 href={`/admin/services/${s.id}`}
-                className="font-medium text-slate-900 hover:text-blue-600 hover:underline"
+                className="font-medium text-stone-900 hover:text-indigo-600 hover:underline"
               >
                 {s.name}
               </Link>
-              <span className="text-slate-400">계정 {s.accounts.length}개</span>
+              <span className="text-stone-400">계정 {s.accounts.length}개</span>
               <form action={deleteService} className="ml-auto inline">
                 <input type="hidden" name="id" value={s.id} />
                 <input type="hidden" name="back" value={back} />
-                <button className="text-xs text-slate-400 hover:text-red-600">삭제</button>
+                <button className="text-xs text-stone-400 hover:text-red-600">삭제</button>
               </form>
             </li>
           ))}
           {project.services.length === 0 && (
-            <li className="py-3 text-slate-400">서비스가 없습니다.</li>
+            <li className="py-3 text-stone-400">서비스가 없습니다.</li>
           )}
         </ul>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-slate-700">
-          관련 인원 전체 <span className="font-normal text-slate-400">(하위 포함 롤업)</span>
+      <section className="rounded-lg border border-stone-200 bg-white p-4">
+        <h2 className="mb-2 text-sm font-semibold text-stone-700">
+          관련 인원 전체 <span className="font-normal text-stone-400">(하위 포함 롤업)</span>
         </h2>
         <Roster level="project" id={project.id} />
       </section>
