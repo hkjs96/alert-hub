@@ -20,3 +20,6 @@ next-env.d.ts
 .DS_Store
 *.pem
 npm-debug.log*
+
+# 시드된 디자인 캔버스 산출물(~2MB, 아티팩트로 게시됨) — 소스는 .dc.html
+design-draft/mute-reliability-design.html

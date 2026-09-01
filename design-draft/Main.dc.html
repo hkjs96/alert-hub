@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+    a { color: #2563eb; text-decoration: none; } a:hover { color: #1d4ed8; }
+  </style>
+</helmet>
+<div style="width: 1360px; background: #f8fafc; color: #0f172a;">
+
+  <div style="display: flex; align-items: center; gap: 16px; background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 14px 32px;">
+    <span style="font-weight: 700; font-size: 16px;">alert-hub</span>
+    <span style="margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 13px; color: #64748b;">
+      <span style="display: inline-flex; align-items: center; gap: 6px;">
+        <span style="width: 8px; height: 8px; border-radius: 999px; background: #16a34a;"></span>
+        <span style="font-size: 12px; color: #94a3b8;">통지 정상 · 32초 전 틱</span>
+      </span>
+      <span>등록관리</span>
+      <span style="color: #cbd5e1;">event plane · MVP</span>
+    </span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 20px; padding: 28px 32px 36px;">
+    <div>
+      <div style="font-size: 24px; font-weight: 600;">Alerts</div>
+      <div style="margin-top: 4px; font-size: 14px; color: #64748b;">Fired alarms received via the webhook, deduplicated by fingerprint.</div>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid #e2e8f0; background: #f1f5f9; border-radius: 8px; padding: 12px 16px;">
+      <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: #334155;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"></path><path d="M18.63 13A17.89 17.89 0 0 1 18 8"></path><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"></path><path d="M18 8a6 6 0 0 0-9.33-5"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+        점검 창 활성: <b style="font-weight: 600;">결제서비스</b> · 오늘 21:00 → 23:00 · DB 마이그레이션 (등록: 준호)
+      </span>
+      <span style="display: flex; gap: 8px;">
+        <span style="border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; padding: 5px 12px; font-size: 13px; font-weight: 500; color: #334155;">지금 해제</span>
+        <span style="font-size: 13px; color: #64748b; align-self: center;">점검 · 뮤트 관리 →</span>
+      </span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px;">
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);">
+        <div style="font-size: 14px; font-weight: 500; color: #64748b;">Firing</div>
+        <div style="margin-top: 4px; font-size: 30px; font-weight: 600; color: #dc2626;">4</div>
+        <div style="margin-top: 2px; font-size: 12px; color: #94a3b8;">+ 뮤트 1 (깨우지 않음)</div>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);">
+        <div style="font-size: 14px; font-weight: 500; color: #64748b;">Acked</div>
+        <div style="margin-top: 4px; font-size: 30px; font-weight: 600; color: #2563eb;">1</div>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);">
+        <div style="font-size: 14px; font-weight: 500; color: #64748b;">Resolved</div>
+        <div style="margin-top: 4px; font-size: 30px; font-weight: 600; color: #16a34a;">3</div>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);">
+        <div style="font-size: 14px; font-weight: 500; color: #64748b;">No Data</div>
+        <div style="margin-top: 4px; font-size: 30px; font-weight: 600; color: #6b7280;">0</div>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);">
+        <div style="font-size: 14px; font-weight: 500; color: #64748b;">Total</div>
+        <div style="margin-top: 4px; font-size: 30px; font-weight: 600; color: #0f172a;">9</div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+      <span style="border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; padding: 5px 10px; color: #334155;">전체 고객사 ▾</span>
+      <span style="border: 1px solid #e2e8f0; background: #ffffff; border-radius: 6px; padding: 5px 10px; color: #cbd5e1;">전체 프로젝트 ▾</span>
+      <span style="border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; padding: 5px 10px; color: #334155;">전체 환경 ▾</span>
+      <span style="border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; padding: 5px 10px; color: #94a3b8; width: 200px;">검색 (제목·리소스·메트릭·계정)</span>
+      <span style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 5px 12px; color: #334155;">적용</span>
+      <span style="display: flex; gap: 8px; margin-left: 8px;">
+        <span style="background: #0f172a; color: #ffffff; border-radius: 999px; padding: 5px 12px; font-weight: 500;">Firing</span>
+        <span style="background: #ffffff; color: #475569; border-radius: 999px; padding: 5px 12px; box-shadow: inset 0 0 0 1px #e2e8f0;">Acked</span>
+        <span style="background: #ffffff; color: #475569; border-radius: 999px; padding: 5px 12px; box-shadow: inset 0 0 0 1px #e2e8f0;">Resolved</span>
+        <span style="background: #ffffff; color: #475569; border-radius: 999px; padding: 5px 12px; box-shadow: inset 0 0 0 1px #e2e8f0;">No Data</span>
+        <a href="#" style="align-self: center; font-size: 14px;">✕ 초기화</a>
+      </span>
+    </div>
+
+    <div style="display: flex; gap: 24px;">
+      <div style="flex: 1 1 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);">
+        <div style="display: grid; grid-template-columns: 90px 130px 1fr 150px 70px 140px 60px 110px; gap: 0; background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 12px 16px; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; color: #64748b;">
+        <div>SEVERITY</div><div>STATUS</div><div>TITLE</div><div>RESOURCE</div><div>환경</div><div>담당</div><div>COUNT</div><div>LAST SEEN</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 90px 130px 1fr 150px 70px 140px 60px 110px; align-items: center; padding: 12px 16px 12px 13px; border-bottom: 1px solid #f1f5f9; border-left: 3px solid #ef4444; font-size: 14px;">
+          <div><span style="display: inline-flex; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 500; background: #dc2626; color: #ffffff;">SEV-1</span></div>
+          <div><span style="display: inline-flex; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 500; background: #fee2e2; color: #991b1b; box-shadow: inset 0 0 0 1px rgba(220,38,38,0.2);">FIRING</span></div>
+          <div>
+            <div style="font-weight: 500;">SEV-1 prod-db CPUUtilization high</div>
+            <div style="margin-top: 2px; font-size: 12px; color: #94a3b8;">네오위즈 / 게임플랫폼 / 주문API</div>
+          </div>
+          <div style="color: #475569;">prod-db</div>
+          <div><span style="background: #f1f5f9; border-radius: 999px; padding: 2px 8px; font-size: 12px; color: #475569;">prd</span></div>
+          <div>최민서 <span style="color: #94a3b8;">+1</span></div>
+          <div style="text-align: right; color: #475569;">3</div>
+          <div style="color: #64748b; font-size: 13px;">08-30 11:13Z</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 90px 130px 1fr 150px 70px 140px 60px 110px; align-items: center; padding: 12px 16px 12px 13px; border-bottom: 1px solid #f1f5f9; border-left: 3px solid #cbd5e1; background: #fafafa; font-size: 14px;">
+          <div style="opacity: 0.55;"><span style="display: inline-flex; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 500; background: #ea580c; color: #ffffff;">SEV-2</span></div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="display: inline-flex; width: fit-content; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 500; background: #fee2e2; color: #991b1b; box-shadow: inset 0 0 0 1px rgba(220,38,38,0.2); opacity: 0.55;">FIRING</span>
+            <span style="display: inline-flex; width: fit-content; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 500; background: #f1f5f9; color: #64748b;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"></path><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"></path><path d="M18 8a6 6 0 0 0-9.33-5"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+              뮤트 · ~23:00
+            </span>
+          </div>
+          <div style="opacity: 0.55;">
+            <div style="font-weight: 500;">SEV-2 payment-api 5xx spike</div>
+            <div style="margin-top: 2px; font-size: 12px; color: #94a3b8;">네오위즈 / 게임플랫폼 / 결제서비스</div>
+          </div>
+          <div style="color: #475569; opacity: 0.55;">payment-api</div>
+          <div style="opacity: 0.55;"><span style="background: #f1f5f9; border-radius: 999px; padding: 2px 8px; font-size: 12px; color: #475569;">prd</span></div>
+          <div style="opacity: 0.55;">최민서 <span style="color: #94a3b8;">+1</span></div>
+          <div style="text-align: right; color: #475569; opacity: 0.55;">12</div>
+          <div style="color: #64748b; font-size: 13px; opacity: 0.55;">08-30 21:04Z</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 90px 130px 1fr 150px 70px 140px 60px 110px; align-items: center; padding: 12px 16px 12px 13px; border-bottom: 1px solid #f1f5f9; border-left: 3px solid transparent; font-size: 14px;">
+          <div><span style="display: inline-flex; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 500; background: #fbbf24; color: #78350f;">SEV-3</span></div>
+          <div><span style="display: inline-flex; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 500; background: #dbeafe; color: #1e40af; box-shadow: inset 0 0 0 1px rgba(37,99,235,0.2);">ACKNOWLEDGED</span></div>
+          <div>
+            <div style="font-weight: 500;">SEV-3 auth latency p99</div>
+            <div style="margin-top: 2px; font-size: 12px; color: #94a3b8;">네오위즈 / 게임플랫폼 / 로그인서비스</div>
+          </div>
+          <div style="color: #475569;">auth-elb</div>
+          <div><span style="background: #f1f5f9; border-radius: 999px; padding: 2px 8px; font-size: 12px; color: #475569;">prd</span></div>
+          <div>김도윤 <span style="color: #94a3b8;">+1</span></div>
+          <div style="text-align: right; color: #475569;">1</div>
+          <div style="color: #64748b; font-size: 13px;">08-30 10:41Z</div>
+        </div>
+      </div>
+
+      <div style="flex: 0 0 256px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); height: fit-content;">
+        <div style="font-size: 14px; font-weight: 600; color: #334155;">담당 인원</div>
+        <div style="margin-top: 2px; margin-bottom: 12px; font-size: 12px; color: #94a3b8;">필터 결과 기준 1순위 담당별 건수</div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 14px;">
+          <div style="display: flex; justify-content: space-between; border-radius: 6px; padding: 6px 8px; color: #334155;"><span>최민서</span><span style="color: #94a3b8; font-size: 12px;">3</span></div>
+          <div style="display: flex; justify-content: space-between; border-radius: 6px; padding: 6px 8px; color: #334155;"><span>김도윤</span><span style="color: #94a3b8; font-size: 12px;">1</span></div>
+          <div style="display: flex; justify-content: space-between; border-radius: 6px; padding: 6px 8px; color: #94a3b8;"><span>미지정</span><span style="font-size: 12px;">1</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

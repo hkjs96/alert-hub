@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+    a { color: #2563eb; text-decoration: none; } a:hover { color: #1d4ed8; }
+  </style>
+</helmet>
+<div style="width: 1100px; background: #f8fafc; color: #0f172a; padding: 28px 32px 36px; display: flex; flex-direction: column; gap: 20px;">
+
+  <div style="display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; font-size: 14px;">
+    <span style="font-weight: 600;">등록관리</span>
+    <span style="color: #475569;">조직 · 담당자 관리</span>
+    <span style="color: #475569;">알람 처리 순서</span>
+    <span style="color: #0f172a; font-weight: 600; border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: -12px;">점검 · 뮤트</span>
+    <span style="color: #475569;">멤버 관리</span>
+    <span style="margin-left: auto; color: #94a3b8;">← 대시보드</span>
+  </div>
+
+  <div>
+    <div style="font-size: 20px; font-weight: 600;">점검 · 뮤트</div>
+    <div style="margin-top: 4px; font-size: 14px; color: #64748b;">
+      점검 창 동안 통지와 자동 에스컬레이션을 멈춥니다. 알람 수집과 상태 전이는 계속됩니다 —
+      대시보드에는 뮤트 표시로 남습니다. 상위에 걸면 하위 전체에 적용됩니다 (배정과 같은 상속 규칙).
+    </div>
+  </div>
+
+  <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 12px;">
+    <div style="font-size: 14px; font-weight: 600; color: #334155;">새 점검 창</div>
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; flex-wrap: wrap;">
+      <span style="border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; padding: 5px 10px; color: #334155;">네오위즈 ▾</span>
+      <span style="color: #cbd5e1;">/</span>
+      <span style="border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; padding: 5px 10px; color: #334155;">게임플랫폼 ▾</span>
+      <span style="color: #cbd5e1;">/</span>
+      <span style="border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; padding: 5px 10px; color: #334155; font-weight: 500;">결제서비스 ▾</span>
+      <span style="margin-left: 12px; display: flex; gap: 6px;">
+        <span style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 5px 12px; font-size: 13px; color: #334155;">1시간</span>
+        <span style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 5px 12px; font-size: 13px; color: #334155;">오늘 자정까지</span>
+        <span style="background: #0f172a; color: #ffffff; border-radius: 6px; padding: 5px 12px; font-size: 13px;">기간 지정</span>
+      </span>
+      <span style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 10px; font-size: 13px; color: #475569;">08-31 21:00</span>
+      <span style="color: #94a3b8;">→</span>
+      <span style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 10px; font-size: 13px; color: #475569;">08-31 23:00</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="flex: 1 1 auto; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 10px; font-size: 13px; color: #94a3b8;">사유 (필수) — 통지 이력과 대시보드 배너에 표시됩니다</span>
+      <span style="background: #0f172a; color: #ffffff; border-radius: 6px; padding: 6px 14px; font-size: 13px; font-weight: 500;">+ 등록</span>
+    </div>
+  </div>
+
+  <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);">
+    <div style="display: grid; grid-template-columns: 1fr 220px 1fr 110px 90px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 12px 16px; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; color: #64748b;">
+      <div>스코프</div><div>기간</div><div>사유</div><div>등록자</div><div></div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 220px 1fr 110px 90px; align-items: center; padding: 12px 16px; border-bottom: 1px solid #f1f5f9; font-size: 14px; background: #f8fafc;">
+      <div>
+        <span style="font-weight: 500;">결제서비스</span>
+        <span style="margin-left: 6px; background: #f1f5f9; border-radius: 999px; padding: 2px 8px; font-size: 12px; color: #64748b;">서비스</span>
+        <span style="margin-left: 6px; display: inline-flex; align-items: center; gap: 4px; background: #dcfce7; border-radius: 999px; padding: 2px 8px; font-size: 12px; color: #166534;">진행 중</span>
+      </div>
+      <div style="color: #475569; font-size: 13px;">오늘 21:00 → 23:00</div>
+      <div style="color: #475569;">DB 마이그레이션</div>
+      <div style="color: #475569;">준호</div>
+      <div style="text-align: right;"><span style="border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; padding: 4px 10px; font-size: 13px; color: #334155;">지금 해제</span></div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 220px 1fr 110px 90px; align-items: center; padding: 12px 16px; border-bottom: 1px solid #f1f5f9; font-size: 14px;">
+      <div>
+        <span style="font-weight: 500;">SEV-2 payment-api 5xx spike</span>
+        <span style="margin-left: 6px; background: #f1f5f9; border-radius: 999px; padding: 2px 8px; font-size: 12px; color: #64748b;">알람 1건</span>
+        <span style="margin-left: 6px; display: inline-flex; align-items: center; gap: 4px; background: #dcfce7; border-radius: 999px; padding: 2px 8px; font-size: 12px; color: #166534;">진행 중</span>
+      </div>
+      <div style="color: #475569; font-size: 13px;">~ 내일 09:00</div>
+      <div style="color: #475569;">배포 중 예상 소음</div>
+      <div style="color: #475569;">하은</div>
+      <div style="text-align: right;"><span style="border: 1px solid #cbd5e1; background: #ffffff; border-radius: 6px; padding: 4px 10px; font-size: 13px; color: #334155;">지금 해제</span></div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 220px 1fr 110px 90px; align-items: center; padding: 12px 16px; font-size: 14px; color: #94a3b8;">
+      <div>
+        <span style="font-weight: 500; color: #64748b;">카카오뱅크</span>
+        <span style="margin-left: 6px; background: #f1f5f9; border-radius: 999px; padding: 2px 8px; font-size: 12px;">고객사</span>
+        <span style="margin-left: 6px; background: #f1f5f9; border-radius: 999px; padding: 2px 8px; font-size: 12px;">예약됨</span>
+      </div>
+      <div style="font-size: 13px;">09-02 02:00 → 04:00</div>
+      <div>정기 점검 (매월 첫 화요일)</div>
+      <div>준호</div>
+      <div style="text-align: right;"><span style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 10px; font-size: 13px;">취소</span></div>
+    </div>
+  </div>
+
+  <div style="font-size: 12px; color: #94a3b8;">
+    지난 점검 창 12건 보기 → &nbsp;·&nbsp; 뮤트 중 발생한 알람은 해제 시점에 요약 1건으로 통지됩니다 (놓침 방지).
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
