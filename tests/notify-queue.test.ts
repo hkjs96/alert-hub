@@ -215,3 +215,94 @@ describe("recordNotifications", () => {
     ).resolves.toBeUndefined();
   });
 });
+
+describe("묶음 통지 (v2 프레임 05)", () => {
+  const digestMock = vi.hoisted(() => vi.fn());
+  vi.mock("@/lib/notify/slack", async (importOriginal) => ({
+    ...(await importOriginal<typeof import("@/lib/notify/slack")>()),
+    sendSlackDigest: digestMock,
+  }));
+
+  it("enqueue: groupKey + 창이 있으면 Slack 잡만 미뤄지고 email은 즉시", async () => {
+    mocks.configuredChannels.mockReturnValue(["slack", "email"]);
+    mocks.jobCreate
+      .mockResolvedValueOnce({ id: "j1" })
+      .mockResolvedValueOnce({ id: "j2" });
+    mocks.jobFindMany.mockResolvedValue([]);
+    const before = Date.now();
+
+    await enqueueAndSend("a1", ALERT, CTX, {
+      groupKey: "service:svc1",
+      digestDelaySeconds: 60,
+    });
+
+    const slackData = mocks.jobCreate.mock.calls[0][0].data;
+    expect(slackData.channel).toBe("slack");
+    expect(slackData.groupKey).toBe("service:svc1");
+    expect(slackData.nextAttemptAt.getTime()).toBeGreaterThanOrEqual(before + 59_000);
+    const emailData = mocks.jobCreate.mock.calls[1][0].data;
+    expect(emailData.groupKey).toBeNull();
+    expect(emailData.nextAttemptAt.getTime()).toBeLessThan(before + 5_000);
+  });
+
+  it("드레인: 같은 groupKey의 due Slack 잡들이 다이제스트 한 건으로 나간다", async () => {
+    digestMock.mockResolvedValue("sent");
+    mocks.jobFindMany.mockResolvedValue([
+      job({ id: "j1", alertId: "a1", groupKey: "service:svc1" }),
+      job({ id: "j2", alertId: "a2", groupKey: "service:svc1" }),
+    ]);
+
+    const result = await drainDueJobs(NOW);
+
+    expect(digestMock).toHaveBeenCalledOnce();
+    expect(digestMock.mock.calls[0][0]).toHaveLength(2);
+    expect(result).toMatchObject({ due: 2, sent: 2 });
+    // 알람별로 통지 이력이 남는다
+    expect(mocks.logCreateMany).toHaveBeenCalledTimes(2);
+    expect(mocks.logCreateMany.mock.calls[0][0].data[0].alertId).toBe("a1");
+    expect(mocks.logCreateMany.mock.calls[1][0].data[0].alertId).toBe("a2");
+  });
+
+  it("다이제스트 실패는 전원 백오프 재시도로", async () => {
+    digestMock.mockRejectedValue(new Error("slack down"));
+    mocks.jobFindMany.mockResolvedValue([
+      job({ id: "j1", groupKey: "service:svc1" }),
+      job({ id: "j2", alertId: "a2", groupKey: "service:svc1" }),
+    ]);
+
+    const result = await drainDueJobs(NOW);
+
+    expect(result).toMatchObject({ retrying: 2, sent: 0 });
+    expect(mocks.logCreateMany).not.toHaveBeenCalled();
+  });
+
+  it("창 안에 한 건뿐이면 평소의 단건 메시지로 나간다", async () => {
+    const notify = vi.fn().mockResolvedValue("sent");
+    mocks.getNotifier.mockReturnValue(fakeNotifier(notify));
+    mocks.jobFindMany.mockResolvedValue([job({ groupKey: "service:svc1" })]);
+
+    const result = await drainDueJobs(NOW);
+
+    expect(digestMock).not.toHaveBeenCalled();
+    expect(notify).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({ sent: 1 });
+  });
+
+  it("다른 groupKey는 섞이지 않는다", async () => {
+    digestMock.mockResolvedValue("sent");
+    const notify = vi.fn().mockResolvedValue("sent");
+    mocks.getNotifier.mockReturnValue(fakeNotifier(notify));
+    mocks.jobFindMany.mockResolvedValue([
+      job({ id: "j1", groupKey: "service:svc1" }),
+      job({ id: "j2", alertId: "a2", groupKey: "service:svc1" }),
+      job({ id: "j3", alertId: "a3", groupKey: "service:svc2" }),
+    ]);
+
+    await drainDueJobs(NOW);
+
+    // svc1 → 다이제스트(2건), svc2 → 단건
+    expect(digestMock).toHaveBeenCalledOnce();
+    expect(digestMock.mock.calls[0][0]).toHaveLength(2);
+    expect(notify).toHaveBeenCalledOnce();
+  });
+});

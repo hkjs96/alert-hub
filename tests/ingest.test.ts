@@ -28,7 +28,10 @@ vi.mock("@/lib/prisma", () => ({
 // 팬아웃은 아웃박스 경유로 바뀌었다 — ingest의 계약은 "enqueueAndSend가
 // (alertId, alert, ctx)로 호출되는가/안 되는가"다. 큐 자체(재시도, 로그)는
 // tests/notify-queue.test.ts가 고정한다.
-vi.mock("@/server/notify-queue", () => ({ enqueueAndSend: mocks.notifyAll }));
+vi.mock("@/server/notify-queue", () => ({
+  enqueueAndSend: mocks.notifyAll,
+  digestWindowSeconds: () => 0,
+}));
 
 vi.mock("@/server/org", async (importOriginal) => ({
   // buildOwnershipSnapshot은 순수 함수라 실제 구현을 쓴다 — 스냅샷 형태까지

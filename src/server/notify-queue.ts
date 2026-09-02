@@ -7,6 +7,7 @@ import {
   type NotifyOutcome,
 } from "@/lib/notify";
 import { MAX_ATTEMPTS, nextAttemptAt } from "@/lib/notify/backoff";
+import { sendSlackDigest } from "@/lib/notify/slack";
 import type { NormalizedAlert } from "@/lib/types";
 
 // 통지 아웃박스 (신뢰성 트랙 ①).
@@ -59,8 +60,10 @@ export async function recordNotifications(
   }
 }
 
-/** 한 잡을 선점하고 1회 발송 시도. 결과에 따라 잡 상태를 굴린다. */
-async function attemptJob(job: JobRow, now: Date): Promise<"sent" | "retrying" | "gave-up" | "skipped" | "lost"> {
+type AttemptOutcome = "sent" | "retrying" | "gave-up" | "skipped" | "lost";
+
+/** attempts 낙관적 선점. 다음 시도 시각을 미리 적어 크래시에도 안전하다. */
+async function claimJob(job: JobRow, now: Date): Promise<boolean> {
   const attemptsMade = job.attempts + 1;
   const retryAt = nextAttemptAt(attemptsMade, now);
   const claimed = await prisma.notificationJob.updateMany({
@@ -71,7 +74,57 @@ async function attemptJob(job: JobRow, now: Date): Promise<"sent" | "retrying" |
       nextAttemptAt: retryAt ?? new Date(now.getTime() + 600_000),
     },
   });
-  if (claimed.count === 0) return "lost"; // 겹치는 틱이 이미 잡았다
+  return claimed.count > 0;
+}
+
+/** 발송 성공/실패/포기에 따라 잡 상태와 통지 이력을 확정한다. */
+async function settleJob(
+  job: JobRow,
+  ctx: NotifyContext,
+  result: "sent" | "skipped" | { error: string },
+): Promise<AttemptOutcome> {
+  if (result === "skipped") {
+    await prisma.notificationJob.updateMany({
+      where: { id: job.id },
+      data: { status: "skipped" },
+    });
+    return "skipped";
+  }
+  if (result === "sent") {
+    await prisma.notificationJob.updateMany({
+      where: { id: job.id },
+      data: { status: "sent", lastError: null },
+    });
+    await recordNotifications(job.alertId, ctx, [
+      { channel: job.channel, status: "sent" },
+    ]);
+    return "sent";
+  }
+  const attemptsMade = job.attempts + 1;
+  if (attemptsMade >= MAX_ATTEMPTS) {
+    await prisma.notificationJob.updateMany({
+      where: { id: job.id },
+      data: { status: "failed", lastError: result.error },
+    });
+    await recordNotifications(job.alertId, ctx, [
+      {
+        channel: job.channel,
+        status: "failed",
+        error: `${result.error} · ${MAX_ATTEMPTS}회 실패, 포기`,
+      },
+    ]);
+    return "gave-up";
+  }
+  await prisma.notificationJob.updateMany({
+    where: { id: job.id },
+    data: { lastError: result.error },
+  });
+  return "retrying";
+}
+
+/** 한 잡을 선점하고 1회 발송 시도. 결과에 따라 잡 상태를 굴린다. */
+async function attemptJob(job: JobRow, now: Date): Promise<AttemptOutcome> {
+  if (!(await claimJob(job, now))) return "lost"; // 겹치는 틱이 이미 잡았다
 
   const { alert, ctx } = job.payload as unknown as JobPayload;
   const notifier = getNotifier(job.channel);
@@ -90,45 +143,53 @@ async function attemptJob(job: JobRow, now: Date): Promise<"sent" | "retrying" |
   }
 
   try {
-    const result = await notifier.notify(alert, ctx);
-    if (result === "skipped") {
-      await prisma.notificationJob.updateMany({
-        where: { id: job.id },
-        data: { status: "skipped" },
-      });
-      return "skipped";
-    }
-    await prisma.notificationJob.updateMany({
-      where: { id: job.id },
-      data: { status: "sent", lastError: null },
-    });
-    await recordNotifications(job.alertId, ctx, [
-      { channel: job.channel, status: "sent" },
-    ]);
-    return "sent";
+    return await settleJob(job, ctx, await notifier.notify(alert, ctx));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error(`[notify:${job.channel}] attempt ${attemptsMade} failed`, err);
-    if (attemptsMade >= MAX_ATTEMPTS) {
-      await prisma.notificationJob.updateMany({
-        where: { id: job.id },
-        data: { status: "failed", lastError: message },
-      });
-      await recordNotifications(job.alertId, ctx, [
-        {
-          channel: job.channel,
-          status: "failed",
-          error: `${message} · ${MAX_ATTEMPTS}회 실패, 포기`,
-        },
-      ]);
-      return "gave-up";
-    }
-    await prisma.notificationJob.updateMany({
-      where: { id: job.id },
-      data: { lastError: message },
-    });
-    return "retrying";
+    console.error(`[notify:${job.channel}] attempt ${job.attempts + 1} failed`, err);
+    return settleJob(job, ctx, { error: message });
   }
+}
+
+/**
+ * 묶음 통지 (v2 프레임 05): 같은 groupKey의 due Slack 잡들을 선점해 하나의
+ * 다이제스트로 보낸다. 성공하면 전원 sent + 알람별 로그, 실패하면 전원
+ * 백오프 재시도(각자 settleJob) — 잡 단위 재시도 의미론을 그대로 탄다.
+ */
+async function attemptDigest(jobs: JobRow[], now: Date): Promise<AttemptOutcome[]> {
+  const claimed: JobRow[] = [];
+  for (const job of jobs) {
+    if (await claimJob(job, now)) claimed.push(job);
+  }
+  if (claimed.length === 0) return jobs.map(() => "lost");
+  if (claimed.length === 1) {
+    // 창 안에 하나뿐이면 평소의 단건 메시지가 낫다.
+    const job = claimed[0];
+    const { alert, ctx } = job.payload as unknown as JobPayload;
+    const notifier = getNotifier(job.channel);
+    if (!notifier) return [await settleJob(job, ctx, { error: "채널 미설정 (slack)" })];
+    try {
+      return [await settleJob(job, ctx, await notifier.notify(alert, ctx))];
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return [await settleJob(job, ctx, { error: message })];
+    }
+  }
+
+  const items = claimed.map((job) => job.payload as unknown as JobPayload);
+  let result: "sent" | "skipped" | { error: string };
+  try {
+    result = await sendSlackDigest(items);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[notify:slack] digest of ${claimed.length} failed`, err);
+    result = { error: message };
+  }
+  const outcomes: AttemptOutcome[] = [];
+  for (let i = 0; i < claimed.length; i++) {
+    outcomes.push(await settleJob(claimed[i], items[i].ctx, result));
+  }
+  return outcomes;
 }
 
 export interface DrainResult {
@@ -154,17 +215,53 @@ export async function drainDueJobs(
     take: limit,
   });
   const result: DrainResult = { due: jobs.length, sent: 0, retrying: 0, gaveUp: 0 };
+  const tally = (o: "sent" | "retrying" | "gave-up" | "skipped" | "lost") => {
+    if (o === "sent") result.sent += 1;
+    else if (o === "retrying") result.retrying += 1;
+    else if (o === "gave-up") result.gaveUp += 1;
+  };
+
+  // Slack 잡 중 groupKey가 있는 것들은 키별로 묶어 다이제스트로 나간다.
+  const singles: JobRow[] = [];
+  const groups = new Map<string, JobRow[]>();
   for (const job of jobs) {
-    const outcome = await attemptJob(job, now);
-    if (outcome === "sent") result.sent += 1;
-    else if (outcome === "retrying") result.retrying += 1;
-    else if (outcome === "gave-up") result.gaveUp += 1;
+    if (job.channel === "slack" && job.groupKey) {
+      const list = groups.get(job.groupKey) ?? [];
+      list.push(job);
+      groups.set(job.groupKey, list);
+    } else {
+      singles.push(job);
+    }
+  }
+
+  for (const job of singles) tally(await attemptJob(job, now));
+  for (const [, groupJobs] of groups) {
+    for (const outcome of await attemptDigest(groupJobs, now)) tally(outcome);
   }
   return result;
 }
 
+export interface EnqueueOptions {
+  /**
+   * 묶음 통지 키 ("service:<id>"). digestDelaySeconds > 0이면 Slack 잡의
+   * 첫 시도가 그만큼 미뤄져 같은 키의 알람들과 한 메시지로 합쳐진다.
+   * 다른 채널(email/twilio)은 영향 없다.
+   */
+  groupKey?: string;
+  digestDelaySeconds?: number;
+}
+
+/** NOTIFY_DIGEST_WINDOW_SECONDS — 기본 60초, 0이면 묶음 통지 끔. */
+export function digestWindowSeconds(): number {
+  const raw = process.env.NOTIFY_DIGEST_WINDOW_SECONDS;
+  if (raw === undefined || raw === "") return 60;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 60;
+}
+
 /**
  * 팬아웃 진입점: 설정된 채널마다 잡을 만들고 인라인으로 1회 즉시 시도한다.
+ * 묶음 대상 Slack 잡은 due가 아니라서 인라인 드레인이 자연히 건너뛴다.
  * 채널이 하나도 설정돼 있지 않으면 아무것도 만들지 않는다 (지금까지의
  * no-op 동작과 동일). 큐 조작 실패는 삼킨다 — 아웃박스가 ingest를 죽이면
  * 본말전도다.
@@ -173,19 +270,28 @@ export async function enqueueAndSend(
   alertId: string,
   alert: NormalizedAlert,
   ctx: NotifyContext,
+  opts: EnqueueOptions = {},
 ): Promise<void> {
   const channels = configuredChannels();
   if (channels.length === 0) return;
   try {
     const payload = { alert, ctx } as unknown as Prisma.InputJsonValue;
     const now = new Date();
+    const delay = opts.groupKey ? (opts.digestDelaySeconds ?? 0) : 0;
     const created = await prisma.$transaction(
-      channels.map((channel) =>
-        prisma.notificationJob.create({
-          data: { alertId, channel, payload, nextAttemptAt: now },
+      channels.map((channel) => {
+        const batched = channel === "slack" && delay > 0;
+        return prisma.notificationJob.create({
+          data: {
+            alertId,
+            channel,
+            payload,
+            groupKey: batched ? opts.groupKey : null,
+            nextAttemptAt: batched ? new Date(now.getTime() + delay * 1000) : now,
+          },
           select: { id: true },
-        }),
-      ),
+        });
+      }),
     );
     await drainDueJobs(now, channels.length, created.map((j) => j.id));
   } catch (err) {

@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { NotifyContext } from "@/lib/notify";
-import { enqueueAndSend } from "@/server/notify-queue";
+import { digestWindowSeconds, enqueueAndSend } from "@/server/notify-queue";
 import { buildOwnershipSnapshot, getOwnershipByAwsAccount } from "@/server/org";
 import { findActiveSilence } from "@/server/silences";
 import type { SilenceScope } from "@/lib/silence";
@@ -77,6 +77,8 @@ interface IngestOwnership {
   snapshot?: Prisma.InputJsonValue;
   /** 뮤트 매칭 좌표 — 알람이 속한 체인 id들 (미매핑이면 없음). */
   scope?: Omit<SilenceScope, "alertId">;
+  /** "고객사 › 프로젝트 › 서비스" — 다이제스트 헤더용. */
+  chainLabel?: string;
 }
 
 async function resolveIngestOwnership(
@@ -93,6 +95,7 @@ async function resolveIngestOwnership(
         projectId: ownership.chain.project.id,
         serviceId: ownership.chain.service.id,
       },
+      chainLabel: `${ownership.chain.customer.name} › ${ownership.chain.project.name} › ${ownership.chain.service.name}`,
     };
     if (ownership.contacts.length > 0) {
       out.assignees = ownership.contacts.map((c) => ({
@@ -112,6 +115,7 @@ async function resolveIngestOwnership(
 function toNotifyContext(alertId: string, own: IngestOwnership): NotifyContext {
   const ctx: NotifyContext = { alertId };
   if (own.assignees) ctx.assignees = own.assignees;
+  if (own.chainLabel) ctx.chainLabel = own.chainLabel;
   return ctx;
 }
 
@@ -133,7 +137,11 @@ async function notifyUnlessSilenced(
     return;
   }
   // 아웃박스 경유: 채널별 잡 생성 + 인라인 1회 시도, 실패분은 틱이 재시도.
-  await enqueueAndSend(alertId, n, toNotifyContext(alertId, own));
+  // 서비스가 식별되면 Slack은 묶음 창(기본 60초)만큼 미뤄 다이제스트 후보로.
+  await enqueueAndSend(alertId, n, toNotifyContext(alertId, own), {
+    groupKey: own.scope?.serviceId ? `service:${own.scope.serviceId}` : undefined,
+    digestDelaySeconds: digestWindowSeconds(),
+  });
 }
 
 export interface IngestResult {
@@ -291,6 +299,50 @@ export async function ingestAlerts(alerts: NormalizedAlert[]): Promise<IngestRes
     }
   }
   return results;
+}
+
+/**
+ * 저장된 알람 행을 다시 팬아웃한다 — 점검 창 종료 시 "남은 FIRING 즉시
+ * 발송" 경로. 담당은 지금 기준으로 다시 해석하고, 다른 창이 아직 덮고
+ * 있으면 notifyUnlessSilenced가 알아서 삼킨다. 여러 건이 남았으면 묶음
+ * 창에서 다시 다이제스트로 합쳐진다.
+ */
+export async function refireNotifications(row: {
+  id: string;
+  fingerprint: string;
+  title: string;
+  description: string | null;
+  source: string;
+  severity: string;
+  resource: string | null;
+  metric: string | null;
+  namespace: string | null;
+  value: string | null;
+  threshold: number | null;
+  comparison: string | null;
+  region: string | null;
+  accountId: string | null;
+  stateReason: string | null;
+}): Promise<void> {
+  const n: NormalizedAlert = {
+    fingerprint: row.fingerprint,
+    title: row.title,
+    description: row.description ?? undefined,
+    source: row.source,
+    severity: row.severity,
+    status: "FIRING",
+    resource: row.resource ?? undefined,
+    metric: row.metric ?? undefined,
+    namespace: row.namespace ?? undefined,
+    value: row.value ?? undefined,
+    threshold: row.threshold ?? undefined,
+    comparison: row.comparison ?? undefined,
+    region: row.region ?? undefined,
+    accountId: row.accountId ?? undefined,
+    stateReason: row.stateReason ?? undefined,
+  };
+  const own = await resolveIngestOwnership(n);
+  await notifyUnlessSilenced(row.id, n, own);
 }
 
 // --- Read helpers used by the dashboard ------------------------------------
