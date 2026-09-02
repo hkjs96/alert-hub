@@ -293,6 +293,12 @@ export async function enqueueAndSend(
         });
       }),
     );
+    // 재발화 스로틀(②)의 기준 시각 — 잡이 만들어진 순간이 "팬아웃이 나간
+    // 순간"이다 (인라인 시도 실패분도 큐가 이어서 보내므로).
+    await prisma.alert.updateMany({
+      where: { id: alertId },
+      data: { lastNotifiedAt: now },
+    });
     await drainDueJobs(now, channels.length, created.map((j) => j.id));
   } catch (err) {
     console.error("[notify] outbox enqueue failed", err);

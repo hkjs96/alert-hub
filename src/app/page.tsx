@@ -21,6 +21,8 @@ import { AlertTable } from "@/components/alert-table";
 import { Mark, statusTone } from "@/components/badges";
 import { getActiveSilences } from "@/server/silences";
 import { matchSilence, type SilenceRow } from "@/lib/silence";
+import { bulkAckAlerts } from "@/server/alert-actions";
+import { ackMinutesFromEnv } from "@/lib/escalation";
 
 export const dynamic = "force-dynamic";
 
@@ -194,15 +196,67 @@ export default async function DashboardPage({
   const toggleAssignee = (id: string) =>
     dashboardHref({ ...f, assignee: f.assignee === id ? undefined : id });
 
+  // 일괄 Ack 대상: 지금 화면(필터 결과)의 FIRING들. 제출 사이에 변한 행은
+  // 서버 가드가 걸러낸다.
+  const firingVisible = visible.filter((a) => a.status === "FIRING");
+
+  // 에스컬레이션 대기 (v2 우측 카드): 사다리가 남은 FIRING의 다음 통지 예정.
+  const ackMinutes = ackMinutesFromEnv();
+  const escalationQueue = visible
+    .flatMap((a) => {
+      if (a.status !== "FIRING") return [];
+      const snap = parseOwnershipSnapshot(a.ownershipSnapshot);
+      if (!snap || a.escalationStep >= snap.order.length) return [];
+      const base = a.escalatedAt ?? new Date(snap.capturedAt);
+      const dueAt = new Date(new Date(base).getTime() + ackMinutes * 60_000);
+      return [
+        {
+          id: a.id,
+          title: a.title,
+          waitingOn: snap.order[a.escalationStep - 1]?.name ?? "?",
+          next: snap.order[a.escalationStep],
+          step: a.escalationStep + 1,
+          dueAt,
+          progress: Math.min(
+            Math.max(
+              (now.getTime() - new Date(base).getTime()) / (ackMinutes * 60_000),
+              0,
+            ),
+            1,
+          ),
+        },
+      ];
+    })
+    .sort((x, y) => x.dueAt.getTime() - y.dueAt.getTime())
+    .slice(0, 2);
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-[27px] font-semibold leading-tight tracking-[-0.025em] text-stone-900">
-          알람 대시보드
-        </h1>
-        <p className="mt-1.5 text-[13px] text-stone-500">
-          웹훅으로 수신한 발화 알람 · 핑거프린트 기준 중복 제거
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-[27px] font-semibold leading-tight tracking-[-0.025em] text-stone-900">
+            알람 대시보드
+          </h1>
+          <p className="mt-1.5 text-[13px] text-stone-500">
+            웹훅으로 수신한 발화 알람 · 핑거프린트 기준 중복 제거
+          </p>
+        </div>
+        {firingVisible.length > 0 && (
+          <form action={bulkAckAlerts}>
+            <input
+              type="hidden"
+              name="ids"
+              value={firingVisible.map((a) => a.id).join(",")}
+            />
+            <input type="hidden" name="back" value={dashboardHref(f)} />
+            <button
+              title="현재 필터 결과의 FIRING 알람을 모두 Ack합니다"
+              className="inline-flex h-8 items-center border border-stone-900 bg-stone-900 px-[15px] text-[13px] font-semibold text-white transition-colors hover:bg-black"
+            >
+              일괄 Ack ({firingVisible.length})
+            </button>
+          </form>
+        )}
       </div>
 
       {unmappedCount > 0 && !f.unmapped && (
@@ -474,6 +528,52 @@ export default async function DashboardPage({
               이름을 눌러 담당자 기준으로 필터
             </p>
           </div>
+
+          {escalationQueue.length > 0 && (
+            <div className="mt-[18px] border border-stone-200 bg-white">
+              <div className="border-b border-stone-200 px-4 py-3">
+                <h2 className="font-mono text-[10px] font-bold tracking-[0.11em] text-stone-400">
+                  에스컬레이션 대기
+                </h2>
+              </div>
+              <div className="flex flex-col gap-4 px-4 py-3.5">
+                {escalationQueue.map((e) => {
+                  const remainMs = e.dueAt.getTime() - now.getTime();
+                  const remain =
+                    remainMs <= 0
+                      ? "다음 틱에 통지"
+                      : `T-${Math.floor(remainMs / 60_000)}:${String(
+                          Math.floor((remainMs % 60_000) / 1000),
+                        ).padStart(2, "0")}`;
+                  return (
+                    <div key={e.id} className="flex flex-col gap-2.5">
+                      <div className="flex items-baseline justify-between gap-2.5">
+                        <Link
+                          href={`/alerts/${e.id}`}
+                          className="truncate text-[13px] font-medium text-stone-900 hover:text-indigo-600 hover:underline"
+                        >
+                          {e.title}
+                        </Link>
+                        <span className="whitespace-nowrap font-mono text-xs font-bold text-[#b54708]">
+                          {remain}
+                        </span>
+                      </div>
+                      <div className="text-xs leading-relaxed text-stone-500">
+                        {e.waitingOn} 미응답 → {e.step}순위 {e.next.name}
+                        {e.next.department ? `(${e.next.department})` : ""} 자동 통지
+                      </div>
+                      <div className="h-[3px] bg-stone-100">
+                        <span
+                          className="block h-full bg-[#b54708]"
+                          style={{ width: `${Math.round(e.progress * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </aside>
       </div>
     </div>

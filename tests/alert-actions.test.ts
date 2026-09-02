@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   updateMany: vi.fn(),
   eventCreate: vi.fn(),
   revalidatePath: vi.fn(),
+  redirect: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -18,8 +19,9 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 
-import { ackAlert, resolveAlert } from "@/server/alert-actions";
+import { ackAlert, bulkAckAlerts, resolveAlert } from "@/server/alert-actions";
 
 function form(entries: Record<string, string>): FormData {
   const fd = new FormData();
@@ -88,5 +90,36 @@ describe("resolveAlert", () => {
     await resolveAlert(form({ id: "a1" }));
 
     expect(mocks.eventCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe("bulkAckAlerts (일괄 Ack)", () => {
+  it("FIRING인 행만 전이하고, 실제로 움직인 행에만 이벤트를 남긴다", async () => {
+    mocks.updateMany
+      .mockResolvedValueOnce({ count: 1 }) // a1: FIRING → ACK
+      .mockResolvedValueOnce({ count: 0 }) // a2: 그 사이 RESOLVED — no-op
+      .mockResolvedValueOnce({ count: 1 }); // a3: FIRING → ACK
+
+    await bulkAckAlerts(form({ ids: "a1, a2, a3", back: "/?status=FIRING" }));
+
+    expect(mocks.updateMany).toHaveBeenCalledTimes(3);
+    expect(mocks.updateMany.mock.calls[0][0].where).toMatchObject({
+      id: "a1",
+      status: { in: ["FIRING"] },
+    });
+    // 이벤트는 움직인 a1·a3에만
+    expect(mocks.eventCreate).toHaveBeenCalledTimes(2);
+    expect(mocks.eventCreate.mock.calls[0][0].data).toMatchObject({
+      alertId: "a1",
+      status: "ACKNOWLEDGED",
+      stateReason: "일괄 Ack (대시보드)",
+    });
+    expect(mocks.eventCreate.mock.calls[1][0].data.alertId).toBe("a3");
+    // 필터가 보존된 현재 뷰로 복귀
+    expect(mocks.redirect).toHaveBeenCalledWith("/?status=FIRING");
+  });
+
+  it("ids가 비면 던진다", async () => {
+    await expect(bulkAckAlerts(form({}))).rejects.toThrow("missing ids");
   });
 });
