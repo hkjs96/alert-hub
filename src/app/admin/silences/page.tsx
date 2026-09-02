@@ -4,6 +4,7 @@ import { getSilencesForDisplay } from "@/server/silences";
 import { createSilence, revokeSilence } from "@/server/silence-actions";
 import { silenceStatus, type SilenceStatus } from "@/lib/silence";
 import { Mark } from "@/components/badges";
+import { PendingButton } from "@/components/pending-button";
 
 export const dynamic = "force-dynamic";
 
@@ -283,9 +284,9 @@ export default async function SilencesPage({
                     </span>
                     <input name="createdBy" placeholder="이름" className={`${control} w-full`} />
                   </label>
-                  <button className="inline-flex h-8 items-center rounded-md bg-stone-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-stone-700">
+                  <PendingButton pendingLabel="등록 중…" className="inline-flex h-8 items-center rounded-md bg-stone-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-stone-700">
                     점검 창 등록
-                  </button>
+                  </PendingButton>
                 </div>
                 <p className="text-xs text-stone-400">
                   등록 즉시(또는 예약 시작 시점부터) 스코프 하위 모든 알람의 통지가
@@ -380,9 +381,9 @@ export default async function SilencesPage({
                       <form action={revokeSilence} className="inline">
                         <input type="hidden" name="id" value={s.id} />
                         <input type="hidden" name="back" value={back} />
-                        <button className="inline-flex h-[26px] items-center border border-stone-200 bg-white px-2.5 text-xs font-medium text-stone-900 transition-colors hover:border-stone-400">
+                        <PendingButton pendingLabel="처리 중…" className="inline-flex h-[26px] items-center border border-stone-200 bg-white px-2.5 text-xs font-medium text-stone-900 transition-colors hover:border-stone-400">
                           {status === "active" ? "지금 해제" : "취소"}
-                        </button>
+                        </PendingButton>
                       </form>
                     ) : (
                       <span className="inline-flex h-[26px] cursor-not-allowed items-center border border-stone-100 bg-stone-100 px-2.5 text-xs font-medium text-stone-400">

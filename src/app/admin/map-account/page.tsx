@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { createAccountMap } from "@/server/org-actions";
+import { PendingButton } from "@/components/pending-button";
 
 export const dynamic = "force-dynamic";
 
@@ -135,9 +136,9 @@ export default async function MapAccountPage({
             </label>
           </div>
           <div className="flex items-center gap-3 pt-1">
-            <button className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700">
+            <PendingButton pendingLabel="매핑 중…" className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700">
               매핑하고 돌아가기
-            </button>
+            </PendingButton>
             <Link href={back} className="text-stone-500 hover:underline">
               취소
             </Link>

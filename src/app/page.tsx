@@ -23,6 +23,7 @@ import { getActiveSilences } from "@/server/silences";
 import { matchSilence, type SilenceRow } from "@/lib/silence";
 import { bulkAckAlerts } from "@/server/alert-actions";
 import { ackMinutesFromEnv } from "@/lib/escalation";
+import { PendingButton } from "@/components/pending-button";
 
 export const dynamic = "force-dynamic";
 
@@ -249,12 +250,13 @@ export default async function DashboardPage({
               value={firingVisible.map((a) => a.id).join(",")}
             />
             <input type="hidden" name="back" value={dashboardHref(f)} />
-            <button
+            <PendingButton
+              pendingLabel="Ack 처리 중…"
               title="현재 필터 결과의 FIRING 알람을 모두 Ack합니다"
               className="inline-flex h-8 items-center border border-stone-900 bg-stone-900 px-[15px] text-[13px] font-semibold text-white transition-colors hover:bg-black"
             >
               일괄 Ack ({firingVisible.length})
-            </button>
+            </PendingButton>
           </form>
         )}
       </div>

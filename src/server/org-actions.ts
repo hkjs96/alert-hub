@@ -38,14 +38,24 @@ function optionalString(formData: FormData, key: string): string | null {
 
 // --- Customers ---------------------------------------------------------------
 
+/**
+ * redirectTo에 "__ID__" 자리표시가 있으면 방금 만든 행의 id로 바꿔 이동한다 —
+ * 온보딩 위저드(O3)가 생성 직후 다음 단계로 이어지는 방법.
+ */
+function redirectWithId(formData: FormData, id: string) {
+  const to = optionalString(formData, "redirectTo");
+  if (to && to.startsWith("/")) redirect(to.replace("__ID__", id));
+}
+
 export async function createCustomer(formData: FormData) {
-  await prisma.customer.create({
+  const customer = await prisma.customer.create({
     data: {
       name: requireString(formData, "name"),
       isInternal: formData.get("isInternal") === "on",
     },
   });
   revalidatePath("/admin/customers");
+  redirectWithId(formData, customer.id);
 }
 
 export async function deleteCustomer(formData: FormData) {
@@ -56,13 +66,14 @@ export async function deleteCustomer(formData: FormData) {
 // --- Projects ------------------------------------------------------------------
 
 export async function createProject(formData: FormData) {
-  await prisma.project.create({
+  const project = await prisma.project.create({
     data: {
       name: requireString(formData, "name"),
       customerId: requireString(formData, "customerId"),
     },
   });
   revalidateBack(formData, "/admin/customers");
+  redirectWithId(formData, project.id);
 }
 
 export async function deleteProject(formData: FormData) {
@@ -73,13 +84,14 @@ export async function deleteProject(formData: FormData) {
 // --- Services ------------------------------------------------------------------
 
 export async function createService(formData: FormData) {
-  await prisma.service.create({
+  const service = await prisma.service.create({
     data: {
       name: requireString(formData, "name"),
       projectId: requireString(formData, "projectId"),
     },
   });
   revalidateBack(formData, "/admin/customers");
+  redirectWithId(formData, service.id);
 }
 
 export async function deleteService(formData: FormData) {
@@ -127,6 +139,45 @@ export async function createContact(formData: FormData) {
       slackId: optionalString(formData, "slackId"),
       department: optionalString(formData, "department"),
       customerId: optionalString(formData, "customerId"),
+    },
+  });
+  revalidatePath("/admin/contacts");
+}
+
+/**
+ * 멤버 수정 (M2). 소속 변경은 테넌트 격리를 깨뜨릴 수 있어 제한한다:
+ * 배정이 남아 있는 인원은 내부로만 옮길 수 있다 (내부 인원은 모든 고객사
+ * 드롭다운에 나타나므로 기존 배정이 계속 유효하다). 고객사→다른 고객사는
+ * 배정을 먼저 해제해야 한다.
+ */
+export async function updateContact(formData: FormData) {
+  const id = requireString(formData, "id");
+  const nextCustomerId = optionalString(formData, "customerId");
+
+  const current = await prisma.contact.findUnique({
+    where: { id },
+    include: { _count: { select: { assignments: true } } },
+  });
+  if (!current) throw new Error("이미 삭제된 인원입니다");
+  if (
+    (current.customerId ?? null) !== nextCustomerId &&
+    nextCustomerId !== null &&
+    current._count.assignments > 0
+  ) {
+    throw new Error(
+      "배정이 남아 있는 인원의 소속은 다른 고객사로 바꿀 수 없습니다 — 먼저 배정을 해제하거나 내부 소속으로 변경하세요",
+    );
+  }
+
+  await prisma.contact.update({
+    where: { id },
+    data: {
+      name: requireString(formData, "name"),
+      email: optionalString(formData, "email"),
+      phone: optionalString(formData, "phone"),
+      slackId: optionalString(formData, "slackId"),
+      department: optionalString(formData, "department"),
+      customerId: nextCustomerId,
     },
   });
   revalidatePath("/admin/contacts");

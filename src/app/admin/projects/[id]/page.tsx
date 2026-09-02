@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createService, deleteService } from "@/server/org-actions";
+import { DangerDelete } from "@/components/admin/danger-delete";
+import { CoverageBadge } from "@/components/admin/coverage-badge";
+import { PendingButton } from "@/components/pending-button";
 import { AssignmentEditor } from "@/components/admin/assignment-editor";
 import { Roster } from "@/components/admin/roster";
 
@@ -14,7 +17,14 @@ export default async function ProjectDetailPage({
 }) {
   const project = await prisma.project.findUnique({
     where: { id: params.id },
-    include: { customer: true, services: { include: { accounts: true } } },
+    include: {
+      customer: { include: { _count: { select: { assignments: true } } } },
+      _count: { select: { assignments: true } },
+      services: {
+        include: { accounts: true, _count: { select: { assignments: true } } },
+        orderBy: { name: "asc" },
+      },
+    },
   });
   if (!project) notFound();
   const back = `/admin/projects/${project.id}`;
@@ -58,9 +68,9 @@ export default async function ProjectDetailPage({
             placeholder="서비스 이름"
             className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
           />
-          <button className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700">
+          <PendingButton pendingLabel="추가 중…" className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700">
             + 서비스
-          </button>
+          </PendingButton>
         </form>
         <ul className="divide-y divide-stone-100 text-sm">
           {project.services.map((s: any) => (
@@ -72,11 +82,25 @@ export default async function ProjectDetailPage({
                 {s.name}
               </Link>
               <span className="text-stone-400">계정 {s.accounts.length}개</span>
-              <form action={deleteService} className="ml-auto inline">
-                <input type="hidden" name="id" value={s.id} />
-                <input type="hidden" name="back" value={back} />
-                <button className="text-xs text-stone-400 hover:text-[#b42318]">삭제</button>
-              </form>
+              <CoverageBadge
+                direct={s._count.assignments}
+                inheritedFrom={
+                  project._count.assignments > 0
+                    ? "프로젝트"
+                    : project.customer._count.assignments > 0
+                      ? "고객사"
+                      : null
+                }
+              />
+              <span className="ml-auto">
+                <DangerDelete
+                  action={deleteService}
+                  id={s.id}
+                  back={back}
+                  subject={`${s.name} 서비스`}
+                  impact={`계정 매핑 ${s.accounts.length}개와 점검 창`}
+                />
+              </span>
             </li>
           ))}
           {project.services.length === 0 && (

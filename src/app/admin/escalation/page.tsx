@@ -8,6 +8,7 @@ import {
 } from "@/server/org";
 import { addAssignment, moveAssignment, removeAssignment } from "@/server/org-actions";
 import { NewContactInline } from "@/components/admin/new-contact-inline";
+import { PendingButton } from "@/components/pending-button";
 
 export const dynamic = "force-dynamic";
 
@@ -98,18 +99,14 @@ export default async function EscalationPage({
   };
   const back = query();
 
-  const [assignments, choices] = await Promise.all([
+  // P2: 상속 해석까지 한 번에 병렬로 — 필요 없으면 결과만 버린다 (직접
+  // 등록이 있는 스코프에서 쿼리 하나 아끼자고 왕복을 하나 더 쓰지 않는다).
+  const [assignments, choices, inheritedRaw] = await Promise.all([
     getDirectAssignments(level, scopeId),
     getContactChoices(customer.id),
+    getInheritedOrder(level, { customerId: customer.id, projectId: project?.id }),
   ]);
-
-  const inherited =
-    assignments.length === 0
-      ? await getInheritedOrder(level, {
-          customerId: customer.id,
-          projectId: project?.id,
-        })
-      : null;
+  const inherited = assignments.length === 0 ? inheritedRaw : null;
   const inheritedContacts = inherited ? await getContactsByIds(inherited.order) : [];
 
   const registered = new Set(assignments.map((a) => a.contactId));
@@ -173,9 +170,9 @@ export default async function EscalationPage({
             </option>
           ))}
         </select>
-        <button className="inline-flex h-8 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50">
+        <PendingButton pendingLabel="이동 중…" className="inline-flex h-8 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50">
           이동
-        </button>
+        </PendingButton>
       </form>
 
       {/* v2: 세그먼트 필 대신 잉크 밑줄 탭 */}
@@ -324,9 +321,9 @@ export default async function EscalationPage({
                 </option>
               ))}
             </select>
-            <button className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700">
+            <PendingButton pendingLabel="추가 중…" className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700">
               + 추가
-            </button>
+            </PendingButton>
           </form>
         )}
 

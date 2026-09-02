@@ -22,7 +22,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </h1>
         <nav className="mt-4 flex gap-6 text-[13px]">
           <NavTab
-            href="/admin/customers"
+            href="/admin/org"
             label="조직 · 담당자 관리"
             pattern="^/admin(?!/(escalation|contacts|silences))"
             className={TAB_BASE}
