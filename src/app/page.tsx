@@ -19,6 +19,8 @@ import {
 import { StatCards } from "@/components/stat-cards";
 import { AlertTable } from "@/components/alert-table";
 import { Mark, statusTone } from "@/components/badges";
+import { getActiveSilences } from "@/server/silences";
+import { matchSilence, type SilenceRow } from "@/lib/silence";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +58,7 @@ function factsOf(a: AlertRow, ownership: Map<string, OwnershipInfo>): AlertFacts
       ? {
           customerId: info.chain.customer.id,
           projectId: info.chain.project.id,
+          serviceId: info.chain.service.id,
           environment: info.chain.account.environment,
         }
       : null,
@@ -86,7 +89,7 @@ export default async function DashboardPage({
     unmapped: searchParams.unmapped === "1",
   };
 
-  const [allAlerts, customers, envRows] = await Promise.all([
+  const [allAlerts, customers, envRows, silences] = await Promise.all([
     getAlerts(),
     prisma.customer.findMany({ orderBy: { name: "asc" } }),
     prisma.awsAccountMap.findMany({
@@ -94,6 +97,7 @@ export default async function DashboardPage({
       select: { environment: true },
       distinct: ["environment"],
     }),
+    getActiveSilences(),
   ]);
   const envs = envRows
     .map((r) => r.environment)
@@ -161,6 +165,24 @@ export default async function DashboardPage({
     );
 
   const visible = rows.filter((r) => matchesFilters(r.facts, f)).map((r) => r.a);
+
+  // 뮤트 칩: 행별로 지금 유효한 Silence를 매칭한다. 뮤트여도 행은 그대로
+  // 보인다 — 숨기는 게 아니라 "깨우지 않는" 것이 뮤트의 의미라서다.
+  const now = new Date();
+  const mutedById = new Map<string, SilenceRow>();
+  for (const r of rows) {
+    const hit = matchSilence(
+      silences,
+      {
+        alertId: r.a.id,
+        customerId: r.facts.chain?.customerId,
+        projectId: r.facts.chain?.projectId,
+        serviceId: r.facts.chain?.serviceId,
+      },
+      now,
+    );
+    if (hit) mutedById.set(r.a.id, hit);
+  }
 
   const toggleStatus = (s: AlertStatus) =>
     dashboardHref({
@@ -378,6 +400,7 @@ export default async function DashboardPage({
             ownership={ownership}
             filtered={anyFilterActive(f)}
             backHref={dashboardHref(f)}
+            muted={mutedById}
           />
         </div>
 

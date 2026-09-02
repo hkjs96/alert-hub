@@ -3,6 +3,7 @@ import type { getAlerts } from "@/server/alerts";
 import { parseOwnershipSnapshot, type OwnershipInfo } from "@/server/org";
 import { levelLabel } from "@/lib/org/resolve";
 import { SeverityBadge, StatusBadge } from "@/components/badges";
+import { muteUntilLabel, type SilenceRow } from "@/lib/silence";
 
 type AlertRow = Awaited<ReturnType<typeof getAlerts>>[number];
 
@@ -112,6 +113,7 @@ export function AlertTable({
   ownership,
   filtered = false,
   backHref,
+  muted,
 }: {
   alerts: AlertRow[];
   ownership: Map<string, OwnershipInfo>;
@@ -119,6 +121,8 @@ export function AlertTable({
   filtered?: boolean;
   /** Current dashboard view href, for round-trips (인라인 매핑 복귀). */
   backHref?: string;
+  /** alertId → 지금 유효한 Silence. 뮤트 행은 흐려지고 칩이 붙는다. */
+  muted?: Map<string, SilenceRow>;
 }) {
   if (alerts.length === 0) {
     // "필터 결과 없음"과 "아직 데이터 없음"은 다른 상태다 (페르소나 검증 P2).
@@ -162,13 +166,18 @@ export function AlertTable({
         <tbody className="divide-y divide-stone-100">
           {alerts.map((a) => {
             const { chain, environment } = chainFacts(a, ownership);
+            const silence = muted?.get(a.id) ?? null;
+            const live = a.status === "FIRING" && !silence;
             return (
-            <tr key={a.id} className="transition-colors hover:bg-stone-50">
+            <tr
+              key={a.id}
+              className={`transition-colors hover:bg-stone-50 ${
+                silence ? "bg-stone-50" : ""
+              }`}
+            >
               <td
                 className={`border-l-[3px] px-3 py-3.5 ${
-                  a.status === "FIRING"
-                    ? "border-l-[#b42318]"
-                    : "border-l-transparent"
+                  live ? "border-l-[#b42318]" : "border-l-transparent"
                 }`}
               >
                 <SeverityBadge severity={a.severity} />
@@ -177,18 +186,28 @@ export function AlertTable({
                 <StatusBadge status={a.status} />
               </td>
               <td className="px-3 py-3.5">
-                <Link
-                  href={`/alerts/${a.id}`}
-                  className={`text-[13px] hover:text-indigo-600 hover:underline ${
-                    a.status === "FIRING"
-                      ? "font-semibold text-stone-900"
-                      : a.status === "RESOLVED"
-                        ? "font-medium text-stone-500"
-                        : "font-medium text-stone-900"
-                  }`}
-                >
-                  {a.title}
-                </Link>
+                <span className="flex items-center gap-2">
+                  <Link
+                    href={`/alerts/${a.id}`}
+                    className={`text-[13px] hover:text-indigo-600 hover:underline ${
+                      live
+                        ? "font-semibold text-stone-900"
+                        : a.status === "RESOLVED" || silence
+                          ? "font-medium text-stone-500"
+                          : "font-medium text-stone-900"
+                    }`}
+                  >
+                    {a.title}
+                  </Link>
+                  {silence ? (
+                    <span
+                      className="inline-flex h-[19px] items-center gap-1 whitespace-nowrap border border-stone-200 bg-stone-100 px-1.5 font-mono text-[10px] tracking-[0.04em] text-stone-500"
+                      title={`뮤트 중 — ${silence.reason}`}
+                    >
+                      뮤트 {muteUntilLabel(silence.endsAt)}
+                    </span>
+                  ) : null}
+                </span>
                 {chain ? (
                   <div className="mt-0.5 text-[11px] text-stone-400">{chain}</div>
                 ) : null}

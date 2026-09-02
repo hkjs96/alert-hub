@@ -6,6 +6,8 @@ import {
   type NotifyOutcome,
 } from "@/lib/notify";
 import { buildOwnershipSnapshot, getOwnershipByAwsAccount } from "@/server/org";
+import { findActiveSilence } from "@/server/silences";
+import type { SilenceScope } from "@/lib/silence";
 import type { AlertStatus, NormalizedAlert } from "@/lib/types";
 
 // Columns written when an alert is first created. Optional fields land as
@@ -76,6 +78,8 @@ function isUniqueViolation(err: unknown): boolean {
 interface IngestOwnership {
   assignees?: NonNullable<NotifyContext["assignees"]>;
   snapshot?: Prisma.InputJsonValue;
+  /** 뮤트 매칭 좌표 — 알람이 속한 체인 id들 (미매핑이면 없음). */
+  scope?: Omit<SilenceScope, "alertId">;
 }
 
 async function resolveIngestOwnership(
@@ -87,6 +91,11 @@ async function resolveIngestOwnership(
     if (!ownership) return {}; // unmapped — nothing to freeze
     const out: IngestOwnership = {
       snapshot: buildOwnershipSnapshot(ownership) as unknown as Prisma.InputJsonValue,
+      scope: {
+        customerId: ownership.chain.customer.id,
+        projectId: ownership.chain.project.id,
+        serviceId: ownership.chain.service.id,
+      },
     };
     if (ownership.contacts.length > 0) {
       out.assignees = ownership.contacts.map((c) => ({
@@ -107,6 +116,28 @@ function toNotifyContext(alertId: string, own: IngestOwnership): NotifyContext {
   const ctx: NotifyContext = { alertId };
   if (own.assignees) ctx.assignees = own.assignees;
   return ctx;
+}
+
+/**
+ * FIRING 전이 팬아웃 — 단, 뮤트(점검 창)가 덮고 있으면 통지만 조용히
+ * 생략한다. 수집·이벤트·화면은 이미 위에서 다 처리됐다 (BR: 뮤트는 통지와
+ * 에스컬레이션만 멈춘다).
+ */
+async function notifyUnlessSilenced(
+  alertId: string,
+  n: NormalizedAlert,
+  own: IngestOwnership,
+): Promise<void> {
+  const silence = await findActiveSilence({ alertId, ...own.scope });
+  if (silence) {
+    console.info(
+      `[notify] alert ${alertId} muted by silence ${silence.id} (${silence.reason}) — skipping fan-out`,
+    );
+    return;
+  }
+  const ctx = toNotifyContext(alertId, own);
+  const outcomes = await notifyAll(n, ctx);
+  await recordNotifications(alertId, ctx, outcomes);
 }
 
 /**
@@ -189,9 +220,7 @@ export async function ingestAlert(n: NormalizedAlert): Promise<IngestResult> {
       });
       const firedTransition = n.status === "FIRING";
       if (firedTransition) {
-        const ctx = toNotifyContext(alert.id, own);
-        const outcomes = await notifyAll(n, ctx);
-        await recordNotifications(alert.id, ctx, outcomes);
+        await notifyUnlessSilenced(alert.id, n, own);
       }
       return { alertId: alert.id, status: n.status, firedTransition, created: true };
     } catch (err) {
@@ -277,9 +306,7 @@ async function updateExisting(
         data: { ownershipSnapshot: own.snapshot },
       });
     }
-    const ctx = toNotifyContext(alertId, own);
-    const outcomes = await notifyAll(n, ctx);
-    await recordNotifications(alertId, ctx, outcomes);
+    await notifyUnlessSilenced(alertId, n, own);
   }
 
   return { alertId, status: n.status, firedTransition, created: false };

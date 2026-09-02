@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   contactFindUnique: vi.fn(),
   notifLogCreateMany: vi.fn(),
   notifyAll: vi.fn(),
+  silenceFindMany: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -18,6 +19,7 @@ vi.mock("@/lib/prisma", () => ({
     alertEvent: { create: mocks.eventCreate },
     contact: { findUnique: mocks.contactFindUnique },
     notificationLog: { createMany: mocks.notifLogCreateMany },
+    silence: { findMany: mocks.silenceFindMany },
   },
 }));
 
@@ -85,6 +87,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv("CRON_SECRET", "s3cr3t");
   mocks.findMany.mockResolvedValue([]);
+  mocks.silenceFindMany.mockResolvedValue([]);
   mocks.updateMany.mockResolvedValue({ count: 1 });
   mocks.eventCreate.mockResolvedValue({ id: "ev1" });
   mocks.notifyAll.mockResolvedValue(undefined);
@@ -204,5 +207,49 @@ describe("escalation tick", () => {
     expect(ctx.assignees).toEqual([
       { name: "김도윤", slackId: null, email: null, phone: null },
     ]);
+  });
+});
+
+describe("silence(뮤트/점검 창)", () => {
+  const NOW_MS = Date.now();
+  const silence = (scope: Record<string, string | null>) => ({
+    id: "sil1",
+    alertId: null,
+    customerId: null,
+    projectId: null,
+    serviceId: null,
+    startsAt: new Date(NOW_MS - 60_000),
+    endsAt: new Date(NOW_MS + 60 * 60_000),
+    reason: "정기 배포",
+    createdBy: null,
+    revokedAt: null,
+    ...scope,
+  });
+
+  it("서비스 점검 창이 덮는 알람은 에스컬레이션하지 않는다 (step 보존)", async () => {
+    mocks.findMany.mockResolvedValue([firingAlert()]);
+    mocks.silenceFindMany.mockResolvedValue([silence({ serviceId: "svc1" })]);
+
+    const res = await call({ query: "s3cr3t" });
+    expect(await res.json()).toMatchObject({ checked: 1, escalated: 0, muted: 1 });
+    expect(mocks.updateMany).not.toHaveBeenCalled();
+    expect(mocks.notifyAll).not.toHaveBeenCalled();
+  });
+
+  it("다른 서비스의 점검 창은 이 알람과 무관하다", async () => {
+    mocks.findMany.mockResolvedValue([firingAlert()]);
+    mocks.silenceFindMany.mockResolvedValue([silence({ serviceId: "svc-other" })]);
+    mocks.notifyAll.mockResolvedValue([{ channel: "slack", status: "sent" }]);
+
+    const res = await call({ query: "s3cr3t" });
+    expect(await res.json()).toMatchObject({ checked: 1, escalated: 1, muted: 0 });
+  });
+
+  it("알람 단위 뮤트도 잡힌다", async () => {
+    mocks.findMany.mockResolvedValue([firingAlert()]);
+    mocks.silenceFindMany.mockResolvedValue([silence({ alertId: "a1" })]);
+
+    const res = await call({ query: "s3cr3t" });
+    expect(await res.json()).toMatchObject({ escalated: 0, muted: 1 });
   });
 });

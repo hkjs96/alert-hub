@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   notifLogCreateMany: vi.fn(),
   notifyAll: vi.fn(),
   ownership: vi.fn(),
+  silenceFindFirst: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -20,6 +21,7 @@ vi.mock("@/lib/prisma", () => ({
     },
     alertEvent: { create: mocks.eventCreate },
     notificationLog: { createMany: mocks.notifLogCreateMany },
+    silence: { findFirst: mocks.silenceFindFirst },
   },
 }));
 
@@ -53,6 +55,7 @@ beforeEach(() => {
   mocks.eventCreate.mockResolvedValue({ id: "ev1" });
   mocks.notifyAll.mockResolvedValue(undefined);
   mocks.ownership.mockResolvedValue(null); // 기본: 미매핑/미배정
+  mocks.silenceFindFirst.mockResolvedValue(null); // 기본: 뮤트 없음
 });
 
 describe("ingestAlert — create path", () => {
@@ -382,5 +385,43 @@ describe("ingestAlert — 수신 시점 스냅샷 (BR-05)", () => {
     await ingestAlert(alert({ accountId: "999999999999" }));
 
     expect(mocks.create.mock.calls[0][0].data.ownershipSnapshot).toBeUndefined();
+  });
+});
+
+describe("ingest × silence(뮤트)", () => {
+  it("뮤트가 덮는 FIRING 전이는 수집·이벤트는 그대로, 통지만 생략한다", async () => {
+    mocks.findUnique.mockResolvedValue(null);
+    mocks.create.mockResolvedValue({ id: "a1" });
+    mocks.silenceFindFirst.mockResolvedValue({
+      id: "sil1",
+      alertId: null,
+      customerId: null,
+      projectId: null,
+      serviceId: "svc1",
+      startsAt: new Date(Date.now() - 60_000),
+      endsAt: new Date(Date.now() + 60 * 60_000),
+      reason: "정기 배포",
+      createdBy: null,
+      revokedAt: null,
+    });
+
+    const result = await ingestAlert(alert());
+
+    // 알람과 이벤트는 평소처럼 만들어진다 — 뮤트는 통지만 멈춘다.
+    expect(result).toMatchObject({ alertId: "a1", firedTransition: true });
+    expect(mocks.create).toHaveBeenCalledOnce();
+    // 통지 팬아웃과 통지 이력은 없다.
+    expect(mocks.notifyAll).not.toHaveBeenCalled();
+    expect(mocks.notifLogCreateMany).not.toHaveBeenCalled();
+  });
+
+  it("뮤트 조회가 죽으면 fail-open — 통지는 나간다", async () => {
+    mocks.findUnique.mockResolvedValue(null);
+    mocks.create.mockResolvedValue({ id: "a1" });
+    mocks.silenceFindFirst.mockRejectedValue(new Error("db down"));
+    mocks.notifyAll.mockResolvedValue([{ channel: "slack", status: "sent" }]);
+
+    await ingestAlert(alert());
+    expect(mocks.notifyAll).toHaveBeenCalledOnce();
   });
 });
