@@ -1,5 +1,6 @@
 import { createContactAndAssign } from "@/server/org-actions";
 import type { ScopeLevel } from "@/lib/org/resolve";
+import { PendingButton } from "@/components/pending-button";
 
 /**
  * "+ 새 인원 등록" 인라인 (§6.3/6.4): 멤버 관리로 왕복하지 않고 이 자리에서
@@ -62,9 +63,9 @@ export function NewContactInline({
           <option value="customer">{customerName ?? "이 고객사"} 소속</option>
           <option value="internal">내부(MSP)</option>
         </select>
-        <button className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700">
+        <PendingButton pendingLabel="등록 중…" className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700">
           등록 + 배정
-        </button>
+        </PendingButton>
       </form>
     </details>
   );

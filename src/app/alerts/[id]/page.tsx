@@ -20,6 +20,7 @@ import {
   severityTone,
   statusTone,
 } from "@/components/badges";
+import { PendingButton } from "@/components/pending-button";
 
 export const dynamic = "force-dynamic";
 
@@ -67,7 +68,8 @@ function AlertActions({ id, status }: { id: string; status: string }) {
     <span className="flex flex-none items-center gap-2">
       <form action={ackAlert}>
         <input type="hidden" name="id" value={id} />
-        <button
+        <PendingButton
+          pendingLabel="Ack 중…"
           disabled={!canAck}
           title={canAck ? undefined : "FIRING 상태에서만 Ack할 수 있습니다"}
           className="inline-flex h-8 items-center gap-[7px] border border-indigo-600 bg-indigo-600 px-4 text-[13px] font-semibold text-white transition-colors hover:border-indigo-700 hover:bg-indigo-700 disabled:cursor-not-allowed disabled:border-stone-100 disabled:bg-stone-100 disabled:text-stone-400"
@@ -85,11 +87,12 @@ function AlertActions({ id, status }: { id: string; status: string }) {
             <path d="M3.2 8.4 6.4 11.6 12.8 4.8" />
           </svg>
           Acknowledge
-        </button>
+        </PendingButton>
       </form>
       <form action={resolveAlert}>
         <input type="hidden" name="id" value={id} />
-        <button
+        <PendingButton
+          pendingLabel="Resolve 중…"
           disabled={!canResolve}
           title={
             canResolve ? undefined : "이미 종료되었거나 전이할 수 없는 상태입니다"
@@ -97,7 +100,7 @@ function AlertActions({ id, status }: { id: string; status: string }) {
           className="inline-flex h-8 items-center border border-stone-200 bg-white px-3.5 text-[13px] font-medium text-stone-900 transition-colors hover:border-stone-400 disabled:cursor-not-allowed disabled:border-stone-100 disabled:bg-stone-100 disabled:text-stone-400"
         >
           Resolve
-        </button>
+        </PendingButton>
       </form>
     </span>
   );
@@ -210,9 +213,9 @@ function MuteControl({
           목록에 그대로 남고 뮤트 칩이 함께 표시됩니다.
         </p>
         <div className="flex justify-end">
-          <button className="inline-flex h-8 items-center border border-stone-900 bg-stone-900 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-stone-700">
+          <PendingButton pendingLabel="적용 중…" className="inline-flex h-8 items-center border border-stone-900 bg-stone-900 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-stone-700">
             뮤트 적용
-          </button>
+          </PendingButton>
         </div>
       </form>
     </details>
@@ -246,9 +249,9 @@ function MutedBanner({
         <form action={revokeSilence} className="ml-auto">
           <input type="hidden" name="id" value={silence.id} />
           <input type="hidden" name="back" value={backHref} />
-          <button className="inline-flex h-[26px] items-center border border-stone-200 bg-white px-2.5 text-xs font-medium text-stone-900 transition-colors hover:border-stone-400">
+          <PendingButton pendingLabel="해제 중…" className="inline-flex h-[26px] items-center border border-stone-200 bg-white px-2.5 text-xs font-medium text-stone-900 transition-colors hover:border-stone-400">
             지금 해제
-          </button>
+          </PendingButton>
         </form>
       ) : (
         <Link
@@ -510,12 +513,36 @@ export default async function AlertDetailPage({
   const alert = await getAlert(params.id);
   if (!alert) notFound();
 
-  const ownership = alert.accountId
-    ? await getOwnershipByAwsAccount(alert.accountId)
-    : null;
   const snapshot = parseOwnershipSnapshot(alert.ownershipSnapshot);
 
-  // 뮤트 판정·뮤트 폼 좌표: 스냅샷 체인 우선, 없으면 현재 매핑.
+  // P2: 스냅샷이 있으면 뮤트 판정은 스냅샷 체인만으로 충분하다 — 현재 매핑
+  // 조회와 병렬로 돌려 왕복을 아낀다. 스냅샷이 없을 때만 순차 폴백.
+  const ownershipPromise = alert.accountId
+    ? getOwnershipByAwsAccount(alert.accountId)
+    : Promise.resolve(null);
+  let ownership: Awaited<ReturnType<typeof getOwnershipByAwsAccount>>;
+  let activeSilence;
+  if (snapshot) {
+    [ownership, activeSilence] = await Promise.all([
+      ownershipPromise,
+      findActiveSilence({
+        alertId: alert.id,
+        serviceId: snapshot.chain.serviceId,
+        projectId: snapshot.chain.projectId,
+        customerId: snapshot.chain.customerId,
+      }),
+    ]);
+  } else {
+    ownership = await ownershipPromise;
+    activeSilence = await findActiveSilence({
+      alertId: alert.id,
+      serviceId: ownership?.chain.service.id ?? null,
+      projectId: ownership?.chain.project.id ?? null,
+      customerId: ownership?.chain.customer.id ?? null,
+    });
+  }
+
+  // 뮤트 폼 좌표: 스냅샷 체인 우선, 없으면 현재 매핑.
   const serviceId =
     snapshot?.chain.serviceId ?? ownership?.chain.service.id ?? null;
   const serviceLabel = snapshot
@@ -523,12 +550,6 @@ export default async function AlertDetailPage({
     : ownership
       ? `${ownership.chain.customer.name} › ${ownership.chain.project.name} › ${ownership.chain.service.name}`
       : null;
-  const activeSilence = await findActiveSilence({
-    alertId: alert.id,
-    serviceId,
-    projectId: snapshot?.chain.projectId ?? ownership?.chain.project.id ?? null,
-    customerId: snapshot?.chain.customerId ?? ownership?.chain.customer.id ?? null,
-  });
   const backHref = `/alerts/${alert.id}`;
 
   const sevTone = severityTone(alert.severity);

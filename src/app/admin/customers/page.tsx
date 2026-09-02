@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { createCustomer, deleteCustomer } from "@/server/org-actions";
+import { DangerDelete } from "@/components/admin/danger-delete";
+import { PendingButton } from "@/components/pending-button";
 
 export const dynamic = "force-dynamic";
 
 export default async function CustomersPage() {
   const customers = await prisma.customer.findMany({
     orderBy: { name: "asc" },
-    include: { projects: true },
+    include: { projects: { include: { _count: { select: { services: true } } } } },
   });
 
   return (
@@ -32,12 +34,13 @@ export default async function CustomersPage() {
         <label className="flex items-center gap-1 text-stone-600">
           <input type="checkbox" name="isInternal" /> 내부(자사)
         </label>
-        <button
+        <PendingButton
           type="submit"
+          pendingLabel="등록 중…"
           className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700"
         >
           + 고객사 등록
-        </button>
+        </PendingButton>
       </form>
 
       <div className="overflow-hidden rounded-lg border border-stone-200 bg-white">
@@ -66,12 +69,12 @@ export default async function CustomersPage() {
                   {c.isInternal ? "내부" : "고객"}
                 </td>
                 <td className="px-4 py-2 text-right">
-                  <form action={deleteCustomer} className="inline">
-                    <input type="hidden" name="id" value={c.id} />
-                    <button className="text-xs text-stone-400 hover:text-[#b42318]">
-                      삭제
-                    </button>
-                  </form>
+                  <DangerDelete
+                    action={deleteCustomer}
+                    id={c.id}
+                    subject={`${c.name} 고객사`}
+                    impact={`프로젝트 ${c.projects.length}개·서비스 ${c.projects.reduce((n: number, p: any) => n + p._count.services, 0)}개와 계정 매핑·점검 창`}
+                  />
                 </td>
               </tr>
             ))}

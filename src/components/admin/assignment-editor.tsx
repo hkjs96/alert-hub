@@ -2,6 +2,7 @@ import { addAssignment, removeAssignment } from "@/server/org-actions";
 import { getContactChoices, getDirectAssignments } from "@/server/org";
 import { NewContactInline } from "@/components/admin/new-contact-inline";
 import type { ScopeLevel } from "@/lib/org/resolve";
+import { PendingButton } from "@/components/pending-button";
 
 /**
  * The 붙였다뗐다 widget: who is registered at this scope, as chips (× to
@@ -89,12 +90,13 @@ export async function AssignmentEditor({
               </option>
             ))}
           </select>
-          <button
+          <PendingButton
             type="submit"
+            pendingLabel="추가 중…"
             className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700"
           >
             + 추가
-          </button>
+          </PendingButton>
         </form>
       ) : (
         <p className="text-xs text-stone-400">
