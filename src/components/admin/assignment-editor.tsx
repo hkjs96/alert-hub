@@ -45,7 +45,7 @@ export async function AssignmentEditor({
             <form key={a.id} action={removeAssignment} className="inline-flex">
               <input type="hidden" name="id" value={a.id} />
               <input type="hidden" name="back" value={back} />
-              <span className="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-white px-2.5 py-0.5 text-xs font-medium text-stone-700">
+              <span className="inline-flex h-[26px] items-center gap-1 border border-stone-200 bg-white px-2.5 text-xs font-medium text-stone-700">
                 {a.contact.name}
                 {a.contact.department ? (
                   <span className="opacity-60">· {a.contact.department}</span>
@@ -53,7 +53,7 @@ export async function AssignmentEditor({
                 <button
                   type="submit"
                   aria-label={`${a.contact.name} 제외`}
-                  className="ml-0.5 rounded-full px-1 leading-none opacity-60 hover:opacity-100"
+                  className="ml-0.5 px-1 leading-none opacity-60 hover:opacity-100"
                 >
                   ×
                 </button>

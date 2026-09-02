@@ -41,7 +41,7 @@ export default async function EscalationPage({
   if (customers.length === 0) {
     return (
       <div className="space-y-2">
-        <h1 className="text-xl font-semibold text-stone-900">알람 처리 순서</h1>
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-stone-900">알람 처리 순서</h1>
         <p className="text-sm text-stone-400">
           아직 고객사가 없습니다.{" "}
           <Link href="/admin/customers" className="underline hover:text-indigo-600">
@@ -118,7 +118,7 @@ export default async function EscalationPage({
   return (
     <div className="max-w-3xl space-y-5">
       <div>
-        <h1 className="text-xl font-semibold text-stone-900">알람 처리 순서</h1>
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-stone-900">알람 처리 순서</h1>
         <p className="mt-1 text-sm text-stone-500">
           각 단계에 등록된 담당자를 알람이 통지되는 순서대로 정렬합니다. 순서 1번이
           가장 먼저 통지됩니다. 담당자 등록 자체는{" "}
@@ -143,7 +143,7 @@ export default async function EscalationPage({
             </option>
           ))}
         </select>
-        <span className="text-stone-300">/</span>
+        <span className="font-mono text-xs text-stone-300">›</span>
         <select
           name="projectId"
           aria-label="프로젝트"
@@ -158,7 +158,7 @@ export default async function EscalationPage({
             </option>
           ))}
         </select>
-        <span className="text-stone-300">/</span>
+        <span className="font-mono text-xs text-stone-300">›</span>
         <select
           name="serviceId"
           aria-label="서비스"
@@ -178,7 +178,8 @@ export default async function EscalationPage({
         </button>
       </form>
 
-      <div className="flex w-fit gap-1 rounded-lg bg-stone-100 p-1 text-sm">
+      {/* v2: 세그먼트 필 대신 잉크 밑줄 탭 */}
+      <div className="flex gap-6 border-b border-stone-200 text-[13px]">
         {LEVEL_TABS.map((t) => {
           const disabled =
             (t.level === "project" && !project) || (t.level === "service" && !service);
@@ -187,7 +188,7 @@ export default async function EscalationPage({
             return (
               <span
                 key={t.level}
-                className="cursor-not-allowed rounded-md px-3 py-1 text-stone-300"
+                className="cursor-not-allowed py-2.5 text-stone-300"
               >
                 {t.label}
               </span>
@@ -200,8 +201,8 @@ export default async function EscalationPage({
               aria-current={active ? "page" : undefined}
               className={
                 active
-                  ? "rounded-md bg-white px-3 py-1 font-medium text-stone-900 shadow-sm"
-                  : "rounded-md px-3 py-1 text-stone-500 hover:text-stone-900"
+                  ? "py-2.5 font-semibold text-stone-900 shadow-[inset_0_-2px_0_#1b1a17]"
+                  : "py-2.5 font-medium text-stone-500 hover:text-stone-900"
               }
             >
               {t.label}
@@ -211,7 +212,7 @@ export default async function EscalationPage({
       </div>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4">
-        <h2 className="text-sm font-semibold text-stone-700">{scopeName} 처리 순서</h2>
+        <h2 className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">{scopeName} 처리 순서</h2>
         <p className="mb-3 text-xs text-stone-400">
           이 단계에 직접 등록된 담당자의 알람 통지 순서입니다.
         </p>
@@ -277,7 +278,7 @@ export default async function EscalationPage({
                   <input type="hidden" name="back" value={back} />
                   <button
                     aria-label={`${a.contact.name} 제거`}
-                    className="px-1 text-stone-400 hover:text-red-600"
+                    className="px-1 text-stone-400 hover:text-[#b42318]"
                   >
                     ×
                   </button>

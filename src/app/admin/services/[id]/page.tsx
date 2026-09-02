@@ -40,11 +40,11 @@ export default async function ServiceDetailPage({
           </Link>{" "}
           / {service.name}
         </div>
-        <h1 className="text-xl font-semibold text-stone-900">{service.name}</h1>
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-stone-900">{service.name}</h1>
       </div>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-stone-700">
+        <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
           서비스 담당 <span className="font-normal text-stone-400">(프로젝트 담당을 오버라이드)</span>
         </h2>
         <AssignmentEditor
@@ -56,7 +56,7 @@ export default async function ServiceDetailPage({
       </section>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-stone-700">AWS 계정 매핑</h2>
+        <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">AWS 계정 매핑</h2>
         <p className="mb-3 text-xs text-stone-400">
           알람의 AlarmArn에서 추출된 accountId가 여기 매칭되어 고객사/프로젝트/담당이 결정됩니다.
         </p>
@@ -99,14 +99,14 @@ export default async function ServiceDetailPage({
                 </code>
                 {a.alias ? <span className="text-stone-700">{a.alias}</span> : null}
                 {a.environment ? (
-                  <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
+                  <span className="font-mono text-[11px] uppercase tracking-[0.04em] text-stone-500">
                     {a.environment}
                   </span>
                 ) : null}
                 <form action={deleteAccountMap} className="ml-auto inline">
                   <input type="hidden" name="id" value={a.id} />
                   <input type="hidden" name="back" value={back} />
-                  <button className="text-xs text-stone-400 hover:text-red-600">삭제</button>
+                  <button className="text-xs text-stone-400 hover:text-[#b42318]">삭제</button>
                 </form>
               </div>
               <div className="pl-1">
@@ -129,7 +129,7 @@ export default async function ServiceDetailPage({
       </section>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-stone-700">
+        <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
           관련 인원 전체 <span className="font-normal text-stone-400">(계정 포함 롤업)</span>
         </h2>
         <Roster level="service" id={service.id} />

@@ -1,62 +1,120 @@
-// B안(라이트 정밀): 진한 채움 대신 옅은 바탕 + 같은 계열 보더 — 배지가
-// 소리치지 않고도 구분된다. 라벨은 문장 케이스.
-const STATUS_STYLES: Record<string, string> = {
-  FIRING: "bg-red-50 text-red-700 ring-red-200",
-  RESOLVED: "bg-green-50 text-green-700 ring-green-200",
-  ACKNOWLEDGED: "bg-blue-50 text-blue-700 ring-blue-200",
+// v2(웜 페이퍼 콘솔): 배지는 칩이 아니라 "도형 마크 + 모노 레터스페이스
+// 라벨"이다. 상태마다 색과 도형이 다 달라서(●/▲/○/✓/–) 색약 환경에서도
+// 도형만으로 구분된다 — alert-hub v2.dc.html의 ST/SEV 규약 그대로.
+type MarkShape = "dot" | "tri" | "ring" | "check" | "dash";
+
+interface Tone {
+  color: string;
+  shape: MarkShape;
+}
+
+export const STATUS_TONES: Record<string, Tone> = {
+  FIRING: { color: "#b42318", shape: "dot" },
   // AlertEvent-only marker written by the escalation cron; never an Alert.status.
-  ESCALATED: "bg-orange-50 text-orange-700 ring-orange-200",
-  INSUFFICIENT_DATA: "bg-stone-100 text-stone-600 ring-stone-300",
+  ESCALATED: { color: "#b54708", shape: "tri" },
+  ACKNOWLEDGED: { color: "#4a5568", shape: "ring" },
+  RESOLVED: { color: "#067647", shape: "check" },
+  INSUFFICIENT_DATA: { color: "#8a877f", shape: "dash" },
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  FIRING: "Firing",
-  RESOLVED: "Resolved",
-  ACKNOWLEDGED: "Ack",
-  ESCALATED: "Escalated",
-  INSUFFICIENT_DATA: "No Data",
+export const STATUS_LABELS: Record<string, string> = {
+  FIRING: "FIRING",
+  RESOLVED: "RESOLVED",
+  ACKNOWLEDGED: "ACK",
+  ESCALATED: "ESCALATED",
+  INSUFFICIENT_DATA: "NO DATA",
 };
 
-// 심각도: 채운 칩 대신 색점 + 모노 라벨 — 행마다 원색 덩어리가 소리치지
-// 않으면서, 점 색·라벨 둘 다로 읽힌다.
-const SEVERITY_DOTS: Record<string, string> = {
-  "SEV-0": "bg-red-700",
-  "SEV-1": "bg-red-600",
-  "SEV-2": "bg-orange-500",
-  "SEV-3": "bg-amber-400",
-  "SEV-4": "bg-yellow-300",
-  "SEV-5": "bg-stone-300",
-  CRITICAL: "bg-red-600",
-  HIGH: "bg-orange-500",
-  ERROR: "bg-orange-500",
-  WARNING: "bg-amber-400",
-  LOW: "bg-yellow-300",
-  INFO: "bg-sky-400",
-  UNKNOWN: "bg-stone-300",
+export const SEVERITY_TONES: Record<string, Tone> = {
+  "SEV-0": { color: "#7a1710", shape: "dot" },
+  "SEV-1": { color: "#b42318", shape: "dot" },
+  "SEV-2": { color: "#b54708", shape: "tri" },
+  "SEV-3": { color: "#8a877f", shape: "ring" },
+  "SEV-4": { color: "#8a877f", shape: "ring" },
+  "SEV-5": { color: "#8a877f", shape: "dash" },
+  CRITICAL: { color: "#b42318", shape: "dot" },
+  HIGH: { color: "#b54708", shape: "tri" },
+  ERROR: { color: "#b54708", shape: "tri" },
+  WARNING: { color: "#8a877f", shape: "ring" },
+  LOW: { color: "#8a877f", shape: "ring" },
+  INFO: { color: "#8a877f", shape: "dash" },
+  UNKNOWN: { color: "#8a877f", shape: "dash" },
 };
 
-function Pill({ label, className }: { label: string; className: string }) {
+export function statusTone(status: string): Tone {
+  return STATUS_TONES[status] ?? STATUS_TONES.INSUFFICIENT_DATA;
+}
+
+export function severityTone(severity: string): Tone {
+  return SEVERITY_TONES[severity] ?? SEVERITY_TONES.UNKNOWN;
+}
+
+/** 도형 마크 — dot(●)/ring(○)/tri(▲)/check(✓)/dash(–), 색은 인라인. */
+export function Mark({ color, shape }: Tone) {
+  switch (shape) {
+    case "dot":
+      return (
+        <span
+          className="inline-block h-[7px] w-[7px] shrink-0 rounded-full"
+          style={{ background: color }}
+        />
+      );
+    case "ring":
+      return (
+        <span
+          className="inline-block h-[7px] w-[7px] shrink-0 rounded-full border-[1.5px]"
+          style={{ borderColor: color }}
+        />
+      );
+    case "tri":
+      return (
+        <span
+          className="inline-block h-0 w-0 shrink-0"
+          style={{
+            borderLeft: "4px solid transparent",
+            borderRight: "4px solid transparent",
+            borderBottom: `7px solid ${color}`,
+          }}
+        />
+      );
+    case "check":
+      return (
+        <span
+          className="mb-[2px] inline-block h-[4px] w-[7px] shrink-0 -rotate-45"
+          style={{
+            borderLeft: `1.5px solid ${color}`,
+            borderBottom: `1.5px solid ${color}`,
+          }}
+        />
+      );
+    default:
+      return (
+        <span
+          className="inline-block h-[1.5px] w-2 shrink-0"
+          style={{ background: color }}
+        />
+      );
+  }
+}
+
+function ToneLabel({ tone, label }: { tone: Tone; label: string }) {
   return (
     <span
-      className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${className}`}
+      className="inline-flex items-center gap-1.5 whitespace-nowrap font-mono text-[10px] font-bold tracking-[0.08em]"
+      style={{ color: tone.color }}
     >
+      <Mark {...tone} />
       {label}
     </span>
   );
 }
 
 export function StatusBadge({ status }: { status: string }) {
-  const style = STATUS_STYLES[status] ?? STATUS_STYLES.INSUFFICIENT_DATA;
-  const label = STATUS_LABELS[status] ?? status;
-  return <Pill label={label} className={style} />;
+  return (
+    <ToneLabel tone={statusTone(status)} label={STATUS_LABELS[status] ?? status} />
+  );
 }
 
 export function SeverityBadge({ severity }: { severity: string }) {
-  const dot = SEVERITY_DOTS[severity] ?? SEVERITY_DOTS.UNKNOWN;
-  return (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap font-mono text-xs font-medium text-stone-700">
-      <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
-      {severity}
-    </span>
-  );
+  return <ToneLabel tone={severityTone(severity)} label={severity} />;
 }

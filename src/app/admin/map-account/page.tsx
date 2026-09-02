@@ -39,7 +39,7 @@ export default async function MapAccountPage({
   return (
     <div className="max-w-xl space-y-5">
       <div>
-        <h1 className="text-xl font-semibold text-stone-900">AWS 계정 매핑</h1>
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-stone-900">AWS 계정 매핑</h1>
         <p className="mt-1 text-sm text-stone-500">
           이 계정에서 오는 알람이 어느 서비스의 것인지 지정합니다. 매핑되는 즉시
           대시보드 필터와 담당 해석이 이 계정의 알람에도 적용됩니다.
@@ -47,7 +47,7 @@ export default async function MapAccountPage({
       </div>
 
       {existing ? (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+        <div className="border border-stone-200 border-l-[3px] border-l-[#067647] bg-white p-4 text-sm text-stone-700">
           계정 <code className="font-mono">{existing.accountId}</code>은(는) 이미{" "}
           <span className="font-medium">
             {existing.service.project.customer.name} /{" "}
