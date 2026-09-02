@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAlert } from "@/server/alerts";
 import { ackAlert, resolveAlert } from "@/server/alert-actions";
+import { muteAlert, revokeSilence } from "@/server/silence-actions";
+import { findActiveSilence } from "@/server/silences";
+import { muteUntilLabel, type SilenceRow } from "@/lib/silence";
 import {
   getOwnershipByAwsAccount,
   parseOwnershipSnapshot,
@@ -97,6 +100,165 @@ function AlertActions({ id, status }: { id: string; status: string }) {
         </button>
       </form>
     </span>
+  );
+}
+
+/**
+ * 뮤트 팝오버 (v2 프레임 03) — JS 없이 <details>로 연다. 기간·범위·사유를
+ * 받아 muteAlert 액션으로 Silence 행을 만든다. 사유는 필수.
+ */
+function MuteControl({
+  alertId,
+  serviceId,
+  serviceLabel,
+  backHref,
+}: {
+  alertId: string;
+  serviceId: string | null;
+  serviceLabel: string | null;
+  backHref: string;
+}) {
+  const overline =
+    "font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400";
+  return (
+    <details className="relative">
+      <summary className="inline-flex h-8 cursor-pointer list-none items-center gap-[7px] border border-stone-200 bg-white px-3.5 text-[13px] font-medium text-stone-900 transition-colors hover:border-stone-400 [&::-webkit-details-marker]:hidden">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="#6b6862"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        >
+          <path d="M8.5 3 5 6H2.5v4H5l3.5 3z" />
+          <path d="M11.5 5.5 14 10.5M14 5.5l-2.5 5" />
+        </svg>
+        뮤트
+      </summary>
+      <form
+        action={muteAlert}
+        className="absolute right-0 top-10 z-10 w-[380px] space-y-4 border border-stone-300 bg-white p-[18px] text-left shadow-[0_18px_44px_rgba(27,26,23,0.18)]"
+      >
+        <input type="hidden" name="alertId" value={alertId} />
+        <input type="hidden" name="back" value={backHref} />
+        {serviceId ? <input type="hidden" name="serviceId" value={serviceId} /> : null}
+        <div className="text-sm font-semibold text-stone-900">알람 뮤트</div>
+        <div>
+          <div className={`mb-2 ${overline}`}>기간 (UTC)</div>
+          <div className="flex flex-col gap-1.5 text-[13px]">
+            <label className="flex items-center gap-1.5">
+              <input type="radio" name="preset" value="1h" defaultChecked required />
+              1시간
+            </label>
+            <label className="flex items-center gap-1.5">
+              <input type="radio" name="preset" value="tomorrow9" required />
+              내일 09:00Z
+            </label>
+            <label className="flex flex-wrap items-center gap-1.5">
+              <input type="radio" name="preset" value="custom" required />
+              기간 지정
+              <input
+                type="datetime-local"
+                name="endsAt"
+                aria-label="종료 (UTC)"
+                className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-xs shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
+              />
+            </label>
+          </div>
+        </div>
+        <div>
+          <div className={`mb-2 ${overline}`}>범위</div>
+          <div className="flex flex-col gap-1.5 text-[13px]">
+            <label className="flex items-start gap-1.5">
+              <input type="radio" name="scope" value="alert" defaultChecked required className="mt-0.5" />
+              <span>
+                <span className="font-medium text-stone-900">이 알람만</span>
+                <span className="block text-xs text-stone-500">
+                  동일 리소스·메트릭 조합 (재발화 포함)
+                </span>
+              </span>
+            </label>
+            {serviceId ? (
+              <label className="flex items-start gap-1.5">
+                <input type="radio" name="scope" value="service" required className="mt-0.5" />
+                <span>
+                  <span className="font-medium text-stone-900">서비스 전체</span>
+                  <span className="block text-xs text-stone-500">{serviceLabel}</span>
+                </span>
+              </label>
+            ) : null}
+          </div>
+        </div>
+        <div>
+          <div className="mb-2 flex items-center gap-2">
+            <span className={overline}>사유</span>
+            <span className="font-mono text-[10px] font-bold tracking-[0.08em] text-[#b42318]">
+              필수
+            </span>
+          </div>
+          <input
+            name="reason"
+            required
+            placeholder="예) RDS 스케일업 작업 중 (CHG-2418)"
+            className="h-8 w-full rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
+          />
+        </div>
+        <p className="border border-stone-100 bg-stone-50 px-3 py-2.5 text-xs leading-relaxed text-stone-600">
+          수집과 상태 전이는 계속됩니다. 통지와 에스컬레이션만 멈추며, 알람은
+          목록에 그대로 남고 뮤트 칩이 함께 표시됩니다.
+        </p>
+        <div className="flex justify-end">
+          <button className="inline-flex h-8 items-center border border-stone-900 bg-stone-900 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-stone-700">
+            뮤트 적용
+          </button>
+        </div>
+      </form>
+    </details>
+  );
+}
+
+/** 진행 중인 뮤트/점검 창 배너 — 왜 조용한지 화면에서 설명한다. */
+function MutedBanner({
+  silence,
+  alertId,
+  backHref,
+}: {
+  silence: SilenceRow;
+  alertId: string;
+  backHref: string;
+}) {
+  const isAlertScope = silence.alertId === alertId;
+  return (
+    <div className="flex flex-wrap items-center gap-3 border border-stone-200 border-l-[3px] border-l-[#8a877f] bg-white px-4 py-3">
+      <span className="font-mono text-[10px] font-bold tracking-[0.1em] text-stone-500">
+        뮤트 중
+      </span>
+      <span className="text-[13px] font-semibold text-stone-900">
+        {isAlertScope ? "이 알람" : "점검 창(상위 스코프)"} ·{" "}
+        <span className="font-mono text-xs">{muteUntilLabel(silence.endsAt)}</span>
+      </span>
+      <span className="text-[13px] text-stone-500">
+        사유: {silence.reason} — 통지·에스컬레이션만 멈추고 수집은 계속됩니다.
+      </span>
+      {isAlertScope ? (
+        <form action={revokeSilence} className="ml-auto">
+          <input type="hidden" name="id" value={silence.id} />
+          <input type="hidden" name="back" value={backHref} />
+          <button className="inline-flex h-[26px] items-center border border-stone-200 bg-white px-2.5 text-xs font-medium text-stone-900 transition-colors hover:border-stone-400">
+            지금 해제
+          </button>
+        </form>
+      ) : (
+        <Link
+          href="/admin/silences"
+          className="ml-auto text-[13px] font-semibold text-indigo-600 hover:underline"
+        >
+          점검 · 뮤트 관리 →
+        </Link>
+      )}
+    </div>
   );
 }
 
@@ -353,6 +515,22 @@ export default async function AlertDetailPage({
     : null;
   const snapshot = parseOwnershipSnapshot(alert.ownershipSnapshot);
 
+  // 뮤트 판정·뮤트 폼 좌표: 스냅샷 체인 우선, 없으면 현재 매핑.
+  const serviceId =
+    snapshot?.chain.serviceId ?? ownership?.chain.service.id ?? null;
+  const serviceLabel = snapshot
+    ? `${snapshot.chain.customerName} › ${snapshot.chain.projectName} › ${snapshot.chain.serviceName}`
+    : ownership
+      ? `${ownership.chain.customer.name} › ${ownership.chain.project.name} › ${ownership.chain.service.name}`
+      : null;
+  const activeSilence = await findActiveSilence({
+    alertId: alert.id,
+    serviceId,
+    projectId: snapshot?.chain.projectId ?? ownership?.chain.project.id ?? null,
+    customerId: snapshot?.chain.customerId ?? ownership?.chain.customer.id ?? null,
+  });
+  const backHref = `/alerts/${alert.id}`;
+
   const sevTone = severityTone(alert.severity);
   const heroBorder =
     alert.status === "FIRING" ? sevTone.color : statusTone(alert.status).color;
@@ -397,9 +575,23 @@ export default async function AlertDetailPage({
               </p>
             ) : null}
           </div>
-          <AlertActions id={alert.id} status={alert.status} />
+          <span className="flex flex-none items-start gap-2">
+            <AlertActions id={alert.id} status={alert.status} />
+            {!activeSilence ? (
+              <MuteControl
+                alertId={alert.id}
+                serviceId={serviceId}
+                serviceLabel={serviceLabel}
+                backHref={backHref}
+              />
+            ) : null}
+          </span>
         </div>
       </div>
+
+      {activeSilence ? (
+        <MutedBanner silence={activeSilence} alertId={alert.id} backHref={backHref} />
+      ) : null}
 
       {snapshot && snapshot.order.length > 0 ? (
         <SnapshotPanel snapshot={snapshot} current={ownership} />

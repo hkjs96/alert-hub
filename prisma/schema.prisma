@@ -6,7 +6,7 @@
 // features (assignee/routing/grouping) without forcing columns now.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   // "native" builds the engine for the local dev machine. The extra RHEL target
   // is a future-proofing seed for AWS Lambda / Vercel (Amazon Linux) so the
   // EC2 -> serverless migration doesn't need a schema change. Harmless locally.
@@ -14,19 +14,19 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   // Runtime uses the POOLED connection (Supabase Supavisor / PgBouncer,
   // port 6543, ?pgbouncer=true) so a serverless fleet can't exhaust Postgres
   // connections — this pre-solves the pooling problem before any Lambda move.
-  url = env("DATABASE_URL")
+  url       = env("DATABASE_URL")
   // Migrations (prisma migrate / db push) need a DIRECT connection (port 5432),
   // because they run DDL the pooler can't. Locally, point both at the same DB.
   directUrl = env("DIRECT_URL")
 }
 
 model Alert {
-  id          String   @id @default(cuid())
-  fingerprint String   @unique
+  id          String @id @default(cuid())
+  fingerprint String @unique
 
   title       String
   description String?
@@ -35,14 +35,14 @@ model Alert {
   severity String @default("UNKNOWN")
   status   String @default("FIRING")
 
-  resource   String?
-  metric     String?
-  namespace  String?
-  value      String?
-  threshold  Float?
-  comparison String?
-  region     String?
-  accountId  String?
+  resource    String?
+  metric      String?
+  namespace   String?
+  value       String?
+  threshold   Float?
+  comparison  String?
+  region      String?
+  accountId   String?
   stateReason String?
 
   count       Int      @default(1)
@@ -71,6 +71,7 @@ model Alert {
 
   events        AlertEvent[]
   notifications NotificationLog[]
+  silences      Silence[]
 
   @@index([status])
   @@index([severity])
@@ -99,16 +100,46 @@ model NotificationLog {
   alertId String
   alert   Alert  @relation(fields: [alertId], references: [id], onDelete: Cascade)
 
-  channel String // slack | email | twilio
+  channel        String // slack | email | twilio
   // Who was addressed, human-readable ("최민서 외 1명").
-  target  String?
+  target         String?
   // null = 최초 FIRING 팬아웃, n = n순위 자동 에스컬레이션.
   escalationStep Int?
-  ok      Boolean
-  error   String?
+  ok             Boolean
+  error          String?
 
   createdAt DateTime @default(now())
 
+  @@index([alertId])
+}
+
+// 점검 창 · 뮤트 (노이즈 관리 트랙 ③). 통지(Slack/이메일/전화)와 자동
+// 에스컬레이션만 멈춘다 — 수집과 상태 전이는 계속되고, 알람은 목록에 그대로
+// 남아 뮤트 칩만 붙는다. 스코프는 정확히 하나(앱 코드에서 강제): 알람 단위
+// (alertId) 또는 조직 단위(customerId/projectId/serviceId, 하위로 상속).
+// 해제는 revokedAt 기록 — 행을 지우지 않아 일람이 감사 로그로 남는다.
+model Silence {
+  id String @id @default(cuid())
+
+  alertId    String?
+  alert      Alert?    @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  projectId  String?
+  project    Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  serviceId  String?
+  service    Service?  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  startsAt  DateTime  @default(now())
+  endsAt    DateTime
+  // 사유는 필수 — "왜 조용했는가"가 남지 않는 뮤트는 신뢰를 깎는다.
+  reason    String
+  createdBy String?
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([endsAt])
   @@index([alertId])
 }
 
@@ -129,6 +160,7 @@ model Customer {
   updatedAt DateTime @updatedAt
 
   projects    Project[]
+  silences    Silence[]
   contacts    Contact[]
   assignments Assignment[]
 }
@@ -143,6 +175,7 @@ model Project {
   updatedAt DateTime @updatedAt
 
   services    Service[]
+  silences    Silence[]
   assignments Assignment[]
 
   @@unique([customerId, name])
@@ -158,22 +191,23 @@ model Service {
   updatedAt DateTime @updatedAt
 
   accounts    AwsAccountMap[]
+  silences    Silence[]
   assignments Assignment[]
 
   @@unique([projectId, name])
 }
 
 model AwsAccountMap {
-  id        String  @id @default(cuid())
+  id          String  @id @default(cuid())
   // 12-digit AWS account id, matched against the accountId parsed from
   // incoming alarm ARNs. Unique: one account belongs to one service (shared
   // accounts get resource-pattern overrides later — see docs/org-model.md).
-  accountId String  @unique
-  alias     String?
+  accountId   String  @unique
+  alias       String?
   // prd | stg | dev ... — first source of truth for environment enrichment.
   environment String?
-  serviceId String
-  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceId   String
+  service     Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -182,7 +216,7 @@ model AwsAccountMap {
 }
 
 model Contact {
-  id         String  @id @default(cuid())
+  id         String    @id @default(cuid())
   name       String
   email      String?
   phone      String?
@@ -207,7 +241,7 @@ model Contact {
 // someone (조직 · 담당자 관리) appends to the end; reordering (알람 처리 순서)
 // is a separate screen so the two decisions stay independent.
 model Assignment {
-  id String @id @default(cuid())
+  id        String  @id @default(cuid())
   // Position within this scope's list. 0 = 1순위 = first notified. Contiguous
   // per scope; the actions renumber on remove/reorder.
   order     Int     @default(0)
@@ -215,11 +249,11 @@ model Assignment {
   contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
 
   customerId String?
-  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer   Customer?      @relation(fields: [customerId], references: [id], onDelete: Cascade)
   projectId  String?
-  project    Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project    Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   serviceId  String?
-  service    Service? @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  service    Service?       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   accountId  String?
   account    AwsAccountMap? @relation(fields: [accountId], references: [id], onDelete: Cascade)
 

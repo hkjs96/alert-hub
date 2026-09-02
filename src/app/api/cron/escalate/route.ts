@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { notifyAll } from "@/lib/notify";
 import { recordNotifications } from "@/server/alerts";
 import { parseOwnershipSnapshot } from "@/server/org";
+import { getActiveSilences, scopeOfStoredAlert } from "@/server/silences";
+import { matchSilence } from "@/lib/silence";
 import { ackMinutesFromEnv, nextEscalation } from "@/lib/escalation";
 import type { NormalizedAlert } from "@/lib/types";
 
@@ -66,10 +68,20 @@ export async function GET(req: Request) {
 
   const ackMinutes = ackMinutesFromEnv();
   const now = new Date();
-  const firing = await prisma.alert.findMany({ where: { status: "FIRING" } });
+  const [firing, silences] = await Promise.all([
+    prisma.alert.findMany({ where: { status: "FIRING" } }),
+    getActiveSilences(now),
+  ]);
 
   let escalated = 0;
+  let muted = 0;
   for (const alert of firing) {
+    // 뮤트 중엔 에스컬레이션도 멈춘다. step은 건드리지 않으므로 뮤트가
+    // 끝나면 다음 틱에 밀린 단계가 즉시 이어진다 ("통지 재개").
+    if (matchSilence(silences, scopeOfStoredAlert(alert), now)) {
+      muted += 1;
+      continue;
+    }
     const snap = parseOwnershipSnapshot(alert.ownershipSnapshot);
     if (!snap || snap.order.length === 0) continue;
 
@@ -128,5 +140,5 @@ export async function GET(req: Request) {
     escalated += 1;
   }
 
-  return NextResponse.json({ checked: firing.length, escalated, ackMinutes });
+  return NextResponse.json({ checked: firing.length, escalated, muted, ackMinutes });
 }

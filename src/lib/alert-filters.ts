@@ -39,6 +39,8 @@ export interface AlertFacts {
   chain?: {
     customerId: string;
     projectId: string;
+    /** 뮤트(Silence) 매칭에 쓰인다 — 필터 자체는 보지 않는 필드. */
+    serviceId?: string;
     environment: string | null;
   } | null;
   /** 1순위 담당 (snapshot first, else live resolution); null = 미지정. */
