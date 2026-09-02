@@ -5,6 +5,10 @@ import { digestWindowSeconds, enqueueAndSend } from "@/server/notify-queue";
 import { buildOwnershipSnapshot, getOwnershipByAwsAccount } from "@/server/org";
 import { findActiveSilence } from "@/server/silences";
 import type { SilenceScope } from "@/lib/silence";
+import {
+  refireThrottleMinutesFromEnv,
+  shouldThrottleRefire,
+} from "@/lib/refire-throttle";
 import type { AlertStatus, NormalizedAlert } from "@/lib/types";
 
 // Columns written when an alert is first created. Optional fields land as
@@ -136,8 +140,32 @@ async function notifyUnlessSilenced(
     );
     return;
   }
+
+  // 재발화 스로틀 (②): 마지막 팬아웃 후 N분 안의 재발화(플랩)는 재페이징하지
+  // 않는다. 판정 실패는 fail-open — 스로틀 때문에 통지가 죽으면 본말전도.
+  const now = new Date();
+  try {
+    const row = await prisma.alert.findUnique({
+      where: { id: alertId },
+      select: { lastNotifiedAt: true },
+    });
+    if (
+      shouldThrottleRefire(
+        row?.lastNotifiedAt ?? null,
+        now,
+        refireThrottleMinutesFromEnv(),
+      )
+    ) {
+      console.info(`[notify] alert ${alertId} refire throttled — skipping fan-out`);
+      return;
+    }
+  } catch (err) {
+    console.error("[notify] refire-throttle check failed — notifying anyway", err);
+  }
+
   // 아웃박스 경유: 채널별 잡 생성 + 인라인 1회 시도, 실패분은 틱이 재시도.
   // 서비스가 식별되면 Slack은 묶음 창(기본 60초)만큼 미뤄 다이제스트 후보로.
+  // lastNotifiedAt 스탬프는 잡 생성과 함께 큐가 찍는다.
   await enqueueAndSend(alertId, n, toNotifyContext(alertId, own), {
     groupKey: own.scope?.serviceId ? `service:${own.scope.serviceId}` : undefined,
     digestDelaySeconds: digestWindowSeconds(),

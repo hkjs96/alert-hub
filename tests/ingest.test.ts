@@ -385,3 +385,41 @@ describe("ingest × silence(뮤트)", () => {
     expect(mocks.notifyAll).toHaveBeenCalledOnce();
   });
 });
+
+describe("ingest × 재발화 스로틀 (②)", () => {
+  it("마지막 팬아웃 후 10분 안의 재발화는 재페이징하지 않는다", async () => {
+    mocks.findUnique.mockResolvedValue({
+      id: "a1",
+      lastNotifiedAt: new Date(Date.now() - 5 * 60_000),
+    });
+    mocks.updateMany.mockResolvedValue({ count: 1 }); // 전환 가드 매치
+
+    const res = await ingestAlert(alert());
+
+    // 전이·이벤트는 그대로, 팬아웃만 생략
+    expect(res.firedTransition).toBe(true);
+    expect(mocks.eventCreate).toHaveBeenCalledOnce();
+    expect(mocks.notifyAll).not.toHaveBeenCalled();
+  });
+
+  it("창을 지난 재발화는 평소처럼 페이징한다", async () => {
+    mocks.findUnique.mockResolvedValue({
+      id: "a1",
+      lastNotifiedAt: new Date(Date.now() - 30 * 60_000),
+    });
+    mocks.updateMany.mockResolvedValue({ count: 1 });
+
+    await ingestAlert(alert());
+    expect(mocks.notifyAll).toHaveBeenCalledOnce();
+  });
+
+  it("스로틀 판정이 죽으면 fail-open — 통지는 나간다", async () => {
+    mocks.findUnique
+      .mockResolvedValueOnce({ id: "a1" }) // fingerprint 조회
+      .mockRejectedValueOnce(new Error("db down")); // lastNotifiedAt 조회
+    mocks.updateMany.mockResolvedValue({ count: 1 });
+
+    await ingestAlert(alert());
+    expect(mocks.notifyAll).toHaveBeenCalledOnce();
+  });
+});

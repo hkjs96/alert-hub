@@ -57,6 +57,9 @@ model Alert {
   // FIRING; the cron walks step → step+1 while the alert stays un-acked.
   escalationStep Int       @default(1)
   escalatedAt    DateTime?
+  // 마지막 FIRING 팬아웃이 나간 시각 — 재발화 스로틀(플랩 억제)의 기준.
+  // REFIRE_THROTTLE_MINUTES 안에 다시 FIRING으로 전이해도 재페이징하지 않는다.
+  lastNotifiedAt DateTime?
 
   // 수신 시점 담당 스냅샷 (BR-05): the chain + ordered assignees in effect when
   // the alert was received (refreshed on each transition INTO FIRING, i.e. the

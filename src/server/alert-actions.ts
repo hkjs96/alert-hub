@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 
 // 인시던트 액션 (Phase 2c) — 알람 상세의 Ack/Resolve 버튼 뒤.
@@ -59,4 +60,31 @@ export async function resolveAlert(formData: FormData) {
     "RESOLVED",
     "수동 Resolve (알람 상세)",
   );
+}
+
+/**
+ * 일괄 Ack (v2 대시보드 헤더): 지금 화면에 보이는 FIRING들을 한 번에 잡는다.
+ * ids는 대시보드가 렌더 시점에 hidden으로 넣은 것 — 제출 사이에 상태가 변한
+ * 행은 가드(updateMany where FIRING)가 조용히 걸러낸다. per-id 가드 유지를
+ * 위해 순차 처리 (한 화면 분량이라 n이 작다).
+ */
+export async function bulkAckAlerts(formData: FormData) {
+  const ids = requireString(formData, "ids")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const back = formData.get("back");
+  for (const id of ids) {
+    const moved = await prisma.alert.updateMany({
+      where: { id, status: { in: ["FIRING"] } },
+      data: { status: "ACKNOWLEDGED" },
+    });
+    if (moved.count > 0) {
+      await prisma.alertEvent.create({
+        data: { alertId: id, status: "ACKNOWLEDGED", stateReason: "일괄 Ack (대시보드)" },
+      });
+    }
+  }
+  revalidatePath("/");
+  if (typeof back === "string" && back.startsWith("/")) redirect(back);
 }

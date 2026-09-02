@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   jobFindMany: vi.fn(),
   jobUpdateMany: vi.fn(),
   logCreateMany: vi.fn(),
+  alertUpdateMany: vi.fn(),
   configuredChannels: vi.fn(),
   getNotifier: vi.fn(),
 }));
@@ -21,6 +22,7 @@ vi.mock("@/lib/prisma", () => ({
       updateMany: mocks.jobUpdateMany,
     },
     notificationLog: { createMany: mocks.logCreateMany },
+    alert: { updateMany: mocks.alertUpdateMany },
     $transaction: (ops: Promise<unknown>[]) => Promise.all(ops),
   },
 }));
@@ -70,6 +72,7 @@ beforeEach(() => {
   mocks.jobUpdateMany.mockResolvedValue({ count: 1 });
   mocks.jobCreate.mockResolvedValue({ id: "j1" });
   mocks.logCreateMany.mockResolvedValue({ count: 1 });
+  mocks.alertUpdateMany.mockResolvedValue({ count: 1 });
   mocks.configuredChannels.mockReturnValue(["slack"]);
 });
 
