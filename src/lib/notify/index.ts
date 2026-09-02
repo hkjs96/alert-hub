@@ -51,6 +51,16 @@ export interface NotifyOutcome {
 
 const notifiers: Notifier[] = [slackNotifier, emailNotifier, twilioNotifier];
 
+/** 지금 설정된 채널 이름들 — 아웃박스가 어떤 잡을 만들지 결정한다. */
+export function configuredChannels(): string[] {
+  return notifiers.filter((n) => n.isConfigured()).map((n) => n.name);
+}
+
+/** 채널 이름으로 노티파이어를 찾는다 (아웃박스 드레인용). */
+export function getNotifier(name: string): Notifier | undefined {
+  return notifiers.find((n) => n.name === name);
+}
+
 /** Testable core of notifyAll — the registry is injected. */
 export async function runNotifiers(
   list: Notifier[],

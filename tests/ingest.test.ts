@@ -25,7 +25,10 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-vi.mock("@/lib/notify", () => ({ notifyAll: mocks.notifyAll }));
+// 팬아웃은 아웃박스 경유로 바뀌었다 — ingest의 계약은 "enqueueAndSend가
+// (alertId, alert, ctx)로 호출되는가/안 되는가"다. 큐 자체(재시도, 로그)는
+// tests/notify-queue.test.ts가 고정한다.
+vi.mock("@/server/notify-queue", () => ({ enqueueAndSend: mocks.notifyAll }));
 
 vi.mock("@/server/org", async (importOriginal) => ({
   // buildOwnershipSnapshot은 순수 함수라 실제 구현을 쓴다 — 스냅샷 형태까지
@@ -71,7 +74,7 @@ describe("ingestAlert — create path", () => {
     expect(data.count).toBe(1);
     expect(data.events.create.status).toBe("FIRING");
     expect(mocks.notifyAll).toHaveBeenCalledOnce();
-    expect(mocks.notifyAll.mock.calls[0][1]).toEqual({ alertId: "a1" });
+    expect(mocks.notifyAll.mock.calls[0][2]).toEqual({ alertId: "a1" });
   });
 
   it("does not notify when a new alert arrives already RESOLVED", async () => {
@@ -244,7 +247,7 @@ describe("ingestAlert — FIRING 통지에 담당 순서를 싣는다", () => {
     await ingestAlert(alert({ accountId: "123456789012" }));
 
     expect(mocks.ownership).toHaveBeenCalledWith("123456789012");
-    const ctx = mocks.notifyAll.mock.calls[0][1];
+    const ctx = mocks.notifyAll.mock.calls[0][2];
     expect(ctx.alertId).toBe("a1");
     expect(ctx.assignees).toEqual([
       { name: "최민서", slackId: "U123" },
@@ -259,7 +262,7 @@ describe("ingestAlert — FIRING 통지에 담당 순서를 싣는다", () => {
     await ingestAlert(alert());
 
     expect(mocks.ownership).not.toHaveBeenCalled();
-    expect(mocks.notifyAll.mock.calls[0][1]).toEqual({ alertId: "a1" });
+    expect(mocks.notifyAll.mock.calls[0][2]).toEqual({ alertId: "a1" });
   });
 
   it("해석이 죽어도 통지는 나간다", async () => {
@@ -270,53 +273,7 @@ describe("ingestAlert — FIRING 통지에 담당 순서를 싣는다", () => {
     await ingestAlert(alert({ accountId: "123456789012" }));
 
     expect(mocks.notifyAll).toHaveBeenCalledOnce();
-    expect(mocks.notifyAll.mock.calls[0][1]).toEqual({ alertId: "a1" });
-  });
-});
-
-describe("ingestAlert — 통지 이력 (NotificationLog)", () => {
-  it("채널별 결과가 로그로 남는다 — skipped는 제외, 실패는 에러와 함께", async () => {
-    mocks.findUnique.mockResolvedValue(null);
-    mocks.create.mockResolvedValue({ id: "a1" });
-    mocks.ownership.mockResolvedValue(OWNERSHIP);
-    mocks.notifyAll.mockResolvedValue([
-      { channel: "slack", status: "sent" },
-      { channel: "email", status: "failed", error: "SMTP 530" },
-      { channel: "twilio", status: "skipped" },
-    ]);
-
-    await ingestAlert(alert({ accountId: "123456789012" }));
-
-    const rows = mocks.notifLogCreateMany.mock.calls[0][0].data;
-    expect(rows).toHaveLength(2);
-    expect(rows[0]).toMatchObject({
-      alertId: "a1",
-      channel: "slack",
-      ok: true,
-      target: "최민서 외 1명",
-      escalationStep: null,
-    });
-    expect(rows[1]).toMatchObject({ channel: "email", ok: false, error: "SMTP 530" });
-  });
-
-  it("전부 skipped면 로그 행을 만들지 않는다", async () => {
-    mocks.findUnique.mockResolvedValue(null);
-    mocks.create.mockResolvedValue({ id: "a1" });
-    mocks.notifyAll.mockResolvedValue([{ channel: "twilio", status: "skipped" }]);
-
-    await ingestAlert(alert());
-
-    expect(mocks.notifLogCreateMany).not.toHaveBeenCalled();
-  });
-
-  it("로그 기록이 죽어도 ingest는 성공한다", async () => {
-    mocks.findUnique.mockResolvedValue(null);
-    mocks.create.mockResolvedValue({ id: "a1" });
-    mocks.notifyAll.mockResolvedValue([{ channel: "slack", status: "sent" }]);
-    mocks.notifLogCreateMany.mockRejectedValue(new Error("db down"));
-
-    const res = await ingestAlert(alert());
-    expect(res.firedTransition).toBe(true);
+    expect(mocks.notifyAll.mock.calls[0][2]).toEqual({ alertId: "a1" });
   });
 });
 

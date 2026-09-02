@@ -23,7 +23,9 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-vi.mock("@/lib/notify", () => ({ notifyAll: mocks.notifyAll }));
+// 통지는 아웃박스 경유 — 큐 내부(재시도·로그)는 tests/notify-queue.test.ts가
+// 고정하고, 여기서는 enqueueAndSend가 받는 (alertId, alert, ctx) 계약만 본다.
+vi.mock("@/server/notify-queue", () => ({ enqueueAndSend: mocks.notifyAll }));
 
 import { GET } from "@/app/api/cron/escalate/route";
 
@@ -145,22 +147,13 @@ describe("escalation tick", () => {
       "2순위 김도윤",
     );
 
-    // 다음 순위 한 명에게, 살아있는 연락처로 통지된다
-    const [, ctx] = mocks.notifyAll.mock.calls[0];
+    // 다음 순위 한 명에게, 살아있는 연락처로 통지(아웃박스 팬아웃)된다
+    const [jobAlertId, , ctx] = mocks.notifyAll.mock.calls[0];
+    expect(jobAlertId).toBe("a1");
     expect(ctx.escalationStep).toBe(2);
     expect(ctx.assignees).toEqual([
       { name: "김도윤", slackId: "U2", email: "dy@corp.test", phone: "+821012345678" },
     ]);
-
-    // 통지 이력에도 순위와 함께 남는다
-    const logRows = mocks.notifLogCreateMany.mock.calls[0][0].data;
-    expect(logRows[0]).toMatchObject({
-      alertId: "a1",
-      channel: "slack",
-      ok: true,
-      target: "김도윤",
-      escalationStep: 2,
-    });
   });
 
   it("아직 창이 안 지난 알람은 건드리지 않는다", async () => {
@@ -203,7 +196,7 @@ describe("escalation tick", () => {
 
     await call({ query: "s3cr3t" });
 
-    const [, ctx] = mocks.notifyAll.mock.calls[0];
+    const [, , ctx] = mocks.notifyAll.mock.calls[0];
     expect(ctx.assignees).toEqual([
       { name: "김도윤", slackId: null, email: null, phone: null },
     ]);
