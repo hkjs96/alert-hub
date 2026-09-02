@@ -1,5 +1,6 @@
 {
   "crons": [
-    { "path": "/api/cron/escalate", "schedule": "0 0 * * *" }
+    { "path": "/api/cron/escalate", "schedule": "0 0 * * *" },
+    { "path": "/api/cron/notify", "schedule": "30 0 * * *" }
   ]
 }

@@ -642,17 +642,44 @@ export default async function AlertDetailPage({
           </h2>
           <span className="font-mono text-[11px] text-stone-400">
             {alert.notifications.length}
+            {alert.notifyJobs.length > 0
+              ? ` · 재시도 대기 ${alert.notifyJobs.length}`
+              : ""}
           </span>
         </div>
+        {/* 재시도 대기 중인 아웃박스 잡 — 지수 백오프 30s·1m·2m·5m·10m,
+            5회 실패 시 포기. */}
+        {alert.notifyJobs.length > 0 ? (
+          <ul className="divide-y divide-stone-100 border-b border-stone-100 text-sm">
+            {alert.notifyJobs.map((job) => (
+              <li key={job.id} className="flex flex-wrap items-center gap-3 bg-stone-50 px-6 py-3">
+                <span className="w-14 shrink-0 font-mono text-[11px] uppercase tracking-[0.04em] text-stone-500">
+                  {job.channel}
+                </span>
+                <span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-[0.08em] text-[#b54708]">
+                  <Mark color="#b54708" shape="tri" />
+                  재시도 {job.attempts}/5
+                </span>
+                <span className="text-xs text-stone-500">
+                  다음 시도{" "}
+                  <span className="font-mono">
+                    {new Date(job.nextAttemptAt).toISOString().slice(11, 16)}Z
+                  </span>
+                  {job.lastError ? ` · ${job.lastError}` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         {/* 빈 상태도 명시한다 — "통지가 안 나간 것"과 "기록이 없는 것"을
             구분할 수 없으면 고객사 입장에서 신뢰가 깎인다 (페르소나 검증 P2). */}
-        {alert.notifications.length === 0 ? (
+        {alert.notifications.length === 0 && alert.notifyJobs.length === 0 ? (
           <p className="px-6 py-4 text-sm text-stone-400">
             이 알람에 대해 발송된 통지가 없습니다 — 통지 채널이 설정되지
             않았거나, 담당자에게 연락 수단이 없거나, 통지 이력 도입 이전의
             알람입니다.
           </p>
-        ) : (
+        ) : alert.notifications.length === 0 ? null : (
           <ul className="divide-y divide-stone-100 text-sm">
             {alert.notifications.map((nlog) => (
               <li

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Instrument_Sans, Space_Mono, Noto_Sans_KR } from "next/font/google";
 import { NavTab } from "@/components/nav-tab";
+import { PipelineHealth } from "@/components/pipeline-health";
 import "./globals.css";
 
 // v2(웜 페이퍼 콘솔, docs/design/tokens.md): 라틴은 Instrument Sans, 수치·
@@ -68,8 +69,12 @@ export default function RootLayout({
                 />
               </nav>
             </div>
-            <span className="font-mono text-[11px] text-stone-400">
-              event plane · MVP
+            <span className="flex items-center gap-5">
+              <PipelineHealth />
+              <span className="hidden h-[18px] w-px bg-stone-200 sm:block" />
+              <span className="font-mono text-[11px] text-stone-400">
+                event plane · MVP
+              </span>
             </span>
           </div>
         </header>

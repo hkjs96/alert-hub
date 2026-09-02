@@ -72,6 +72,7 @@ model Alert {
   events        AlertEvent[]
   notifications NotificationLog[]
   silences      Silence[]
+  notifyJobs    NotificationJob[]
 
   @@index([status])
   @@index([severity])
@@ -110,6 +111,34 @@ model NotificationLog {
 
   createdAt DateTime @default(now())
 
+  @@index([alertId])
+}
+
+// 통지 아웃박스 (신뢰성 트랙 ①). 채널별 발송 시도를 잡(job)으로 떨어뜨리고
+// 지수 백오프(30s·1m·2m·5m·10m)로 재시도한다 — Slack이 죽어 있던 5분 때문에
+// 통지가 증발하면 안 된다. 발화 시 인라인으로 1회 즉시 시도(지연 없음)하고,
+// 실패분만 큐에 남아 틱(/api/cron/notify)이 마저 민다. 5회 실패 시 포기하고
+// NotificationLog에 남긴다. 선점은 attempts 낙관적 갱신으로 한다.
+model NotificationJob {
+  id      String @id @default(cuid())
+  alertId String
+  alert   Alert  @relation(fields: [alertId], references: [id], onDelete: Cascade)
+
+  channel String // slack | email | twilio
+  // 발송에 필요한 전부의 스냅샷: { alert: NormalizedAlert, ctx: NotifyContext }.
+  // 재시도 시점에 원본 행이 변해 있어도 "그때 알리려던 내용"을 보낸다.
+  payload Json
+
+  // pending → sent | skipped | failed(포기)
+  status        String   @default("pending")
+  attempts      Int      @default(0)
+  nextAttemptAt DateTime @default(now())
+  lastError     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, nextAttemptAt])
   @@index([alertId])
 }
 
