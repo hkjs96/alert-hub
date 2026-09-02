@@ -24,6 +24,11 @@ export interface NotifyContext {
    * message as an escalation instead of a fresh FIRING fan-out.
    */
   escalationStep?: number;
+  /**
+   * "고객사 › 프로젝트 › 서비스" — 묶음 통지(다이제스트) 헤더와 메시지의
+   * 조직 표기에 쓰인다. 미매핑 알람에는 없다.
+   */
+  chainLabel?: string;
 }
 
 // A Notifier is any channel that can deliver an alert — Slack, email, Twilio.

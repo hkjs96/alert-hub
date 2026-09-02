@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { drainDueJobs } from "@/server/notify-queue";
+import { summarizeEndedSilences } from "@/server/silence-summary";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  const now = new Date();
+  // 점검 종료 요약을 먼저 — 재개 대상 알람의 잡을 이 틱의 드레인이 바로
+  // (또는 묶음 창 뒤 다음 틱이) 집어가게.
+  const summaries = await summarizeEndedSilences(now);
   const result = await drainDueJobs(new Date(), 50);
-  return NextResponse.json(result);
+  return NextResponse.json({ ...result, summaries });
 }
