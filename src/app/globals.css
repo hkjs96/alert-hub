@@ -3,36 +3,36 @@
 @tailwind utilities;
 
 :root {
-  --background: #fafaf9;
+  --background: #fbfaf7;
 }
 
 body {
   background: var(--background);
-  color: #1c1917;
+  color: #1b1a17;
+  font-variant-numeric: tabular-nums;
 }
 
 @layer base {
-  /* 세련됨의 절반은 포커스 마감 — 모든 인터랙티브 요소에 인디고 링 */
+  /* v2: 포커스도 액센트 블루 한 색으로 — 직각 프레임이라 링도 직각. */
   a:focus-visible,
   button:focus-visible,
   input:focus-visible,
   select:focus-visible,
   summary:focus-visible {
-    outline: 2px solid rgb(99 102 241 / 0.6);
+    outline: 2px solid rgb(20 81 214 / 0.55);
     outline-offset: 2px;
-    border-radius: 6px;
   }
   input:focus,
   select:focus {
     outline: none;
-    border-color: rgb(129 140 248);
-    box-shadow: 0 0 0 3px rgb(99 102 241 / 0.12);
+    border-color: #1451d6;
+    box-shadow: 0 0 0 3px rgb(20 81 214 / 0.14);
   }
   input,
   select {
-    accent-color: #4f46e5;
+    accent-color: #1451d6;
   }
   ::placeholder {
-    color: #a8a29e;
+    color: #b0aca2;
   }
 }

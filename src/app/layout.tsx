@@ -1,12 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
-import { Noto_Sans_KR } from "next/font/google";
+import { Instrument_Sans, Space_Mono, Noto_Sans_KR } from "next/font/google";
+import { NavTab } from "@/components/nav-tab";
 import "./globals.css";
 
-// B안(라이트 정밀, docs/design/tokens.md): 라틴은 Geist, 한글은 Noto Sans KR
-// 폴백 — 굵기와 자간으로 위계를 만드는 타이포가 이 방향의 정체성이다.
+// v2(웜 페이퍼 콘솔, docs/design/tokens.md): 라틴은 Instrument Sans, 수치·
+// 코드·오버라인은 Space Mono, 한글은 Noto Sans KR 폴백.
+const instrument = Instrument_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-instrument",
+});
+
+const spaceMono = Space_Mono({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-space-mono",
+});
+
 const notoSansKr = Noto_Sans_KR({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -26,29 +37,43 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${GeistSans.variable} ${GeistMono.variable} ${notoSansKr.variable}`}
+      className={`${instrument.variable} ${spaceMono.variable} ${notoSansKr.variable}`}
     >
       <body className="min-h-screen antialiased">
         <header className="border-b border-stone-200 bg-white">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-            <Link
-              href="/"
-              className="text-lg font-semibold tracking-tight text-stone-900"
-            >
-              alert-hub
-            </Link>
-            <div className="flex items-center gap-4">
+          <div className="mx-auto flex h-[52px] max-w-7xl items-center justify-between px-6">
+            <div className="flex items-center gap-8">
               <Link
-                href="/admin"
-                className="text-sm text-stone-600 hover:text-indigo-600"
+                href="/"
+                className="text-[15px] font-bold tracking-[-0.02em] text-stone-900"
               >
-                등록관리
+                alert<span className="text-indigo-600">·</span>hub
               </Link>
-              <span className="text-sm text-stone-400">event plane · MVP</span>
+              <nav className="flex gap-6 text-[13px]">
+                <NavTab
+                  href="/"
+                  label="대시보드"
+                  pattern="^/(?!admin)"
+                  className="flex h-[52px] items-center"
+                  activeClassName="font-semibold text-stone-900 shadow-[inset_0_-2px_0_#1b1a17]"
+                  inactiveClassName="text-stone-500 hover:text-stone-900"
+                />
+                <NavTab
+                  href="/admin"
+                  label="등록 관리"
+                  pattern="^/admin"
+                  className="flex h-[52px] items-center"
+                  activeClassName="font-semibold text-stone-900 shadow-[inset_0_-2px_0_#1b1a17]"
+                  inactiveClassName="text-stone-500 hover:text-stone-900"
+                />
+              </nav>
             </div>
+            <span className="font-mono text-[11px] text-stone-400">
+              event plane · MVP
+            </span>
           </div>
         </header>
-        <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
+        <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
       </body>
     </html>
   );

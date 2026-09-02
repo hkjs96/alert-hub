@@ -15,7 +15,7 @@ export default async function ContactsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-stone-900">멤버 관리</h1>
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-stone-900">멤버 관리</h1>
         <p className="mt-1 text-sm text-stone-500">
           전체 인원 마스터 — 고객사 담당자와 내부(MSP) 엔지니어를 함께 관리합니다.
           한 번 등록하면 어느 고객사/프로젝트/서비스에든 드롭다운으로 배정할 수 있습니다.
@@ -85,7 +85,7 @@ export default async function ContactsPage() {
                 <td className="px-4 py-2 text-right">
                   <form action={deleteContact} className="inline">
                     <input type="hidden" name="id" value={c.id} />
-                    <button className="text-xs text-stone-400 hover:text-red-600">
+                    <button className="text-xs text-stone-400 hover:text-[#b42318]">
                       삭제
                     </button>
                   </form>

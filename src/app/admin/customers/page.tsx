@@ -13,7 +13,7 @@ export default async function CustomersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-stone-900">고객사</h1>
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-stone-900">고객사</h1>
         <p className="mt-1 text-sm text-stone-500">
           테넌트의 뿌리. 사내 시스템은 &ldquo;내부&rdquo; 고객사로 등록하세요.
         </p>
@@ -68,7 +68,7 @@ export default async function CustomersPage() {
                 <td className="px-4 py-2 text-right">
                   <form action={deleteCustomer} className="inline">
                     <input type="hidden" name="id" value={c.id} />
-                    <button className="text-xs text-stone-400 hover:text-red-600">
+                    <button className="text-xs text-stone-400 hover:text-[#b42318]">
                       삭제
                     </button>
                   </form>

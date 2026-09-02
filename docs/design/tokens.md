@@ -1,84 +1,91 @@
-# alert-hub 디자인 토큰 · 컴포넌트 규약 (B안 · 라이트 정밀)
+# alert-hub 디자인 토큰 — v2 "웜 페이퍼 콘솔"
 
-코드 곳곳에 흩어진 스타일의 단일 원천. 새 화면 목업(Claude Design 캔버스
-포함)과 구현이 이 문서를 따르면 서로 어긋나지 않는다. 값은 실제 코드
-(Tailwind 클래스)와 1:1 — 코드가 바뀌면 이 문서도 바꾼다.
+> 단일 기준(source of truth). 원본은 Claude Design의 `alert-hub v2.dc.html`
+> (2026-09 공유본)이며, 이 문서는 그 캔버스를 코드 토큰으로 옮긴 것이다.
+> 구현 반영: `tailwind.config.ts`(팔레트 리맵·라운딩 제거), `globals.css`,
+> `src/components/badges.tsx`(도형 마크), `src/app/layout.tsx`(폰트·헤더).
 
-비주얼 방향은 design-directions/ 비교에서 **B안(라이트 정밀)** 채택:
-웜 뉴트럴(stone) 바탕, 헤어라인 보더, 인디고 단일 액센트, 굵기·자간으로
-만드는 타이포 위계. 다크 모드는 후속 — 이 토큰의 반전으로 얻는다.
+## 1. 원칙
 
-## 원칙
+- **종이 위의 잉크.** 따뜻한 종이색 바탕(#fbfaf7) 위에 잉크(#1b1a17) 한 색으로
+  위계를 만든다. 회색이 아니라 웜 그레이(스톤→모래) 스케일.
+- **직각.** 라운딩 없음. 카드·버튼·인풋·칩 전부 0px. 원형은 상태 점·아바타 등
+  "마크"에만 허용 (`rounded-full`).
+- **도형 = 상태.** 상태·심각도는 색만이 아니라 도형으로도 구분된다:
+  ●(dot) ▲(tri) ○(ring) ✓(check) –(dash). 색약 환경 대비.
+- **모노 오버라인.** 섹션 제목·테이블 헤더·라벨은 Space Mono 700 10px,
+  letter-spacing 0.11em, uppercase, FAINT 색.
+- **액센트는 파랑 하나.** #1451d6 — 링크, 주 CTA(Acknowledge), 포커스 링.
+  위험/경고 색은 상태 시맨틱에서만 나온다.
 
-- **정보 설계 우선**: 훑고 조작하는 운영 도구. 상태는 숫자보다 형태(배지·
-  액센트·틴트)로 먼저 읽힌다.
-- **색은 의미가 있을 때만**: 액센트는 인디고 1색(링크·주 액션·활성 상태).
-  상태색(빨강·파랑·초록·주황)은 상태에만. 스탯 수치는 Firing만 빨강,
-  나머지는 잉크.
-- **사실과 정책의 분리**: 상태(FIRING)는 사실, 통지 여부(뮤트)는 정책 —
-  정책이 사실의 표시를 지우지 않는다.
-- **JS 없는 조작**: 링크와 폼 전송. 색만으로 의미 전달 금지(배지엔 라벨).
+## 2. 팔레트
 
-## 타이포그래피
+| 토큰 | 값 | Tailwind | 용도 |
+|---|---|---|---|
+| CANVAS | `#efece5` | — | (디자인 캔버스 전용, 앱 미사용) |
+| BG | `#fbfaf7` | `body` | 앱 바탕 |
+| SURFACE | `#ffffff` | `bg-white` | 카드·헤더·컨트롤 |
+| SOFT | `#faf8f4` | `stone-50` | hover·뮤트 행·활성 틴트 |
+| HAIR BG | `#f4f1ea` | `stone-100` | 칩 바탕, 셀 이음 헤어라인 |
+| RULE | `#ded9cf` | `stone-200` | 모든 보더 |
+| DECO | `#d3cec3` | `stone-300` | 장식 보더, 비활성 |
+| FAINT | `#9a978f` | `stone-400` | 오버라인·보조 텍스트 |
+| MUT | `#6b6862` | `stone-500` | 본문 보조 |
+| INK2 | `#4a4842` | `stone-600` | 본문 강조 보조 |
+| INK | `#1b1a17` | `stone-900` | 제목·본문·주 버튼 |
+| ACCENT | `#1451d6` | `indigo-600` | 링크·CTA·포커스 |
+| ACCENT HOVER | `#0f3fa8` | `indigo-700` | |
 
-- 패밀리: **Geist**(라틴) + **Noto Sans KR**(한글 폴백) — `font-sans`,
-  숫자·시각·코드는 **Geist Mono** — `font-mono`
-- 페이지 제목: `text-2xl font-semibold tracking-tight text-stone-900`
-- 섹션 제목: `text-xl font-semibold` · 카드 제목 `text-sm font-semibold
-  text-stone-700`
-- 섹션 라벨: `text-xs font-semibold uppercase tracking-wide text-stone-500`
-- 본문 14px(`text-sm`) · 메타 12px(`text-xs`) · 숫자 `tabular-nums`
-- 위계는 크기보다 **굵기(400/500/600)와 잉크 농도**로
+상태(도형과 짝):
 
-## 색 (Tailwind stone + 인디고 액센트 + 상태색)
-
-| 역할 | 클래스 | hex |
+| 상태 | 색 | 도형 |
 |---|---|---|
-| 페이지 배경 | (`--background`) | `#fafaf9` (stone-50) |
-| 서피스(카드) | `bg-white` + `border-stone-200` | `#ffffff` / `#e7e5e4` |
-| 본문 잉크 | `text-stone-900` | `#1c1917` |
-| 보조 텍스트 | `text-stone-500` / `-400` | `#78716c` / `#a8a29e` |
-| 구분선 | `divide-stone-100` | `#f5f5f4` |
-| **액센트(유일)** | `text-indigo-600`, 활성 틴트 `bg-indigo-50 text-indigo-700 ring-indigo-200` | `#4f46e5` / `#eef2ff` |
-| FIRING 배지 | `bg-red-50 text-red-700 ring-red-200` + 행 액센트 `border-l-red-600` | |
-| ACK 배지 | `bg-blue-50 text-blue-700 ring-blue-200` | |
-| RESOLVED 배지 | `bg-green-50 text-green-700 ring-green-200` | |
-| ESCALATED 배지 | `bg-orange-50 text-orange-700 ring-orange-200` | |
-| NO DATA 배지 | `bg-stone-100 text-stone-600 ring-stone-300` | |
-| 경고 배너 | `bg-amber-50 border-amber-200 text-amber-800` | |
-| 심각도 SEV-0/1 | `bg-red-600/500 text-white` · SEV-2 `bg-orange-500` · SEV-3 `bg-amber-400` | |
+| FIRING | `#b42318` | ● dot |
+| ESCALATED | `#b54708` | ▲ tri |
+| ACKNOWLEDGED | `#4a5568` | ○ ring |
+| RESOLVED | `#067647` | ✓ check |
+| NO DATA / MUTED | `#8a877f` | – dash |
 
-상태 배지 라벨은 문장 케이스: Firing / Ack / Resolved / Escalated / No Data.
+심각도: SEV-0/1 ● `#b42318` (SEV-0은 `#7a1710`), SEV-2 ▲ `#b54708`,
+SEV-3/4 ○ `#8a877f`, SEV-5 – `#8a877f`.
 
-## 형태
+FIRING 활성 틴트 `#fdf5f4` (스탯 타일).
 
-- 카드: `rounded-lg`(8px) + `border-stone-200` + `shadow-sm`
-- **스탯 타일 밴드**: 떠 있는 카드 5장이 아니라 `gap-px bg-stone-200
-  rounded-xl overflow-hidden` 이음선 밴드. 활성 = `bg-indigo-50` 틴트.
-  수치는 `text-2xl font-semibold tracking-tight tabular-nums`
-- 버튼: `rounded-md`(6px). 주 버튼 `bg-stone-900 text-white`, 핵심 액션(Ack)
-  `bg-indigo-600`, 보조 `border-stone-300 bg-white`, 비활성은 숨기지 않고
-  `disabled:bg-stone-100 disabled:text-stone-400`
-- 배지: `rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset` —
-  옅은 바탕 + 같은 계열 보더 (진한 채움 금지)
-- 칩(필터/담당 패널): pill. **활성 = 인디고 틴트**(`bg-indigo-50
-  text-indigo-700 ring-indigo-200`), 비활성 `bg-white ring-stone-200`
-- 순번 배지: `h-5 w-5 rounded tabular-nums` — 1순위 `bg-stone-900
-  text-white`, 나머지 `bg-stone-100 text-stone-500`
-- 테이블: 헤더 `bg-stone-50 text-xs uppercase text-stone-500`, 셀 `px-3
-  py-3`, 행 구분 `divide-stone-100`, hover `bg-stone-50`, FIRING 행 좌측
-  `border-l-[3px] border-l-red-600`, Count·Last seen은 `font-mono text-xs`
+## 3. 타이포그래피
 
-## 재사용 패턴
+- 본문: **Instrument Sans** (400/500/600/700) + Noto Sans KR 폴백.
+- 수치·코드·오버라인·타임스탬프: **Space Mono** (400/700), `tabular-nums` 전역.
+- 페이지 타이틀: 27px/600/-0.025em. 서브페이지 22px/600/-0.02em.
+- 히어로 제목(알람 상세): 26px/600/-0.025em.
+- 본문 13px, 보조 12px, 캡션 11px.
+- 오버라인: mono 10px/700, tracking 0.11em, uppercase, FAINT.
+- 배지 라벨: mono 10px/700, tracking 0.08em, 상태색.
 
-- 스탯 타일 5개: 클릭=상태 토글, 수치는 "상태를 제외한 현재 필터" 기준.
-- 스코프 선택자: 고객사 ▾ / 프로젝트 ▾ / 서비스 ▾ + [이동|적용].
-- 레벨 탭: `bg-stone-100 p-1 rounded-lg` 안에 활성 `bg-white shadow-sm`.
-- 타임라인: 좌측 보더 + 상태 배지 + UTC 시각, append-only.
-- 아이콘: 이모지 금지(Slack 발신 본문 제외), 16/20px 스트로크 인라인 SVG.
+## 4. 컴포넌트 규약
 
-## 카피 톤
+- **카드**: `border border-stone-200 bg-white`, 그림자 없음(팝오버만
+  `0 18px 44px rgba(27,26,23,.18)`). 헤더 스트립: 오버라인 + `border-b`.
+- **강조 카드**: 좌측 3px 상태색 보더 (`border-l-[3px]`).
+- **버튼(32px)**: 주 = 잉크 배경/흰 글자, hover #000. CTA(Ack) = ACCENT 배경.
+  보조 = 흰 배경 + RULE 보더, hover 보더 FAINT. 비활성 = `#f4f1ea` 배경 +
+  `#b0aca2` 글자.
+- **인풋/셀렉트(32px)**: 흰 배경 + RULE 보더. 포커스: 보더 ACCENT +
+  `0 0 0 3px rgba(20,81,214,.14)`.
+- **상태 칩(26px)**: 흰 배경 + RULE 보더 + 마크 + 라벨 + 모노 카운트.
+  활성: 잉크 보더 + `#f7f5f0` 배경 + 600 weight.
+- **스탯 타일**: 흰 상자 하나를 `stone-100` 세로 헤어라인으로 분할.
+  마크+오버라인 / Space Mono 32px 수치. 활성: 상태색 inset 밑줄 2px + 틴트.
+- **테이블**: 헤더 = 모노 오버라인 행(34px), 행 이음 `stone-100`.
+  FIRING 행 좌측 3px `#b42318`. CNT는 mono 700, 8회 이상 붉게. ENV는
+  mono 11px uppercase (prd만 잉크, 나머지 FAINT).
+- **탭**: 밑줄 탭 — 활성 `inset 0 -2px 0 #1b1a17` + 600. 세그먼트 필 금지.
+- **순번 마크**: 정사각(19~20px) — 1순위 잉크 배경/흰 글자, 이후 흰
+  배경/RULE 보더.
+- **아바타**: 26px 정사각, 이니셜 1자. 활성 시 잉크 반전.
+- **조직 체인 구분자**: `›` (mono, `stone-300`).
+- **타임라인**: 상태 도형 마크 + 1px 세로 연결선(`#e6e2d9`≈stone-200).
 
-- 화면·기능 이름은 사용자의 일 기준: "알람 처리 순서", "점검 · 뮤트".
-- 빈 상태는 원인과 다음 행동을 함께.
-- 시각은 UTC 고정(`08-30 11:13Z`), 상세에서만 초 단위.
+## 5. 남겨둔 것 (v2 캔버스에 있으나 기능 미구현)
+
+뮤트 칩·점검 배너·파이프라인 헬스 인디케이터·일괄 Ack·에스컬레이션 대기
+카드 — 노이즈/신뢰성 트랙(아웃박스·Silence) 구현 시 이 규약대로 붙인다.

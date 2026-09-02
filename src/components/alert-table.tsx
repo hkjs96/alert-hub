@@ -25,14 +25,14 @@ function OwnerCell({
   if (snap && snap.order.length > 0) {
     return (
       <span
-        className="text-stone-800"
+        className="font-medium text-stone-900"
         title={`수신 시점 스냅샷 · ${levelLabel(snap.level)} 단계 · ${snap.order
           .map((o) => o.name)
           .join(" → ")}`}
       >
         {snap.order[0].name}
         {snap.order.length > 1 ? (
-          <span className="text-stone-400"> +{snap.order.length - 1}</span>
+          <span className="font-normal text-stone-400"> +{snap.order.length - 1}</span>
         ) : null}
       </span>
     );
@@ -51,7 +51,7 @@ function OwnerCell({
     return (
       <Link
         href={`/admin/map-account?accountId=${alert.accountId}${back}`}
-        className="font-medium text-amber-700 hover:underline"
+        className="font-medium text-[#b54708] hover:underline"
         title="이 계정이 어느 서비스에도 매핑되어 있지 않습니다 — 눌러서 바로 매핑하세요"
       >
         ⚠ 매핑 필요
@@ -64,14 +64,14 @@ function OwnerCell({
   }
   return (
     <span
-      className="text-stone-800"
+      className="font-medium text-stone-900"
       title={`${levelLabel(info.responsibility.level)} 단계 순서 적용 · ${info.contacts
         .map((c) => c.name)
         .join(" → ")}`}
     >
       {first.name}
       {info.contacts.length > 1 ? (
-        <span className="text-stone-400"> +{info.contacts.length - 1}</span>
+        <span className="font-normal text-stone-400"> +{info.contacts.length - 1}</span>
       ) : null}
     </span>
   );
@@ -93,14 +93,14 @@ function chainFacts(
   const info = alert.accountId ? ownership.get(alert.accountId) : undefined;
   if (info) {
     return {
-      chain: `${info.chain.customer.name} / ${info.chain.project.name} / ${info.chain.service.name}`,
+      chain: `${info.chain.customer.name} › ${info.chain.project.name} › ${info.chain.service.name}`,
       environment: info.chain.account.environment,
     };
   }
   const snap = parseOwnershipSnapshot(alert.ownershipSnapshot);
   if (snap) {
     return {
-      chain: `${snap.chain.customerName} / ${snap.chain.projectName} / ${snap.chain.serviceName}`,
+      chain: `${snap.chain.customerName} › ${snap.chain.projectName} › ${snap.chain.serviceName}`,
       environment: snap.chain.environment ?? null,
     };
   }
@@ -123,7 +123,7 @@ export function AlertTable({
   if (alerts.length === 0) {
     // "필터 결과 없음"과 "아직 데이터 없음"은 다른 상태다 (페르소나 검증 P2).
     return (
-      <div className="rounded-lg border border-dashed border-stone-300 bg-white p-10 text-center text-stone-500">
+      <div className="border border-dashed border-stone-300 bg-white p-10 text-center text-sm text-stone-500">
         {filtered ? (
           <>
             현재 필터 조건에 맞는 알람이 없습니다.{" "}
@@ -134,7 +134,7 @@ export function AlertTable({
         ) : (
           <>
             No alerts yet. Send one to{" "}
-            <code className="rounded bg-stone-100 px-1 py-0.5 text-sm">
+            <code className="bg-stone-100 px-1 py-0.5 font-mono text-xs">
               POST /api/webhooks/alarm
             </code>
             .
@@ -145,70 +145,86 @@ export function AlertTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white shadow-sm">
-      <table className="min-w-full divide-y divide-stone-200 text-sm">
-        <thead className="bg-stone-50 text-left text-xs uppercase tracking-wide text-stone-500">
-          <tr>
-            <th className="px-3 py-3 font-medium">Severity</th>
-            <th className="px-3 py-3 font-medium">Status</th>
-            <th className="px-3 py-3 font-medium">Title</th>
-            <th className="px-3 py-3 font-medium">Resource</th>
-            <th className="px-3 py-3 font-medium">환경</th>
-            <th className="px-3 py-3 font-medium">담당</th>
-            <th className="px-3 py-3 font-medium text-right">Count</th>
-            <th className="px-3 py-3 font-medium">Last seen</th>
+    <div className="overflow-x-auto border border-stone-200 bg-white">
+      <table className="min-w-full text-sm">
+        <thead>
+          <tr className="border-b border-stone-200 text-left font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+            <th className="border-l-[3px] border-l-transparent px-3 py-2.5 font-bold">SEV</th>
+            <th className="px-3 py-2.5 font-bold">STATUS</th>
+            <th className="px-3 py-2.5 font-bold">TITLE</th>
+            <th className="px-3 py-2.5 font-bold">RESOURCE</th>
+            <th className="px-3 py-2.5 font-bold">ENV</th>
+            <th className="px-3 py-2.5 font-bold">OWNER · P1</th>
+            <th className="px-3 py-2.5 text-right font-bold">CNT</th>
+            <th className="px-3 py-2.5 text-right font-bold">LAST</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-stone-100">
           {alerts.map((a) => {
             const { chain, environment } = chainFacts(a, ownership);
             return (
-            <tr key={a.id} className="hover:bg-stone-50">
+            <tr key={a.id} className="transition-colors hover:bg-stone-50">
               <td
-                className={`border-l-[3px] px-3 py-3 ${
-                  a.status === "FIRING" ? "border-l-red-600" : "border-l-transparent"
+                className={`border-l-[3px] px-3 py-3.5 ${
+                  a.status === "FIRING"
+                    ? "border-l-[#b42318]"
+                    : "border-l-transparent"
                 }`}
               >
                 <SeverityBadge severity={a.severity} />
               </td>
-              <td className="px-3 py-3">
+              <td className="px-3 py-3.5">
                 <StatusBadge status={a.status} />
               </td>
-              <td className="px-3 py-3">
+              <td className="px-3 py-3.5">
                 <Link
                   href={`/alerts/${a.id}`}
-                  className="font-medium text-stone-900 hover:text-indigo-600 hover:underline"
+                  className={`text-[13px] hover:text-indigo-600 hover:underline ${
+                    a.status === "FIRING"
+                      ? "font-semibold text-stone-900"
+                      : a.status === "RESOLVED"
+                        ? "font-medium text-stone-500"
+                        : "font-medium text-stone-900"
+                  }`}
                 >
                   {a.title}
                 </Link>
                 {chain ? (
-                  <div className="mt-0.5 text-xs text-stone-400">{chain}</div>
+                  <div className="mt-0.5 text-[11px] text-stone-400">{chain}</div>
                 ) : null}
               </td>
-              <td className="px-3 py-3 text-stone-600">
+              <td className="px-3 py-3.5">
                 <span
-                  className="block max-w-44 truncate"
+                  className="block max-w-44 truncate font-mono text-xs text-stone-600"
                   title={a.resource ?? undefined}
                 >
                   {a.resource ?? "—"}
                 </span>
               </td>
-              <td className="px-3 py-3">
+              <td className="px-3 py-3.5">
                 {environment ? (
-                  <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
+                  <span
+                    className={`font-mono text-[11px] uppercase tracking-[0.04em] ${
+                      environment === "prd" ? "text-stone-900" : "text-stone-400"
+                    }`}
+                  >
                     {environment}
                   </span>
                 ) : (
                   <span className="text-stone-300">—</span>
                 )}
               </td>
-              <td className="px-3 py-3 whitespace-nowrap">
+              <td className="whitespace-nowrap px-3 py-3.5 text-[13px]">
                 <OwnerCell alert={a} ownership={ownership} backHref={backHref} />
               </td>
-              <td className="px-3 py-3 text-right font-mono text-xs tabular-nums text-stone-600">
+              <td
+                className={`px-3 py-3.5 text-right font-mono text-[13px] font-bold tabular-nums ${
+                  a.count >= 8 ? "text-[#b42318]" : "text-stone-900"
+                }`}
+              >
                 {a.count}
               </td>
-              <td className="px-3 py-3 whitespace-nowrap font-mono text-xs text-stone-500">
+              <td className="whitespace-nowrap px-3 py-3.5 text-right font-mono text-xs text-stone-500">
                 {formatTime(a.lastSeenAt)}
               </td>
             </tr>

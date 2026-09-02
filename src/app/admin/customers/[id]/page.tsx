@@ -28,7 +28,7 @@ export default async function CustomerDetailPage({
           </Link>{" "}
           / {customer.name}
         </div>
-        <h1 className="text-xl font-semibold text-stone-900">
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-stone-900">
           {customer.name}
           {customer.isInternal ? (
             <span className="ml-2 align-middle text-xs font-medium text-stone-400">
@@ -39,7 +39,7 @@ export default async function CustomerDetailPage({
       </div>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-stone-700">
+        <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
           고객사 레벨 담당 <span className="font-normal text-stone-400">(하위 전체의 기본값)</span>
         </h2>
         <AssignmentEditor
@@ -51,7 +51,7 @@ export default async function CustomerDetailPage({
       </section>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-stone-700">프로젝트</h2>
+        <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">프로젝트</h2>
         <form action={createProject} className="mb-3 flex flex-wrap gap-2 text-sm">
           <input type="hidden" name="customerId" value={customer.id} />
           <input type="hidden" name="back" value={back} />
@@ -78,7 +78,7 @@ export default async function CustomerDetailPage({
               <form action={deleteProject} className="ml-auto inline">
                 <input type="hidden" name="id" value={p.id} />
                 <input type="hidden" name="back" value={back} />
-                <button className="text-xs text-stone-400 hover:text-red-600">삭제</button>
+                <button className="text-xs text-stone-400 hover:text-[#b42318]">삭제</button>
               </form>
             </li>
           ))}
@@ -89,7 +89,7 @@ export default async function CustomerDetailPage({
       </section>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-stone-700">
+        <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
           관련 인원 전체 <span className="font-normal text-stone-400">(하위 포함 롤업)</span>
         </h2>
         <Roster level="customer" id={customer.id} />

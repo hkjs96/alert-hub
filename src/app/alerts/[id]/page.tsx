@@ -9,7 +9,14 @@ import {
   type OwnershipSnapshot,
 } from "@/server/org";
 import { levelLabel } from "@/lib/org/resolve";
-import { SeverityBadge, StatusBadge } from "@/components/badges";
+import {
+  Mark,
+  STATUS_LABELS,
+  SeverityBadge,
+  StatusBadge,
+  severityTone,
+  statusTone,
+} from "@/components/badges";
 
 export const dynamic = "force-dynamic";
 
@@ -17,12 +24,28 @@ function formatTime(date: Date) {
   return new Date(date).toISOString().replace("T", " ").slice(0, 19) + "Z";
 }
 
-function Field({ label, value }: { label: string; value?: string | null }) {
+function Field({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value?: string | null;
+  mono?: boolean;
+}) {
   if (value === null || value === undefined || value === "") return null;
   return (
     <div className="flex flex-col">
-      <dt className="text-xs uppercase tracking-wide text-stone-400">{label}</dt>
-      <dd className="mt-0.5 break-words text-sm text-stone-800">{value}</dd>
+      <dt className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+        {label}
+      </dt>
+      <dd
+        className={`mt-1.5 break-words text-[13px] text-stone-900 ${
+          mono ? "font-mono" : "font-medium"
+        }`}
+      >
+        {value}
+      </dd>
     </div>
   );
 }
@@ -38,14 +61,26 @@ function AlertActions({ id, status }: { id: string; status: string }) {
   const canAck = status === "FIRING";
   const canResolve = status === "FIRING" || status === "ACKNOWLEDGED";
   return (
-    <span className="ml-auto flex items-center gap-2">
+    <span className="flex flex-none items-center gap-2">
       <form action={ackAlert}>
         <input type="hidden" name="id" value={id} />
         <button
           disabled={!canAck}
           title={canAck ? undefined : "FIRING 상태에서만 Ack할 수 있습니다"}
-          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400"
+          className="inline-flex h-8 items-center gap-[7px] border border-indigo-600 bg-indigo-600 px-4 text-[13px] font-semibold text-white transition-colors hover:border-indigo-700 hover:bg-indigo-700 disabled:cursor-not-allowed disabled:border-stone-100 disabled:bg-stone-100 disabled:text-stone-400"
         >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M3.2 8.4 6.4 11.6 12.8 4.8" />
+          </svg>
           Acknowledge
         </button>
       </form>
@@ -56,7 +91,7 @@ function AlertActions({ id, status }: { id: string; status: string }) {
           title={
             canResolve ? undefined : "이미 종료되었거나 전이할 수 없는 상태입니다"
           }
-          className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 hover:bg-stone-50 disabled:cursor-not-allowed disabled:border-stone-200 disabled:bg-stone-100 disabled:text-stone-400"
+          className="inline-flex h-8 items-center border border-stone-200 bg-white px-3.5 text-[13px] font-medium text-stone-900 transition-colors hover:border-stone-400 disabled:cursor-not-allowed disabled:border-stone-100 disabled:bg-stone-100 disabled:text-stone-400"
         >
           Resolve
         </button>
@@ -92,26 +127,28 @@ function SnapshotPanel({
     currentIds !== snapIds;
 
   return (
-    <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
-      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-stone-500">
-        담당 · 조직 <span className="font-normal normal-case">(수신 시점 스냅샷)</span>
-      </h2>
-
-      <div className="flex flex-wrap items-center gap-1 text-sm text-stone-600">
+    <section className="border border-stone-200 bg-white">
+      <div className="border-b border-stone-200 px-6 py-3">
+        <h2 className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+          담당 · 수신 시점 스냅샷
+        </h2>
+      </div>
+      <div className="p-6 pt-4">
+      <div className="flex flex-wrap items-center gap-1.5 text-sm text-stone-600">
         <Link
           href={`/admin/customers/${chain.customerId}`}
           className="font-medium text-stone-800 hover:text-indigo-600 hover:underline"
         >
           {chain.customerName}
         </Link>
-        <span className="text-stone-300">/</span>
+        <span className="font-mono text-xs text-stone-300">›</span>
         <Link
           href={`/admin/projects/${chain.projectId}`}
           className="hover:text-indigo-600 hover:underline"
         >
           {chain.projectName}
         </Link>
-        <span className="text-stone-300">/</span>
+        <span className="font-mono text-xs text-stone-300">›</span>
         <Link
           href={`/admin/services/${chain.serviceId}`}
           className="hover:text-indigo-600 hover:underline"
@@ -120,12 +157,12 @@ function SnapshotPanel({
         </Link>
         {chain.accountAlias ? (
           <>
-            <span className="text-stone-300">/</span>
+            <span className="font-mono text-xs text-stone-300">›</span>
             <span className="font-mono text-xs">{chain.accountAlias}</span>
           </>
         ) : null}
         {chain.environment ? (
-          <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs">
+          <span className="font-mono text-[11px] uppercase tracking-[0.04em] text-stone-500">
             {chain.environment}
           </span>
         ) : null}
@@ -181,6 +218,7 @@ function SnapshotPanel({
           )}
         </p>
       ) : null}
+      </div>
     </section>
   );
 }
@@ -194,11 +232,11 @@ function OwnershipPanel({
 }) {
   if (!info) {
     return (
-      <section className="rounded-lg border border-amber-200 bg-amber-50 p-6">
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-amber-700">
+      <section className="border border-stone-200 border-l-[3px] border-l-[#b54708] bg-white p-6">
+        <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-[#b54708]">
           담당 · 조직
         </h2>
-        <p className="text-sm text-amber-800">
+        <p className="text-sm text-stone-600">
           계정{" "}
           <code className="rounded bg-white px-1 py-0.5 font-mono text-xs">
             {accountId}
@@ -217,38 +255,40 @@ function OwnershipPanel({
   const escalationHref = `/admin/escalation?customerId=${chain.customer.id}&projectId=${chain.project.id}&serviceId=${chain.service.id}&level=${responsibility.level === "account" ? "service" : (responsibility.level ?? "service")}`;
 
   return (
-    <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
-      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-stone-500">
-        담당 · 조직
-      </h2>
-
-      <div className="flex flex-wrap items-center gap-1 text-sm text-stone-600">
+    <section className="border border-stone-200 bg-white">
+      <div className="border-b border-stone-200 px-6 py-3">
+        <h2 className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+          담당 · 조직 (현재 등록 기준)
+        </h2>
+      </div>
+      <div className="p-6 pt-4">
+      <div className="flex flex-wrap items-center gap-1.5 text-sm text-stone-600">
         <Link
           href={`/admin/customers/${chain.customer.id}`}
           className="font-medium text-stone-800 hover:text-indigo-600 hover:underline"
         >
           {chain.customer.name}
         </Link>
-        <span className="text-stone-300">/</span>
+        <span className="font-mono text-xs text-stone-300">›</span>
         <Link
           href={`/admin/projects/${chain.project.id}`}
           className="hover:text-indigo-600 hover:underline"
         >
           {chain.project.name}
         </Link>
-        <span className="text-stone-300">/</span>
+        <span className="font-mono text-xs text-stone-300">›</span>
         <Link
           href={`/admin/services/${chain.service.id}`}
           className="hover:text-indigo-600 hover:underline"
         >
           {chain.service.name}
         </Link>
-        <span className="text-stone-300">/</span>
+        <span className="font-mono text-xs text-stone-300">›</span>
         <span className="font-mono text-xs">
           {chain.account.alias ?? chain.account.accountId}
         </span>
         {chain.account.environment ? (
-          <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs">
+          <span className="font-mono text-[11px] uppercase tracking-[0.04em] text-stone-500">
             {chain.account.environment}
           </span>
         ) : null}
@@ -295,6 +335,7 @@ function OwnershipPanel({
           </ol>
         </>
       )}
+      </div>
     </section>
   );
 }
@@ -312,22 +353,53 @@ export default async function AlertDetailPage({
     : null;
   const snapshot = parseOwnershipSnapshot(alert.ownershipSnapshot);
 
-  return (
-    <div className="space-y-6">
-      <Link href="/" className="text-sm text-indigo-600 hover:underline">
-        ← Back to alerts
-      </Link>
+  const sevTone = severityTone(alert.severity);
+  const heroBorder =
+    alert.status === "FIRING" ? sevTone.color : statusTone(alert.status).color;
 
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold text-stone-900">{alert.title}</h1>
-        <SeverityBadge severity={alert.severity} />
-        <StatusBadge status={alert.status} />
-        <AlertActions id={alert.id} status={alert.status} />
+  return (
+    <div className="space-y-[18px]">
+      <div className="flex items-center gap-2 font-mono text-xs text-stone-400">
+        <span>←</span>
+        <Link
+          href="/"
+          className="font-sans text-[13px] font-medium text-indigo-600 hover:underline"
+        >
+          대시보드
+        </Link>
+        <span className="font-mono text-xs text-stone-300">›</span>
+        <span>{alert.id.slice(0, 8)}</span>
       </div>
 
-      {alert.description ? (
-        <p className="text-stone-600">{alert.description}</p>
-      ) : null}
+      {/* v2 히어로: 좌측 상태색 3px 보더 + 모노 SEV/STATUS 라인 + 큰 제목,
+          우측에 액션. */}
+      <div
+        className="border border-stone-200 bg-white px-6 py-[22px]"
+        style={{ borderLeft: `3px solid ${heroBorder}` }}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-x-7 gap-y-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <SeverityBadge severity={alert.severity} />
+              <span className="h-[13px] w-px bg-stone-200" />
+              <StatusBadge status={alert.status} />
+              <span className="h-[13px] w-px bg-stone-200" />
+              <span className="font-mono text-[11px] text-stone-500">
+                최초 {formatTime(alert.firstSeenAt)} · {alert.count}회 반복
+              </span>
+            </div>
+            <h1 className="mt-3.5 text-[26px] font-semibold leading-tight tracking-[-0.025em] text-stone-900">
+              {alert.title}
+            </h1>
+            {alert.description ? (
+              <p className="mt-2 text-[13px] text-stone-500">
+                {alert.description}
+              </p>
+            ) : null}
+          </div>
+          <AlertActions id={alert.id} status={alert.status} />
+        </div>
+      </div>
 
       {snapshot && snapshot.order.length > 0 ? (
         <SnapshotPanel snapshot={snapshot} current={ownership} />
@@ -335,45 +407,55 @@ export default async function AlertDetailPage({
         <OwnershipPanel accountId={alert.accountId} info={ownership} />
       ) : null}
 
-      <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-stone-500">
-          Details
-        </h2>
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
-          <Field label="Source" value={alert.source} />
-          <Field label="Resource" value={alert.resource} />
-          <Field label="Metric" value={alert.metric} />
-          <Field label="Namespace" value={alert.namespace} />
-          <Field label="Value" value={alert.value} />
+      <section className="border border-stone-200 bg-white">
+        <div className="border-b border-stone-200 px-6 py-3">
+          <h2 className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+            메트릭 · 임계치 · 사유
+          </h2>
+        </div>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-5 p-6 sm:grid-cols-4">
+          <Field label="소스" value={alert.source} />
+          <Field label="리소스" value={alert.resource} mono />
+          <Field label="메트릭" value={alert.metric} mono />
+          <Field label="네임스페이스" value={alert.namespace} mono />
+          <Field label="현재값" value={alert.value} mono />
           <Field
-            label="Threshold"
+            label="임계치"
             value={alert.threshold !== null ? String(alert.threshold) : null}
+            mono
           />
-          <Field label="Comparison" value={alert.comparison} />
-          <Field label="Region" value={alert.region} />
-          <Field label="Account" value={alert.accountId} />
-          <Field label="Count" value={String(alert.count)} />
-          <Field label="First seen" value={formatTime(alert.firstSeenAt)} />
-          <Field label="Last seen" value={formatTime(alert.lastSeenAt)} />
+          <Field label="비교" value={alert.comparison} mono />
+          <Field label="리전" value={alert.region} mono />
+          <Field label="AWS 계정" value={alert.accountId} mono />
+          <Field label="반복" value={`${alert.count}회`} mono />
+          <Field label="최초 수신" value={formatTime(alert.firstSeenAt)} mono />
+          <Field label="최근 수신" value={formatTime(alert.lastSeenAt)} mono />
         </dl>
         {alert.stateReason ? (
-          <div className="mt-4 border-t border-stone-100 pt-4">
-            <dt className="text-xs uppercase tracking-wide text-stone-400">
-              State reason
+          <div className="mx-6 mb-6 border border-stone-100 bg-stone-50 px-4 py-3.5">
+            <dt className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+              발화 사유
             </dt>
-            <dd className="mt-0.5 text-sm text-stone-700">{alert.stateReason}</dd>
+            <dd className="mt-2 text-[13px] leading-relaxed text-stone-900">
+              {alert.stateReason}
+            </dd>
           </div>
         ) : null}
       </section>
 
-      <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-stone-500">
-          통지 이력
-        </h2>
+      <section className="border border-stone-200 bg-white">
+        <div className="flex items-center justify-between border-b border-stone-200 px-6 py-3">
+          <h2 className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+            통지 이력
+          </h2>
+          <span className="font-mono text-[11px] text-stone-400">
+            {alert.notifications.length}
+          </span>
+        </div>
         {/* 빈 상태도 명시한다 — "통지가 안 나간 것"과 "기록이 없는 것"을
             구분할 수 없으면 고객사 입장에서 신뢰가 깎인다 (페르소나 검증 P2). */}
         {alert.notifications.length === 0 ? (
-          <p className="text-sm text-stone-400">
+          <p className="px-6 py-4 text-sm text-stone-400">
             이 알람에 대해 발송된 통지가 없습니다 — 통지 채널이 설정되지
             않았거나, 담당자에게 연락 수단이 없거나, 통지 이력 도입 이전의
             알람입니다.
@@ -381,32 +463,39 @@ export default async function AlertDetailPage({
         ) : (
           <ul className="divide-y divide-stone-100 text-sm">
             {alert.notifications.map((nlog) => (
-              <li key={nlog.id} className="flex flex-wrap items-center gap-2 py-2">
-                <span className="w-14 shrink-0 rounded bg-stone-100 px-1.5 py-0.5 text-center font-mono text-xs text-stone-600">
+              <li
+                key={nlog.id}
+                className="flex flex-wrap items-center gap-3 px-6 py-3.5"
+              >
+                <span className="w-14 shrink-0 font-mono text-[11px] uppercase tracking-[0.04em] text-stone-500">
                   {nlog.channel}
                 </span>
                 {nlog.ok ? (
-                  <span className="text-xs font-medium text-green-700">발송됨</span>
+                  <span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-[0.08em] text-[#067647]">
+                    <Mark color="#067647" shape="check" />
+                    발송됨
+                  </span>
                 ) : (
-                  <span className="text-xs font-medium text-red-700">실패</span>
+                  <span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-[0.08em] text-[#b42318]">
+                    <Mark color="#b42318" shape="dot" />
+                    실패
+                  </span>
                 )}
-                <span className="text-stone-700">
+                <span className="text-[13px] font-medium text-stone-900">
                   {nlog.target ?? "채널 전체"}
                 </span>
-                {nlog.escalationStep ? (
-                  <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-800">
-                    {nlog.escalationStep}순위 에스컬레이션
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-500">
-                    최초 통지
-                  </span>
-                )}
-                <time className="ml-auto text-xs text-stone-400">
+                <span className="text-xs text-stone-500">
+                  {nlog.escalationStep
+                    ? `${nlog.escalationStep}순위 에스컬레이션`
+                    : "최초 통지"}
+                </span>
+                <time className="ml-auto font-mono text-xs text-stone-500">
                   {formatTime(nlog.createdAt)}
                 </time>
                 {nlog.error ? (
-                  <p className="w-full pl-16 text-xs text-red-600">{nlog.error}</p>
+                  <p className="w-full pl-[68px] text-xs text-[#b42318]">
+                    {nlog.error}
+                  </p>
                 ) : null}
               </li>
             ))}
@@ -414,40 +503,53 @@ export default async function AlertDetailPage({
         )}
       </section>
 
-      <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-stone-500">
-          Event timeline
-        </h2>
-        <ol className="relative space-y-4 border-l border-stone-200 pl-6">
-          {alert.events.map((ev) => (
-            <li key={ev.id} className="relative">
-              <span
-                className={`absolute -left-[27px] top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-white ${
-                  ev.status === "FIRING"
-                    ? "bg-red-500"
-                    : ev.status === "RESOLVED"
-                      ? "bg-green-500"
-                      : ev.status === "ACKNOWLEDGED"
-                        ? "bg-blue-500"
-                        : ev.status === "ESCALATED"
-                          ? "bg-orange-500"
-                          : "bg-stone-300"
-                }`}
-              />
-              <div className="flex flex-wrap items-center gap-2">
-                <StatusBadge status={ev.status} />
-                <time className="text-xs text-stone-400">
-                  {formatTime(ev.createdAt)}
-                </time>
-              </div>
-              {ev.stateReason ? (
-                <p className="mt-1 text-sm text-stone-600">{ev.stateReason}</p>
-              ) : null}
-              {ev.value ? (
-                <p className="mt-0.5 text-xs text-stone-400">value: {ev.value}</p>
-              ) : null}
-            </li>
-          ))}
+      <section className="border border-stone-200 bg-white">
+        <div className="flex items-center justify-between border-b border-stone-200 px-6 py-3">
+          <h2 className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+            이벤트 타임라인
+          </h2>
+          <span className="font-mono text-[10px] tracking-[0.08em] text-stone-300">
+            APPEND-ONLY
+          </span>
+        </div>
+        <ol className="flex flex-col gap-4 px-6 py-5">
+          {alert.events.map((ev, i) => {
+            const tone = statusTone(ev.status);
+            const last = i === alert.events.length - 1;
+            return (
+              <li key={ev.id} className="grid grid-cols-[12px_1fr] gap-3">
+                <div className="flex flex-col items-center pt-1">
+                  <Mark {...tone} />
+                  {!last ? (
+                    <span className="mt-1.5 w-px flex-1 bg-stone-200" style={{ minHeight: 16 }} />
+                  ) : null}
+                </div>
+                <div className="pb-0.5">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span
+                      className="font-mono text-[10px] font-bold tracking-[0.08em]"
+                      style={{ color: tone.color }}
+                    >
+                      {STATUS_LABELS[ev.status] ?? ev.status}
+                    </span>
+                    <time className="font-mono text-[11px] text-stone-400">
+                      {formatTime(ev.createdAt)}
+                    </time>
+                  </div>
+                  {ev.stateReason ? (
+                    <p className="mt-1.5 text-[13px] leading-relaxed text-stone-600">
+                      {ev.stateReason}
+                    </p>
+                  ) : null}
+                  {ev.value ? (
+                    <p className="mt-0.5 font-mono text-xs text-stone-400">
+                      value: {ev.value}
+                    </p>
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
         </ol>
       </section>
     </div>

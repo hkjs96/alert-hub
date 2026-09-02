@@ -18,14 +18,15 @@ import {
 } from "@/lib/alert-filters";
 import { StatCards } from "@/components/stat-cards";
 import { AlertTable } from "@/components/alert-table";
+import { Mark, statusTone } from "@/components/badges";
 
 export const dynamic = "force-dynamic";
 
 const STATUS_CHIPS: { label: string; value: AlertStatus }[] = [
-  { label: "Firing", value: "FIRING" },
-  { label: "Acked", value: "ACKNOWLEDGED" },
-  { label: "Resolved", value: "RESOLVED" },
-  { label: "No Data", value: "INSUFFICIENT_DATA" },
+  { label: "FIRING", value: "FIRING" },
+  { label: "ACKNOWLEDGED", value: "ACKNOWLEDGED" },
+  { label: "RESOLVED", value: "RESOLVED" },
+  { label: "NO DATA", value: "INSUFFICIENT_DATA" },
 ];
 
 type AlertRow = Awaited<ReturnType<typeof getAlerts>>[number];
@@ -174,38 +175,49 @@ export default async function DashboardPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-stone-900">Alerts</h1>
-        <p className="mt-1 text-sm text-stone-500">
-          Fired alarms received via the webhook, deduplicated by fingerprint.
+        <h1 className="text-[27px] font-semibold leading-tight tracking-[-0.025em] text-stone-900">
+          알람 대시보드
+        </h1>
+        <p className="mt-1.5 text-[13px] text-stone-500">
+          웹훅으로 수신한 발화 알람 · 핑거프린트 기준 중복 제거
         </p>
       </div>
 
       {unmappedCount > 0 && !f.unmapped && (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-sm font-medium text-amber-800">
-            ⚠ 매핑되지 않은 AWS 계정에서 발생한 알람이 {unmappedCount}건
-            있습니다.
+        <div className="flex items-center gap-3 border border-stone-200 border-l-[3px] border-l-[#b54708] bg-white px-4 py-3">
+          <span className="font-mono text-[10px] font-bold tracking-[0.1em] text-[#b54708]">
+            주의
+          </span>
+          <p className="text-[13px] font-semibold text-stone-900">
+            미매핑 AWS 계정 알람 {unmappedCount}건
+          </p>
+          <p className="hidden text-[13px] text-stone-500 sm:block">
+            담당자 없이 수신된 알람입니다 — 계정을 서비스에 매핑하면 담당 해석이
+            적용됩니다.
           </p>
           <Link
             href={dashboardHref({ ...f, unmapped: true })}
-            className="shrink-0 rounded-md border border-amber-300 bg-white px-3 py-1 text-sm font-medium text-amber-800 hover:bg-amber-100"
+            className="ml-auto shrink-0 text-[13px] font-semibold text-indigo-600 hover:underline"
           >
-            미매핑만 보기
+            미매핑만 보기 →
           </Link>
         </div>
       )}
 
       {f.unmapped && (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-sm font-medium text-amber-800">
+        <div className="flex items-center gap-3 border border-stone-200 border-l-[3px] border-l-[#b54708] bg-white px-4 py-3">
+          <span className="font-mono text-[10px] font-bold tracking-[0.1em] text-[#b54708]">
+            주의
+          </span>
+          <p className="text-[13px] text-stone-600">
             미매핑 계정의 알람만 보고 있습니다. 각 행의 ⚠ 매핑 필요를 누르면 그
             자리에서 서비스에 매핑할 수 있습니다.
           </p>
           <Link
             href={dashboardHref({ ...f, unmapped: false })}
-            className="shrink-0 rounded-md border border-amber-300 bg-white px-3 py-1 text-sm font-medium text-amber-800 hover:bg-amber-100"
+            className="ml-auto shrink-0 text-[13px] font-semibold text-indigo-600 hover:underline"
           >
-            전체 보기
+            전체 보기 →
           </Link>
         </div>
       )}
@@ -231,8 +243,9 @@ export default async function DashboardPage({
       />
 
       {/* 필터 바 — GET form이라 JS 없이 동작. 상태·담당 토글은 링크라서 폼
-          제출 시 hidden으로 함께 보존한다. */}
-      <div className="space-y-2">
+          제출 시 hidden으로 함께 보존한다. v2: 한 장의 카드 안에 조직 필터
+          줄과 상태 칩 줄이 헤어라인으로 나뉜다. */}
+      <div className="space-y-3.5 border border-stone-200 bg-white p-4">
         <form
           method="get"
           action="/"
@@ -297,29 +310,64 @@ export default async function DashboardPage({
           </button>
         </form>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="h-px bg-stone-100" />
+
+        <div className="flex flex-wrap items-center gap-[7px]">
+          <span className="mr-1 font-mono text-[10px] font-bold tracking-[0.11em] text-stone-400">
+            STATUS
+          </span>
           {STATUS_CHIPS.map((c) => {
             const active = f.statuses.includes(c.value);
+            const tone = statusTone(c.value);
+            const count =
+              c.value === "FIRING"
+                ? stats.firing
+                : c.value === "ACKNOWLEDGED"
+                  ? stats.acknowledged
+                  : c.value === "RESOLVED"
+                    ? stats.resolved
+                    : stats.insufficient;
             return (
               <Link
                 key={c.value}
                 href={toggleStatus(c.value)}
                 aria-pressed={active}
-                className={`rounded-full px-3 py-1 text-sm font-medium ring-1 ring-inset transition ${
+                className={`inline-flex h-[26px] items-center gap-[7px] border px-[11px] text-xs transition-colors ${
                   active
-                    ? "bg-indigo-50 text-indigo-700 ring-indigo-200"
-                    : "bg-white text-stone-600 ring-stone-200 hover:bg-stone-50"
+                    ? "border-stone-900 bg-stone-100 font-semibold text-stone-900"
+                    : "border-stone-200 bg-white font-medium text-stone-500 hover:border-stone-400"
                 }`}
               >
+                <Mark
+                  color={active ? tone.color : "#c9c4b8"}
+                  shape={tone.shape}
+                />
                 {c.label}
+                <span
+                  className={`font-mono text-[11px] font-bold ${
+                    active ? "text-stone-600" : "text-stone-400"
+                  }`}
+                >
+                  {count}
+                </span>
               </Link>
             );
           })}
           {anyFilterActive(f) && (
-            <Link href="/" className="text-sm text-indigo-600 hover:underline">
+            <Link
+              href="/"
+              className="ml-1 text-xs font-medium text-indigo-600 hover:underline"
+            >
               ✕ 초기화
             </Link>
           )}
+          <span className="ml-auto text-xs text-stone-500">
+            필터 결과{" "}
+            <span className="font-mono font-bold text-stone-900">
+              {visible.length}
+            </span>{" "}
+            / 전체 <span className="font-mono">{rows.length}</span>
+          </span>
         </div>
       </div>
 
@@ -333,41 +381,64 @@ export default async function DashboardPage({
           />
         </div>
 
-        <aside className="w-full shrink-0 lg:w-64">
-          <div className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-semibold text-stone-700">담당 인원</h2>
-            <p className="mb-3 text-xs text-stone-400">
-              필터 결과 기준 1순위 담당별 건수 · 클릭하면 그 사람 알람만 봅니다
-            </p>
+        <aside className="w-full shrink-0 lg:w-72">
+          <div className="border border-stone-200 bg-white">
+            <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
+              <h2 className="font-mono text-[10px] font-bold tracking-[0.11em] text-stone-400">
+                담당 인원 · P1
+              </h2>
+              <span className="font-mono text-[11px] text-stone-400">
+                {panelBase.length}
+              </span>
+            </div>
             {panel.length === 0 ? (
-              <p className="text-sm text-stone-400">표시할 알람이 없습니다.</p>
+              <p className="px-4 py-3 text-sm text-stone-400">
+                표시할 알람이 없습니다.
+              </p>
             ) : (
-              <ul className="space-y-1">
+              <ul>
                 {panel.map((p) => {
                   const active = f.assignee === p.id;
+                  const unassigned = p.id === UNASSIGNED;
                   return (
                     <li key={p.id}>
                       <Link
                         href={toggleAssignee(p.id)}
                         aria-pressed={active}
-                        className={`flex items-center justify-between rounded-md px-2 py-1.5 text-sm ${
+                        className={`flex items-center gap-[11px] border-b border-stone-100 px-4 py-3 transition-colors ${
                           active
-                            ? "bg-indigo-50 font-medium text-indigo-700"
-                            : "text-stone-700 hover:bg-stone-50"
+                            ? "bg-stone-50 shadow-[inset_2px_0_0_#1b1a17]"
+                            : "hover:bg-stone-50"
                         }`}
                       >
                         <span
-                          className={
-                            p.id === UNASSIGNED && !active ? "text-stone-400" : ""
-                          }
+                          className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center border text-[11px] font-semibold ${
+                            active
+                              ? "border-stone-900 bg-stone-900 text-white"
+                              : "border-stone-200 bg-white text-stone-500"
+                          }`}
+                        >
+                          {unassigned ? "—" : p.name.charAt(0)}
+                        </span>
+                        <span
+                          className={`min-w-0 flex-1 truncate text-[13px] ${
+                            active
+                              ? "font-semibold text-stone-900"
+                              : unassigned
+                                ? "text-stone-400"
+                                : "font-medium text-stone-900"
+                          }`}
                         >
                           {p.name}
                         </span>
                         <span
-                          className={`tabular-nums text-xs ${
-                            active ? "text-indigo-400" : "text-stone-400"
-                          }`}
-                        >
+                          className="block h-[3px]"
+                          style={{
+                            width: `${Math.min(p.count, 6) * 14}px`,
+                            background: active ? "#1b1a17" : "#ded9cf",
+                          }}
+                        />
+                        <span className="min-w-4 text-right font-mono text-[13px] font-bold text-stone-900">
                           {p.count}
                         </span>
                       </Link>
@@ -376,6 +447,9 @@ export default async function DashboardPage({
                 })}
               </ul>
             )}
+            <p className="px-4 py-2.5 text-xs text-stone-400">
+              이름을 눌러 담당자 기준으로 필터
+            </p>
           </div>
         </aside>
       </div>

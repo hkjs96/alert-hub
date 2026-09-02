@@ -34,7 +34,7 @@ export async function Roster({
             <span className="text-stone-400">{r.contact.department}</span>
           ) : null}
           <span
-            className={`ml-auto text-xs ${r.direct ? "text-stone-400" : "text-blue-500"}`}
+            className={`ml-auto text-xs ${r.direct ? "text-stone-400" : "text-indigo-600"}`}
           >
             {r.via}
           </span>

@@ -32,11 +32,11 @@ export default async function ProjectDetailPage({
           </Link>{" "}
           / {project.name}
         </div>
-        <h1 className="text-xl font-semibold text-stone-900">{project.name}</h1>
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-stone-900">{project.name}</h1>
       </div>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-stone-700">
+        <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
           프로젝트 담당 <span className="font-normal text-stone-400">(서비스에 별도 지정 없으면 여기로 상속)</span>
         </h2>
         <AssignmentEditor
@@ -48,7 +48,7 @@ export default async function ProjectDetailPage({
       </section>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-stone-700">서비스</h2>
+        <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">서비스</h2>
         <form action={createService} className="mb-3 flex flex-wrap gap-2 text-sm">
           <input type="hidden" name="projectId" value={project.id} />
           <input type="hidden" name="back" value={back} />
@@ -75,7 +75,7 @@ export default async function ProjectDetailPage({
               <form action={deleteService} className="ml-auto inline">
                 <input type="hidden" name="id" value={s.id} />
                 <input type="hidden" name="back" value={back} />
-                <button className="text-xs text-stone-400 hover:text-red-600">삭제</button>
+                <button className="text-xs text-stone-400 hover:text-[#b42318]">삭제</button>
               </form>
             </li>
           ))}
@@ -86,7 +86,7 @@ export default async function ProjectDetailPage({
       </section>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-stone-700">
+        <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
           관련 인원 전체 <span className="font-normal text-stone-400">(하위 포함 롤업)</span>
         </h2>
         <Roster level="project" id={project.id} />
