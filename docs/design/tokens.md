@@ -53,8 +53,10 @@ FIRING 활성 틴트 `#fdf5f4` (스탯 타일).
 
 ## 3. 타이포그래피
 
-- 본문: **Instrument Sans** (400/500/600/700), 한글은 **Noto Sans KR** —
-  `word-break: keep-all`로 어절 단위 줄바꿈.
+- 본문: **Pretendard** (가변 45–920, 셀프호스팅 `src/fonts/`) — 한글·라틴·
+  숫자가 한 서체로 통일. `word-break: keep-all`로 어절 단위 줄바꿈.
+  (2026-09: Instrument Sans+Noto Sans KR 혼용에서 교체 — OFL, 라이선스 원문
+  동봉)
 - 수치·코드·오버라인·타임스탬프: **Space Mono** (400/700), `tabular-nums` 전역.
 - 페이지 타이틀: 27px/600/-0.025em. 서브페이지 22px/600/-0.02em.
 - 히어로 제목(알람 상세): 26px/600/-0.025em.
