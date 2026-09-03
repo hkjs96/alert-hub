@@ -1,28 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Instrument_Sans, Space_Mono, Noto_Sans_KR } from "next/font/google";
+import { Space_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { NavTab } from "@/components/nav-tab";
 import { PipelineHealth } from "@/components/pipeline-health";
 import "./globals.css";
 
-// v2(웜 페이퍼 콘솔, docs/design/tokens.md): 라틴은 Instrument Sans, 수치·
-// 코드·오버라인은 Space Mono, 한글은 Noto Sans KR 폴백.
-const instrument = Instrument_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-instrument",
+// v2(웜 페이퍼 콘솔, docs/design/tokens.md): 본문은 Pretendard(가변,
+// 셀프호스팅 — 한글·라틴·숫자가 한 서체로 통일된다), 수치·코드·오버라인은
+// Space Mono. OFL 라이선스 원문은 src/fonts/PRETENDARD-LICENSE.txt.
+const pretendard = localFont({
+  src: "../fonts/PretendardVariable.woff2",
+  weight: "45 920",
+  display: "swap",
+  variable: "--font-pretendard",
 });
 
 const spaceMono = Space_Mono({
   subsets: ["latin"],
   weight: ["400", "700"],
   variable: "--font-space-mono",
-});
-
-const notoSansKr = Noto_Sans_KR({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-noto-kr",
 });
 
 export const metadata: Metadata = {
@@ -38,7 +35,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${instrument.variable} ${spaceMono.variable} ${notoSansKr.variable}`}
+      className={`${pretendard.variable} ${spaceMono.variable}`}
     >
       <body className="min-h-screen antialiased">
         <header className="border-b border-stone-200 bg-white">

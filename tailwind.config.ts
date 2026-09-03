@@ -55,8 +55,8 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
-          "var(--font-instrument)",
-          "var(--font-noto-kr)",
+          "var(--font-pretendard)",
+          "Pretendard",
           "ui-sans-serif",
           "system-ui",
           "Apple SD Gothic Neo",
