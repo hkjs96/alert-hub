@@ -5,6 +5,7 @@ import { createSilence, revokeSilence } from "@/server/silence-actions";
 import { silenceStatus, type SilenceStatus } from "@/lib/silence";
 import { Mark } from "@/components/badges";
 import { PendingButton } from "@/components/pending-button";
+import { currentActorName } from "@/server/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,7 @@ export default async function SilencesPage({
 }: {
   searchParams: { customerId?: string; projectId?: string; serviceId?: string; f?: string };
 }) {
+  const actor = await currentActorName();
   const now = new Date();
   const filter: Filter = ["active", "scheduled", "ended"].includes(searchParams.f ?? "")
     ? (searchParams.f as Filter)
@@ -282,7 +284,7 @@ export default async function SilencesPage({
                     <span className="mb-1 block font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
                       등록자 (선택)
                     </span>
-                    <input name="createdBy" placeholder="이름" className={`${control} w-full`} />
+                    <input name="createdBy" placeholder="이름" defaultValue={actor ?? ""} className={`${control} w-full`} />
                   </label>
                   <PendingButton pendingLabel="등록 중…" className="inline-flex h-8 items-center rounded-md bg-stone-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-stone-700">
                     점검 창 등록

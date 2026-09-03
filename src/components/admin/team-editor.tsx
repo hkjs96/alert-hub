@@ -33,7 +33,7 @@ export async function TeamEditor({ teamId, back }: { teamId: string; back: strin
   if (!team) return null;
 
   const choices = await prisma.contact.findMany({
-    where: { OR: [{ customerId: null }, ...(team.customerId ? [{ customerId: team.customerId }] : [])] },
+    where: { active: true, OR: [{ customerId: null }, ...(team.customerId ? [{ customerId: team.customerId }] : [])] },
     orderBy: { name: "asc" },
   });
   const inTeam = new Set(team.members.map((m) => m.contactId));
@@ -79,7 +79,10 @@ export async function TeamEditor({ teamId, back }: { teamId: string; back: strin
             <span className="flex h-5 w-5 shrink-0 items-center justify-center bg-stone-900 font-mono text-[11px] font-bold text-white">
               {i + 1}
             </span>
-            <span className="font-medium text-stone-900">{m.contact.name}</span>
+            <span className={`font-medium ${m.contact.active ? "text-stone-900" : "text-stone-400 line-through"}`}>{m.contact.name}</span>
+            {!m.contact.active ? (
+              <span className="border border-stone-200 px-1 font-mono text-[11px] text-stone-400" title="해석 시 건너뜁니다">비활성</span>
+            ) : null}
             {m.contact.department ? (
               <span className="text-xs text-stone-400">{m.contact.department}</span>
             ) : null}

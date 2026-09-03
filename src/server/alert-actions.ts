@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { currentActorName } from "@/server/auth";
 
 // 인시던트 액션 (Phase 2c) — 알람 상세의 Ack/Resolve 버튼 뒤.
 //
@@ -25,13 +26,15 @@ async function transition(
   to: "ACKNOWLEDGED" | "RESOLVED",
   stateReason: string,
 ) {
+  // SSO 세션이 있으면 누가 했는지 남긴다. 없으면(SSO 꺼짐) null 그대로.
+  const actor = await currentActorName();
   const moved = await prisma.alert.updateMany({
     where: { id, status: { in: from } },
-    data: { status: to },
+    data: { status: to, ...(to === "ACKNOWLEDGED" && actor ? { ackedBy: actor } : {}) },
   });
   if (moved.count > 0) {
     await prisma.alertEvent.create({
-      data: { alertId: id, status: to, stateReason },
+      data: { alertId: id, status: to, stateReason: actor ? `${stateReason} · ${actor}` : stateReason },
     });
   }
   revalidatePath(`/alerts/${id}`);
@@ -74,14 +77,19 @@ export async function bulkAckAlerts(formData: FormData) {
     .map((s) => s.trim())
     .filter(Boolean);
   const back = formData.get("back");
+  const actor = await currentActorName();
   for (const id of ids) {
     const moved = await prisma.alert.updateMany({
       where: { id, status: { in: ["FIRING"] } },
-      data: { status: "ACKNOWLEDGED" },
+      data: { status: "ACKNOWLEDGED", ...(actor ? { ackedBy: actor } : {}) },
     });
     if (moved.count > 0) {
       await prisma.alertEvent.create({
-        data: { alertId: id, status: "ACKNOWLEDGED", stateReason: "일괄 Ack (대시보드)" },
+        data: {
+          alertId: id,
+          status: "ACKNOWLEDGED",
+          stateReason: actor ? `일괄 Ack (대시보드) · ${actor}` : "일괄 Ack (대시보드)",
+        },
       });
     }
   }
