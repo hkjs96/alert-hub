@@ -24,6 +24,7 @@ import { matchSilence, type SilenceRow } from "@/lib/silence";
 import { bulkAckAlerts } from "@/server/alert-actions";
 import { ackMinutesFromEnv } from "@/lib/escalation";
 import { PendingButton } from "@/components/pending-button";
+import { AutoSubmitSelect } from "@/components/auto-submit-select";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,9 @@ const STATUS_CHIPS: { label: string; value: AlertStatus }[] = [
 ];
 
 type AlertRow = Awaited<ReturnType<typeof getAlerts>>[number];
+
+const filterControl =
+  "h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400";
 
 /**
  * Flatten one alert + its resolved ownership into what the filters see.
@@ -92,9 +96,13 @@ export default async function DashboardPage({
     unmapped: searchParams.unmapped === "1",
   };
 
-  const [allAlerts, customers, envRows, silences] = await Promise.all([
+  const [allAlerts, customers, allProjects, envRows, silences] = await Promise.all([
     getAlerts(),
     prisma.customer.findMany({ orderBy: { name: "asc" } }),
+    prisma.project.findMany({
+      orderBy: [{ customer: { name: "asc" } }, { name: "asc" }],
+      include: { customer: { select: { name: true } } },
+    }),
     prisma.awsAccountMap.findMany({
       where: { environment: { not: null } },
       select: { environment: true },
@@ -107,16 +115,16 @@ export default async function DashboardPage({
     .filter((e): e is string => Boolean(e))
     .sort();
 
+  // 프로젝트 드롭다운은 항상 열려 있다: 고객사를 고르면 그 고객사 것만, 아니면
+  // 전체를 고객사별 그룹으로. 프로젝트만 골랐으면 고객사는 거기서 따라온다.
+  // 고객사를 바꿔 제출해 프로젝트가 다른 고객사 것이 되면 고객사 선택이 이긴다.
+  const chosenProject = f.project ? allProjects.find((p) => p.id === f.project) : undefined;
+  if (chosenProject && !f.customer) f.customer = chosenProject.customerId;
+  if (chosenProject && chosenProject.customerId !== f.customer) f.project = undefined;
+  if (f.project && !chosenProject) f.project = undefined;
   const projects = f.customer
-    ? await prisma.project.findMany({
-        where: { customerId: f.customer },
-        orderBy: { name: "asc" },
-      })
-    : [];
-  // 종속 드롭다운: 고객사를 바꿔 제출하면 이전 프로젝트 선택은 무의미해진다.
-  if (f.project && !projects.some((p) => p.id === f.project)) {
-    f.project = undefined;
-  }
+    ? allProjects.filter((p) => p.customerId === f.customer)
+    : allProjects;
 
   const ownership = await getOwnershipByAccountIds(
     allAlerts.map((a) => a.accountId).filter((id): id is string => Boolean(id)),
@@ -334,11 +342,11 @@ export default async function DashboardPage({
           )}
           {f.assignee && <input type="hidden" name="assignee" value={f.assignee} />}
           {f.unmapped && <input type="hidden" name="unmapped" value="1" />}
-          <select
+          <AutoSubmitSelect
             name="customer"
             aria-label="고객사"
             defaultValue={f.customer ?? ""}
-            className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
+            className={filterControl}
           >
             <option value="">전체 고객사</option>
             {customers.map((c) => (
@@ -346,27 +354,40 @@ export default async function DashboardPage({
                 {c.name}
               </option>
             ))}
-          </select>
-          <select
+          </AutoSubmitSelect>
+          <AutoSubmitSelect
             name="project"
             aria-label="프로젝트"
             defaultValue={f.project ?? ""}
-            disabled={!f.customer}
-            className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400 disabled:bg-stone-50 disabled:text-stone-300 disabled:hover:border-stone-300"
-            title={f.customer ? undefined : "고객사를 먼저 선택하고 적용하세요"}
+            className={filterControl}
+            title={f.customer ? undefined : "프로젝트를 고르면 고객사도 함께 좁혀집니다"}
           >
-            <option value="">전체 프로젝트</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-          <select
+            <option value="">{f.customer ? "전체 프로젝트" : "전체 프로젝트 (모든 고객사)"}</option>
+            {f.customer
+              ? projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))
+              : customers.map((c) => {
+                  const mine = projects.filter((p) => p.customerId === c.id);
+                  if (!mine.length) return null;
+                  return (
+                    <optgroup key={c.id} label={c.name}>
+                      {mine.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
+          </AutoSubmitSelect>
+          <AutoSubmitSelect
             name="env"
             aria-label="환경"
             defaultValue={f.env ?? ""}
-            className="h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
+            className={filterControl}
           >
             <option value="">전체 환경</option>
             {envs.map((e) => (
@@ -374,7 +395,7 @@ export default async function DashboardPage({
                 {e}
               </option>
             ))}
-          </select>
+          </AutoSubmitSelect>
           <input
             type="search"
             name="q"
@@ -383,7 +404,10 @@ export default async function DashboardPage({
             placeholder="검색 (제목·리소스·메트릭·계정)"
             className="w-56 h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400"
           />
-          <button className="inline-flex h-8 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50">
+          <button
+            title="드롭다운은 고르는 즉시 적용됩니다 — 검색어는 Enter 또는 이 버튼"
+            className="inline-flex h-8 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
+          >
             적용
           </button>
         </form>
