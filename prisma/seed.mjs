@@ -10,6 +10,13 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// 운영에서 데모 시드를 완전히 끄는 스위치. 실제 고객사를 넣기 전 데모를 정리한
+// 뒤(빈 DB) 다음 배포가 다시 채우는 일을 막는다.
+if (process.env.SEED_DEMO === "false") {
+  console.log("SEED_DEMO=false — 데모 시드를 건너뜁니다.");
+  process.exit(0);
+}
+
 const existing = await prisma.customer.count();
 if (existing > 0) {
   console.log(
