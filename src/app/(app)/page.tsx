@@ -26,6 +26,7 @@ import { bulkAckAlerts } from "@/server/alert-actions";
 import { ackMinutesFromEnv } from "@/lib/escalation";
 import { PendingButton } from "@/components/pending-button";
 import { AutoSubmitSelect } from "@/components/auto-submit-select";
+import { isReadOnly } from "@/server/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -139,6 +140,7 @@ export default async function DashboardPage({
   );
 
   const rows = allAlerts.map((a) => ({ a, facts: factsOf(a, ownership) }));
+  const readOnly = await isReadOnly();
 
   // 스탯 타일은 "상태를 제외한 현재 필터" 기준이다 (페르소나 검증 P1: 필터를
   // 걸었는데 타일이 전체 수치를 보여줘 오독). 상태만 빼는 이유는 타일 자체가
@@ -258,7 +260,7 @@ export default async function DashboardPage({
             웹훅으로 수신한 발화 알람 · 핑거프린트 기준 중복 제거
           </p>
         </div>
-        {firingVisible.length > 0 && (
+        {firingVisible.length > 0 && !readOnly && (
           <form action={bulkAckAlerts}>
             <input
               type="hidden"

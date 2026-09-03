@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/server/auth";
+import { requireUser } from "@/server/auth";
 
 function opt(fd: FormData, k: string): string | null {
   const v = fd.get(k);
@@ -12,21 +12,27 @@ function opt(fd: FormData, k: string): string | null {
   return t ? t : null;
 }
 
-/** 내 통지 프로필 — 세션의 사람만 자기 행을 고친다. 이메일·소속은 SSO가 결정. */
+/**
+ * 내 프로필 — 폼에 실린 필드만 고친다(이름·부서·시간대·Slack ID·전화). 이메일과
+ * 소속은 SSO가 결정하므로 받지 않는다. open 모드(SSO 미연결)에서는 세션이
+ * 없어 고칠 대상이 없다 — 관리자 화면에서 대신 입력한다.
+ */
 export async function updateMyProfile(formData: FormData) {
-  const me = await getCurrentUser();
-  if (!me) redirect("/login?next=/me");
-  const name = (formData.get("name") as string | null)?.trim();
-  await prisma.contact.update({
-    where: { id: me.id },
-    data: {
-      ...(name ? { name } : {}),
-      department: opt(formData, "department"),
-      slackId: opt(formData, "slackId"),
-      phone: opt(formData, "phone"),
-    },
-  });
+  const me = await requireUser();
+  const backRaw = formData.get("back");
+  const back = typeof backRaw === "string" && backRaw.startsWith("/") ? backRaw : "/me";
+  if (!me) redirect("/login?next=" + encodeURIComponent(back));
+  const data: Record<string, string | null> = {};
+  for (const k of ["department", "slackId", "phone", "timezone"] as const) {
+    if (formData.has(k)) data[k] = opt(formData, k);
+  }
+  const name = opt(formData, "name");
+  if (formData.has("name") && name) data.name = name;
+  await prisma.contact.update({ where: { id: me.id }, data });
   revalidatePath("/me");
+  revalidatePath("/welcome");
   revalidatePath("/", "layout");
-  redirect("/me?saved=1");
+  const u = new URL(back, "http://x");
+  u.searchParams.set("saved", "1");
+  redirect(u.pathname + u.search);
 }

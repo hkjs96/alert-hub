@@ -12,6 +12,7 @@ import {
   type OwnershipSnapshot,
 } from "@/server/org";
 import { applyRoutingRules } from "@/server/routing";
+import { isReadOnly } from "@/server/auth";
 import { levelLabel } from "@/lib/org/resolve";
 import {
   Mark,
@@ -62,9 +63,10 @@ function Field({
  * until the alarm re-fires. The actions are guarded server-side too, so a
  * stale tab clicking an enabled button is still a no-op.
  */
-function AlertActions({ id, status }: { id: string; status: string }) {
-  const canAck = status === "FIRING";
-  const canResolve = status === "FIRING" || status === "ACKNOWLEDGED";
+function AlertActions({ id, status, readOnly }: { id: string; status: string; readOnly: boolean }) {
+  // 조회 전용 역할은 버튼을 숨기지 않고 비활성 — 상태 기계가 보이게.
+  const canAck = status === "FIRING" && !readOnly;
+  const canResolve = (status === "FIRING" || status === "ACKNOWLEDGED") && !readOnly;
   return (
     <span className="flex flex-none items-center gap-2">
       <form action={ackAlert}>
@@ -72,7 +74,7 @@ function AlertActions({ id, status }: { id: string; status: string }) {
         <PendingButton
           pendingLabel="Ack 중…"
           disabled={!canAck}
-          title={canAck ? undefined : "FIRING 상태에서만 Ack할 수 있습니다"}
+          title={canAck ? undefined : readOnly ? "조회 전용 권한입니다" : "FIRING 상태에서만 Ack할 수 있습니다"}
           className="inline-flex h-8 items-center gap-[7px] border border-indigo-600 bg-indigo-600 px-4 text-sm font-semibold text-white transition-colors hover:border-indigo-700 hover:bg-indigo-700 disabled:cursor-not-allowed disabled:border-stone-100 disabled:bg-stone-100 disabled:text-stone-400"
         >
           <svg
@@ -528,6 +530,7 @@ export default async function AlertDetailPage({
   if (!alert) notFound();
 
   const snapshot = parseOwnershipSnapshot(alert.ownershipSnapshot);
+  const readOnly = await isReadOnly();
 
   // P2: 스냅샷이 있으면 뮤트 판정은 스냅샷 체인만으로 충분하다 — 현재 매핑
   // 조회와 병렬로 돌려 왕복을 아낀다. 스냅샷이 없을 때만 순차 폴백.
@@ -629,7 +632,7 @@ export default async function AlertDetailPage({
             ) : null}
           </div>
           <span className="flex flex-none items-start gap-2">
-            <AlertActions id={alert.id} status={alert.status} />
+            <AlertActions id={alert.id} status={alert.status} readOnly={readOnly} />
             {!activeSilence ? (
               <MuteControl
                 alertId={alert.id}

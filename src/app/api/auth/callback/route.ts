@@ -4,6 +4,7 @@ import { decodeIdToken, exchangeCode, validateClaims } from "@/lib/auth/google";
 import { SESSION_COOKIE, SESSION_TTL_SECONDS, signSession } from "@/lib/auth/session";
 import { safeNext } from "@/lib/auth/paths";
 import { provisionInternalContact } from "@/server/auth";
+import { newRef } from "@/lib/auth/ref";
 import { STATE_COOKIE, baseUrl, cookieOpts } from "../_shared";
 
 export const dynamic = "force-dynamic";
@@ -16,9 +17,11 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const cfg = readAuthConfig();
   const base = baseUrl(req);
+  // 실패는 참조 코드와 함께 로그에만 자세히 남기고, 화면에는 종류와 코드만.
   const fail = (error: string, detail?: string) => {
-    if (detail) console.warn(`[auth] login failed: ${error} — ${detail}`);
-    const res = NextResponse.redirect(new URL(`/login?error=${error}`, base));
+    const ref = newRef("AU");
+    console.warn(`[auth] ${ref} login failed: ${error}${detail ? ` — ${detail}` : ""}`);
+    const res = NextResponse.redirect(new URL(`/login?error=${error}&ref=${ref}`, base));
     res.cookies.delete(STATE_COOKIE);
     return res;
   };
@@ -62,8 +65,10 @@ export async function GET(req: NextRequest) {
     { sub: jit.contactId, email: claims.email, name: claims.name },
     cfg.secret,
   );
-  // 처음 만들어진 계정은 통지 프로필(Slack ID·전화)을 채우러 /me 로.
-  const dest = jit.created ? "/me?welcome=1" : safeNext(saved.next);
+  // 승인 대기면 /pending, 첫 로그인 프로필을 아직 안 마쳤으면 /welcome, 아니면
+  // 원래 가려던 곳.
+  const dest =
+    jit.status === "PENDING" ? "/pending" : !jit.onboarded ? "/welcome" : safeNext(saved.next);
   const res = NextResponse.redirect(new URL(dest, base));
   res.cookies.delete(STATE_COOKIE);
   res.cookies.set(SESSION_COOKIE, session, {

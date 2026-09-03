@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/server/auth";
+import { isRole } from "@/lib/auth/roles";
+import { assertNotLastAdmin } from "@/server/auth-actions";
 import type { ScopeLevel } from "@/lib/org/resolve";
 
 // Mutations behind the admin UI. Plain server actions driven by <form> posts —
@@ -48,6 +51,7 @@ function redirectWithId(formData: FormData, id: string) {
 }
 
 export async function createCustomer(formData: FormData) {
+  await requireRole("ADMIN");
   const customer = await prisma.customer.create({
     data: {
       name: requireString(formData, "name"),
@@ -59,6 +63,7 @@ export async function createCustomer(formData: FormData) {
 }
 
 export async function deleteCustomer(formData: FormData) {
+  await requireRole("ADMIN");
   await prisma.customer.delete({ where: { id: requireString(formData, "id") } });
   revalidatePath("/admin/customers");
 }
@@ -66,6 +71,7 @@ export async function deleteCustomer(formData: FormData) {
 // --- Projects ------------------------------------------------------------------
 
 export async function createProject(formData: FormData) {
+  await requireRole("ADMIN");
   const project = await prisma.project.create({
     data: {
       name: requireString(formData, "name"),
@@ -77,6 +83,7 @@ export async function createProject(formData: FormData) {
 }
 
 export async function deleteProject(formData: FormData) {
+  await requireRole("ADMIN");
   await prisma.project.delete({ where: { id: requireString(formData, "id") } });
   revalidateBack(formData, "/admin/customers");
 }
@@ -84,6 +91,7 @@ export async function deleteProject(formData: FormData) {
 // --- Services ------------------------------------------------------------------
 
 export async function createService(formData: FormData) {
+  await requireRole("ADMIN");
   const service = await prisma.service.create({
     data: {
       name: requireString(formData, "name"),
@@ -95,6 +103,7 @@ export async function createService(formData: FormData) {
 }
 
 export async function deleteService(formData: FormData) {
+  await requireRole("ADMIN");
   await prisma.service.delete({ where: { id: requireString(formData, "id") } });
   revalidateBack(formData, "/admin/customers");
 }
@@ -102,6 +111,7 @@ export async function deleteService(formData: FormData) {
 // --- AWS account mappings --------------------------------------------------------
 
 export async function createAccountMap(formData: FormData) {
+  await requireRole("ADMIN");
   const accountId = requireString(formData, "accountId");
   if (!/^\d{12}$/.test(accountId)) {
     throw new Error("AWS account id must be 12 digits");
@@ -122,6 +132,7 @@ export async function createAccountMap(formData: FormData) {
 }
 
 export async function deleteAccountMap(formData: FormData) {
+  await requireRole("ADMIN");
   await prisma.awsAccountMap.delete({
     where: { id: requireString(formData, "id") },
   });
@@ -131,6 +142,7 @@ export async function deleteAccountMap(formData: FormData) {
 // --- Contacts ------------------------------------------------------------------
 
 export async function createContact(formData: FormData) {
+  await requireRole("ADMIN");
   await prisma.contact.create({
     data: {
       name: requireString(formData, "name"),
@@ -151,6 +163,7 @@ export async function createContact(formData: FormData) {
  * 배정을 먼저 해제해야 한다.
  */
 export async function updateContact(formData: FormData) {
+  await requireRole("ADMIN");
   const id = requireString(formData, "id");
   const nextCustomerId = optionalString(formData, "customerId");
 
@@ -169,6 +182,11 @@ export async function updateContact(formData: FormData) {
     );
   }
 
+  const roleRaw = optionalString(formData, "role");
+  const nextActive = formData.has("activeField") ? formData.get("active") === "on" : current.active;
+  if (nextCustomerId === null) {
+    await assertNotLastAdmin(id, isRole(roleRaw) ? roleRaw : null, nextActive);
+  }
   await prisma.contact.update({
     where: { id },
     data: {
@@ -180,12 +198,15 @@ export async function updateContact(formData: FormData) {
       customerId: nextCustomerId,
       // 체크박스: 폼에 있을 때만 반영("on" = 활성). 필드가 없는 폼은 건드리지 않는다.
       ...(formData.has("activeField") ? { active: formData.get("active") === "on" } : {}),
+      // 역할은 내부 인원에게만 의미 있다. 폼에 있을 때만 반영.
+      ...(nextCustomerId === null && isRole(roleRaw) ? { role: roleRaw } : {}),
     },
   });
   revalidatePath("/admin/contacts");
 }
 
 export async function deleteContact(formData: FormData) {
+  await requireRole("ADMIN");
   await prisma.contact.delete({ where: { id: requireString(formData, "id") } });
   revalidatePath("/admin/contacts");
 }
@@ -232,6 +253,7 @@ async function renumber(
  * only hold one position in one list.
  */
 export async function addAssignment(formData: FormData) {
+  await requireRole("ADMIN");
   const level = requireString(formData, "level") as ScopeLevel;
   const scopeId = requireString(formData, "scopeId");
   // 항목은 사람 또는 팀 — 폼이 둘 중 하나를 보낸다.
@@ -283,6 +305,7 @@ async function appendToScope(
  * customer's dropdowns.
  */
 export async function createContactAndAssign(formData: FormData) {
+  await requireRole("ADMIN");
   const level = requireString(formData, "level") as ScopeLevel;
   const scopeId = requireString(formData, "scopeId");
   scopeField(level); // validate early, before creating the contact
@@ -307,6 +330,7 @@ export async function createContactAndAssign(formData: FormData) {
 }
 
 export async function removeAssignment(formData: FormData) {
+  await requireRole("ADMIN");
   let row;
   try {
     row = await prisma.assignment.delete({
@@ -336,6 +360,7 @@ export async function removeAssignment(formData: FormData) {
  * neighbour. Bounds are a no-op so a double-submit at the edge is harmless.
  */
 export async function moveAssignment(formData: FormData) {
+  await requireRole("ADMIN");
   const id = requireString(formData, "id");
   const direction = requireString(formData, "direction");
   if (direction !== "up" && direction !== "down") {
@@ -393,6 +418,7 @@ function revalidateTeams(formData: FormData) {
 }
 
 export async function createTeam(formData: FormData) {
+  await requireRole("ADMIN");
   const name = requireString(formData, "name");
   const customerId = optionalString(formData, "customerId");
   const team = await prisma.team.create({ data: { name, customerId } });
@@ -401,6 +427,7 @@ export async function createTeam(formData: FormData) {
 }
 
 export async function renameTeam(formData: FormData) {
+  await requireRole("ADMIN");
   await prisma.team.update({
     where: { id: requireString(formData, "id") },
     data: { name: requireString(formData, "name") },
@@ -409,6 +436,7 @@ export async function renameTeam(formData: FormData) {
 }
 
 export async function deleteTeam(formData: FormData) {
+  await requireRole("ADMIN");
   // 팀을 참조하던 스코프 배정 행은 cascade로 함께 사라진다 — 그 스코프는
   // 상위 상속으로 돌아간다. DangerDelete가 이를 경고한다.
   await prisma.team.delete({ where: { id: requireString(formData, "id") } });
@@ -427,6 +455,7 @@ async function renumberTeam(teamId: string) {
 }
 
 export async function addTeamMember(formData: FormData) {
+  await requireRole("ADMIN");
   const teamId = requireString(formData, "teamId");
   const contactId = requireString(formData, "contactId");
 
@@ -456,6 +485,7 @@ export async function addTeamMember(formData: FormData) {
 }
 
 export async function removeTeamMember(formData: FormData) {
+  await requireRole("ADMIN");
   let row;
   try {
     row = await prisma.teamMember.delete({ where: { id: requireString(formData, "id") } });
@@ -469,6 +499,7 @@ export async function removeTeamMember(formData: FormData) {
 }
 
 export async function moveTeamMember(formData: FormData) {
+  await requireRole("ADMIN");
   const id = requireString(formData, "id");
   const direction = requireString(formData, "direction");
   if (direction !== "up" && direction !== "down") {
@@ -511,6 +542,7 @@ function revalidateRouting(formData: FormData) {
 }
 
 export async function createRoutingRule(formData: FormData) {
+  await requireRole("ADMIN");
   const customerId = requireString(formData, "customerId");
   const teamId = requireString(formData, "teamId");
   const team = await prisma.team.findUnique({ where: { id: teamId } });
@@ -545,11 +577,13 @@ export async function createRoutingRule(formData: FormData) {
 }
 
 export async function deleteRoutingRule(formData: FormData) {
+  await requireRole("ADMIN");
   await prisma.routingRule.delete({ where: { id: requireString(formData, "id") } });
   revalidateRouting(formData);
 }
 
 export async function toggleRoutingRule(formData: FormData) {
+  await requireRole("ADMIN");
   const id = requireString(formData, "id");
   const cur = await prisma.routingRule.findUnique({ where: { id } });
   if (!cur) return;

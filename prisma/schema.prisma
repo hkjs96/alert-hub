@@ -276,6 +276,20 @@ model Contact {
   // SSO(JIT)로 처음 만들어졌거나 로그인한 시각. null = 아직 로그인한 적 없음.
   lastLoginAt DateTime?
 
+  // --- 계정(내부 인원만 의미 있음; 고객사 담당자는 로그인 대상이 아니다) ---
+  // 역할: ADMIN(등록 관리 전체·승인), OPERATOR(알람 처리·점검 창), VIEWER(조회).
+  role   Role          @default(OPERATOR)
+  // 가입 상태: SSO로 처음 들어온 사람은 PENDING, 관리자가 승인하면 ACTIVE.
+  // 관리자가 화면에서 미리 등록한 사람은 ACTIVE로 시작한다(초대와 같다).
+  status AccountStatus @default(ACTIVE)
+  approvedAt DateTime?
+  approvedBy String?
+  // 첫 로그인 프로필 완성(환영 단계)을 마친 시각. null = 아직.
+  onboardedAt DateTime?
+  timezone    String?
+  // 승인 요청 알림을 마지막으로 보낸 시각 (시간당 1회로 제한).
+  approvalPingAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -403,4 +417,16 @@ model RoutingRule {
   updatedAt DateTime @updatedAt
 
   @@index([customerId, priority])
+}
+
+enum Role {
+  ADMIN
+  OPERATOR
+  VIEWER
+}
+
+enum AccountStatus {
+  PENDING
+  ACTIVE
+  REJECTED
 }

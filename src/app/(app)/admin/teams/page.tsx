@@ -4,6 +4,7 @@ import { createTeam } from "@/server/org-actions";
 import { ContactRoster } from "@/components/admin/contact-roster";
 import { TeamEditor } from "@/components/admin/team-editor";
 import { PendingButton } from "@/components/pending-button";
+import { PendingApprovals } from "@/components/admin/pending-approvals";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,8 @@ export default async function TeamsPage() {
           <Link href="/admin/org" className="text-indigo-600 underline">조직 트리</Link>에서 관리합니다.
         </p>
       </div>
+
+      <PendingApprovals />
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-baseline gap-3">
