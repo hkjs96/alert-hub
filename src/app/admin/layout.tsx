@@ -24,7 +24,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <NavTab
             href="/admin/org"
             label="조직 · 담당자 관리"
-            pattern="^/admin(?!/(escalation|contacts|silences))"
+            pattern="^/admin(?!/(escalation|contacts|silences|teams))"
             className={TAB_BASE}
             activeClassName={TAB_ACTIVE}
             inactiveClassName={TAB_IDLE}
@@ -46,9 +46,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             inactiveClassName={TAB_IDLE}
           />
           <NavTab
-            href="/admin/contacts"
-            label="멤버 관리"
-            pattern="^/admin/contacts"
+            href="/admin/teams"
+            label="팀 · 내부 인원"
+            pattern="^/admin/(teams|contacts)"
             className={TAB_BASE}
             activeClassName={TAB_ACTIVE}
             inactiveClassName={TAB_IDLE}

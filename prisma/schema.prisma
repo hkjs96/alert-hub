@@ -127,10 +127,10 @@ model NotificationJob {
   alertId String
   alert   Alert  @relation(fields: [alertId], references: [id], onDelete: Cascade)
 
-  channel String // slack | email | twilio
+  channel  String // slack | email | twilio
   // 발송에 필요한 전부의 스냅샷: { alert: NormalizedAlert, ctx: NotifyContext }.
   // 재시도 시점에 원본 행이 변해 있어도 "그때 알리려던 내용"을 보낸다.
-  payload Json
+  payload  Json
   // 묶음 통지 (v2 프레임 05): 같은 서비스의 FIRING 팬아웃 Slack 잡에
   // "service:<id>"가 박히고 nextAttemptAt이 묶음 창만큼 미뤄진다. 드레인이
   // 같은 키의 due 잡들을 하나의 다이제스트 메시지로 합쳐 보낸다.
@@ -201,6 +201,7 @@ model Customer {
   projects    Project[]
   silences    Silence[]
   contacts    Contact[]
+  teams       Team[]
   assignments Assignment[]
 }
 
@@ -268,10 +269,45 @@ model Contact {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  assignments Assignment[]
+  assignments     Assignment[]
+  teamMemberships TeamMember[]
 }
 
-// One person attached to one scope. Exactly one of
+// 팀 (에스컬레이션 그룹): 재사용 가능한 순번 목록. "누구"를 "어디"에서
+// 떼어낸다 — 인프라팀/DB팀처럼 기능 조직으로 온콜을 도는 고객은 서비스
+// 10개에 팀 하나를 붙이고 순서는 한 곳에서만 관리한다. customerId가 null이면
+// MSP 내부 공용 팀(모든 고객사 스코프에 붙일 수 있음), 있으면 그 고객사 전용.
+model Team {
+  id         String    @id @default(cuid())
+  name       String
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members     TeamMember[]
+  assignments Assignment[]
+
+  @@index([customerId])
+}
+
+model TeamMember {
+  id        String  @id @default(cuid())
+  teamId    String
+  team      Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  // 팀 안의 순번. 0 = 1순위.
+  order     Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@unique([teamId, contactId])
+  @@index([contactId])
+}
+
+// One person (or team) attached to one scope. Exactly one of
 // customerId/projectId/serviceId/accountId is set (enforced in app code).
 // Attach = INSERT, detach = DELETE.
 //
@@ -280,12 +316,18 @@ model Contact {
 // someone (조직 · 담당자 관리) appends to the end; reordering (알람 처리 순서)
 // is a separate screen so the two decisions stay independent.
 model Assignment {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
   // Position within this scope's list. 0 = 1순위 = first notified. Contiguous
   // per scope; the actions renumber on remove/reorder.
-  order     Int     @default(0)
-  contactId String
-  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  order     Int      @default(0)
+  // 항목은 사람(contactId) 또는 팀(teamId) 중 정확히 하나 (앱 코드에서 강제).
+  // 팀 항목은 해석 시점에 팀의 멤버 순서로 펼쳐진다 — 여러 스코프가 같은
+  // 팀을 참조하면 순서는 팀 한 곳에서만 관리된다 (PagerDuty의 escalation
+  // policy와 같은 분리).
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  teamId    String?
+  team      Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   customerId String?
   customer   Customer?      @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -305,7 +347,12 @@ model Assignment {
   @@unique([contactId, projectId])
   @@unique([contactId, serviceId])
   @@unique([contactId, accountId])
+  @@unique([teamId, customerId])
+  @@unique([teamId, projectId])
+  @@unique([teamId, serviceId])
+  @@unique([teamId, accountId])
   @@index([contactId])
+  @@index([teamId])
   @@index([customerId])
   @@index([projectId])
   @@index([serviceId])
