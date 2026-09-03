@@ -20,7 +20,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <h1 className="text-[27px] font-semibold leading-tight tracking-[-0.025em] text-stone-900">
           등록 관리
         </h1>
-        <nav className="mt-4 flex gap-6 text-[13px]">
+        <nav className="mt-4 flex gap-6 text-sm">
           <NavTab
             href="/admin/org"
             label="조직 · 담당자 관리"

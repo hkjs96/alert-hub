@@ -50,7 +50,7 @@ export default function RootLayout({
               >
                 alert<span className="text-indigo-600">·</span>hub
               </Link>
-              <nav className="flex gap-6 text-[13px]">
+              <nav className="flex gap-6 text-sm">
                 <NavTab
                   href="/"
                   label="대시보드"
@@ -72,7 +72,7 @@ export default function RootLayout({
             <span className="flex items-center gap-5">
               <PipelineHealth />
               <span className="hidden h-[18px] w-px bg-stone-200 sm:block" />
-              <span className="font-mono text-[11px] text-stone-400">
+              <span className="font-mono text-xs text-stone-400">
                 event plane · MVP
               </span>
             </span>

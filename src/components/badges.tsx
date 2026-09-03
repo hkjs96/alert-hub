@@ -100,7 +100,7 @@ export function Mark({ color, shape }: Tone) {
 function ToneLabel({ tone, label }: { tone: Tone; label: string }) {
   return (
     <span
-      className="inline-flex items-center gap-1.5 whitespace-nowrap font-mono text-[10px] font-bold tracking-[0.08em]"
+      className="inline-flex items-center gap-1.5 whitespace-nowrap font-mono text-[11px] font-bold tracking-[0.06em]"
       style={{ color: tone.color }}
     >
       <Mark {...tone} />

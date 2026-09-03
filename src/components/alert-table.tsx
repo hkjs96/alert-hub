@@ -152,7 +152,7 @@ export function AlertTable({
     <div className="overflow-x-auto border border-stone-200 bg-white">
       <table className="min-w-full text-sm">
         <thead>
-          <tr className="border-b border-stone-200 text-left font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+          <tr className="border-b border-stone-200 text-left font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
             <th className="border-l-[3px] border-l-transparent px-3 py-2.5 font-bold">SEV</th>
             <th className="px-3 py-2.5 font-bold">STATUS</th>
             <th className="px-3 py-2.5 font-bold">TITLE</th>
@@ -189,7 +189,7 @@ export function AlertTable({
                 <span className="flex items-center gap-2">
                   <Link
                     href={`/alerts/${a.id}`}
-                    className={`text-[13px] hover:text-indigo-600 hover:underline ${
+                    className={`text-sm hover:text-indigo-600 hover:underline ${
                       live
                         ? "font-semibold text-stone-900"
                         : a.status === "RESOLVED" || silence
@@ -201,7 +201,7 @@ export function AlertTable({
                   </Link>
                   {silence ? (
                     <span
-                      className="inline-flex h-[19px] items-center gap-1 whitespace-nowrap border border-stone-200 bg-stone-100 px-1.5 font-mono text-[10px] tracking-[0.04em] text-stone-500"
+                      className="inline-flex h-[19px] items-center gap-1 whitespace-nowrap border border-stone-200 bg-stone-100 px-1.5 font-mono text-[11px] tracking-[0.04em] text-stone-500"
                       title={`뮤트 중 — ${silence.reason}`}
                     >
                       뮤트 {muteUntilLabel(silence.endsAt)}
@@ -209,7 +209,7 @@ export function AlertTable({
                   ) : null}
                 </span>
                 {chain ? (
-                  <div className="mt-0.5 text-[11px] text-stone-400">{chain}</div>
+                  <div className="mt-0.5 text-xs text-stone-400">{chain}</div>
                 ) : null}
               </td>
               <td className="px-3 py-3.5">
@@ -223,7 +223,7 @@ export function AlertTable({
               <td className="px-3 py-3.5">
                 {environment ? (
                   <span
-                    className={`font-mono text-[11px] uppercase tracking-[0.04em] ${
+                    className={`font-mono text-xs uppercase tracking-[0.04em] ${
                       environment === "prd" ? "text-stone-900" : "text-stone-400"
                     }`}
                   >
@@ -233,11 +233,11 @@ export function AlertTable({
                   <span className="text-stone-300">—</span>
                 )}
               </td>
-              <td className="whitespace-nowrap px-3 py-3.5 text-[13px]">
+              <td className="whitespace-nowrap px-3 py-3.5 text-sm">
                 <OwnerCell alert={a} ownership={ownership} backHref={backHref} />
               </td>
               <td
-                className={`px-3 py-3.5 text-right font-mono text-[13px] font-bold tabular-nums ${
+                className={`px-3 py-3.5 text-right font-mono text-sm font-bold tabular-nums ${
                   a.count >= 8 ? "text-[#b42318]" : "text-stone-900"
                 }`}
               >

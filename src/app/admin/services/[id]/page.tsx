@@ -44,7 +44,7 @@ export default async function ServiceDetailPage({
       </div>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4">
-        <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+        <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
           서비스 담당 <span className="font-normal text-stone-400">(프로젝트 담당을 오버라이드)</span>
         </h2>
         <AssignmentEditor
@@ -56,7 +56,7 @@ export default async function ServiceDetailPage({
       </section>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4">
-        <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">AWS 계정 매핑</h2>
+        <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">AWS 계정 매핑</h2>
         <p className="mb-3 text-xs text-stone-400">
           알람의 AlarmArn에서 추출된 accountId가 여기 매칭되어 고객사/프로젝트/담당이 결정됩니다.
         </p>
@@ -99,7 +99,7 @@ export default async function ServiceDetailPage({
                 </code>
                 {a.alias ? <span className="text-stone-700">{a.alias}</span> : null}
                 {a.environment ? (
-                  <span className="font-mono text-[11px] uppercase tracking-[0.04em] text-stone-500">
+                  <span className="font-mono text-xs uppercase tracking-[0.04em] text-stone-500">
                     {a.environment}
                   </span>
                 ) : null}
@@ -129,7 +129,7 @@ export default async function ServiceDetailPage({
       </section>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4">
-        <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+        <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
           관련 인원 전체 <span className="font-normal text-stone-400">(계정 포함 롤업)</span>
         </h2>
         <Roster level="service" id={service.id} />

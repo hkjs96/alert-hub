@@ -15,7 +15,7 @@ export function CoverageBadge({
 }) {
   if (direct > 0) {
     return (
-      <span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-[0.08em] text-stone-900">
+      <span className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold tracking-[0.06em] text-stone-900">
         <Mark color="#1b1a17" shape="dot" />
         직접 {direct}명
       </span>
@@ -23,7 +23,7 @@ export function CoverageBadge({
   }
   if (inheritedFrom) {
     return (
-      <span className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.08em] text-stone-400">
+      <span className="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.06em] text-stone-400">
         <Mark color="#c9c4b8" shape="ring" />
         {inheritedFrom} 상속
       </span>
@@ -31,7 +31,7 @@ export function CoverageBadge({
   }
   return (
     <span
-      className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-[0.08em] text-[#b42318]"
+      className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold tracking-[0.06em] text-[#b42318]"
       title="이 스코프의 알람은 담당자 없이 수신됩니다"
     >
       <Mark color="#b42318" shape="tri" />⚠ 미지정

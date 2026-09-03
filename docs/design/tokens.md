@@ -53,13 +53,16 @@ FIRING 활성 틴트 `#fdf5f4` (스탯 타일).
 
 ## 3. 타이포그래피
 
-- 본문: **Instrument Sans** (400/500/600/700) + Noto Sans KR 폴백.
+- 본문: **Instrument Sans** (400/500/600/700), 한글은 **Noto Sans KR** —
+  `word-break: keep-all`로 어절 단위 줄바꿈.
 - 수치·코드·오버라인·타임스탬프: **Space Mono** (400/700), `tabular-nums` 전역.
 - 페이지 타이틀: 27px/600/-0.025em. 서브페이지 22px/600/-0.02em.
 - 히어로 제목(알람 상세): 26px/600/-0.025em.
-- 본문 13px, 보조 12px, 캡션 11px.
-- 오버라인: mono 10px/700, tracking 0.11em, uppercase, FAINT.
-- 배지 라벨: mono 10px/700, tracking 0.08em, 상태색.
+- 본문 14px(text-sm), 보조 12px(text-xs), 캡션 11px — 세 단계로 통일
+  (2026-09 가독성 패스에서 한 단계씩 상향: 13→14, 11→12, 10→11).
+- 오버라인: mono 11px/700, tracking 0.07em, uppercase, FAINT — 한글이 섞이는
+  라벨이라 자간을 0.11em에서 낮췄다.
+- 배지 라벨: mono 11px/700, tracking 0.06em, 상태색.
 
 ## 4. 컴포넌트 규약
 

@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 const control =
   "h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400";
 const overline =
-  "font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400";
+  "font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400";
 const primaryBtn =
   "inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700";
 
@@ -34,7 +34,7 @@ function Steps({ current }: { current: number }) {
         return (
           <li key={label} className="flex items-center gap-2">
             <span
-              className={`flex h-5 w-5 items-center justify-center font-mono text-[10px] font-bold ${
+              className={`flex h-5 w-5 items-center justify-center font-mono text-[11px] font-bold ${
                 state === "now"
                   ? "bg-stone-900 text-white"
                   : state === "done"
@@ -45,7 +45,7 @@ function Steps({ current }: { current: number }) {
               {state === "done" ? "✓" : i + 1}
             </span>
             <span
-              className={`text-[13px] ${
+              className={`text-sm ${
                 state === "now"
                   ? "font-semibold text-stone-900"
                   : state === "done"
@@ -116,7 +116,7 @@ export default async function OnboardPage({
       <Steps current={step} />
 
       {customer ? (
-        <p className="text-[13px] text-stone-500">
+        <p className="text-sm text-stone-500">
           진행 중:{" "}
           <span className="font-medium text-stone-900">
             {customer.name}
@@ -231,7 +231,7 @@ export default async function OnboardPage({
                 back={qs()}
               />
             </div>
-            <div className="flex flex-wrap items-center gap-4 border-t border-stone-100 pt-4 text-[13px]">
+            <div className="flex flex-wrap items-center gap-4 border-t border-stone-100 pt-4 text-sm">
               <Link
                 href={`/admin/org?level=service&id=${service.id}`}
                 className="inline-flex h-8 items-center border border-stone-900 bg-stone-900 px-[15px] font-semibold text-white transition-colors hover:bg-black"

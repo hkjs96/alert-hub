@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 const control =
   "h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400";
 const overline =
-  "font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400";
+  "font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400";
 
 /** 통지 채널 배지 (M5): 이 사람에게 실제로 닿을 수 있는 수단. */
 function ChannelBadges({
@@ -28,7 +28,7 @@ function ChannelBadges({
   if (chans.length === 0) {
     return (
       <span
-        className="inline-flex items-center gap-1 font-mono text-[10px] font-bold tracking-[0.08em] text-[#b42318]"
+        className="inline-flex items-center gap-1 font-mono text-[11px] font-bold tracking-[0.06em] text-[#b42318]"
         title="연락 수단이 없어 이 사람에게는 어떤 통지도 발송되지 않습니다"
       >
         ⚠ 통지 불가
@@ -40,7 +40,7 @@ function ChannelBadges({
       {chans.map((ch) => (
         <span
           key={ch}
-          className="inline-flex h-[19px] items-center border border-stone-200 bg-stone-100 px-1.5 font-mono text-[10px] text-stone-500"
+          className="inline-flex h-[19px] items-center border border-stone-200 bg-stone-100 px-1.5 font-mono text-[11px] text-stone-500"
         >
           {ch}
         </span>
@@ -232,7 +232,7 @@ export default async function ContactsPage({
       </form>
 
       <section className="border border-stone-200 bg-white">
-        <div className="grid grid-cols-[1fr_130px_110px_170px_70px_60px] gap-3 border-b border-stone-200 px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+        <div className="grid grid-cols-[1fr_130px_110px_170px_70px_60px] gap-3 border-b border-stone-200 px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
           <span>이름</span>
           <span>소속</span>
           <span>부서</span>
@@ -251,14 +251,14 @@ export default async function ContactsPage({
                 <details className="group">
                   <summary className="grid cursor-pointer list-none grid-cols-[1fr_130px_110px_170px_70px_60px] items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-stone-50 [&::-webkit-details-marker]:hidden">
                     <span className="font-medium text-stone-900">{c.name}</span>
-                    <span className="text-[13px] text-stone-500">
+                    <span className="text-sm text-stone-500">
                       {c.customer?.name ?? "내부"}
                     </span>
-                    <span className="text-[13px] text-stone-500">
+                    <span className="text-sm text-stone-500">
                       {c.department ?? "—"}
                     </span>
                     <ChannelBadges c={c} />
-                    <span className="font-mono text-[13px] text-stone-600">
+                    <span className="font-mono text-sm text-stone-600">
                       {c.assignments.length}
                     </span>
                     <span className="text-right text-xs text-stone-400 group-open:hidden">
@@ -323,7 +323,7 @@ export default async function ContactsPage({
                       {c.assignments.length === 0 ? (
                         <p className="text-xs text-stone-400">배정 없음</p>
                       ) : (
-                        <ul className="space-y-1 text-[13px] text-stone-600">
+                        <ul className="space-y-1 text-sm text-stone-600">
                           {c.assignments.map((a) => (
                             <li key={a.id}>· {scopeLabel(a)}</li>
                           ))}
