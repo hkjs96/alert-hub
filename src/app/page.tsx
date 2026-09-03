@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAlerts } from "@/server/alerts";
 import {
@@ -125,6 +126,13 @@ export default async function DashboardPage({
   const projects = f.customer
     ? allProjects.filter((p) => p.customerId === f.customer)
     : allProjects;
+
+  // GET 폼은 빈 칸도 `customer=&q=`로 실어 보낸다. 빈 값이 하나라도 있으면
+  // 정규 URL(비어 있지 않은 것만, 파생된 고객사 포함)로 한 번 돌려보낸다 —
+  // 공유·북마크되는 주소가 깔끔해지고 프로젝트→고객사 파생도 URL에 남는다.
+  if (Object.values(searchParams).some((v) => v === "")) {
+    redirect(dashboardHref(f));
+  }
 
   const ownership = await getOwnershipByAccountIds(
     allAlerts.map((a) => a.accountId).filter((id): id is string => Boolean(id)),
