@@ -51,7 +51,9 @@ export async function GET(req: NextRequest) {
     nonce: saved.nonce,
   });
   if (!claims.ok) return fail("claims", claims.reason);
-  if (!isEmailAllowed(claims.email, cfg.allowedDomains)) return fail("domain", claims.email);
+  if (!isEmailAllowed(claims.email, cfg.allowedDomains, cfg.allowedEmails)) {
+    return fail("domain", claims.email);
+  }
 
   const jit = await provisionInternalContact({ email: claims.email, name: claims.name });
   if (!jit.ok) return fail(jit.reason, claims.email);

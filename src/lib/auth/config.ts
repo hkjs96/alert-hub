@@ -9,8 +9,10 @@ export interface AuthConfig {
   clientId: string;
   clientSecret: string;
   secret: string;
-  /** 소문자 도메인 목록. 비어 있으면 도메인 제한 없음(경고). */
+  /** 소문자 도메인 목록. */
   allowedDomains: string[];
+  /** 도메인과 무관하게 허용하는 개별 이메일(소문자). 외부 협력자·개인 계정용. */
+  allowedEmails: string[];
 }
 
 export function readAuthConfig(env: Record<string, string | undefined> = process.env): AuthConfig {
@@ -18,6 +20,7 @@ export function readAuthConfig(env: Record<string, string | undefined> = process
   const clientSecret = env.GOOGLE_CLIENT_SECRET?.trim() ?? "";
   const secret = env.AUTH_SECRET?.trim() ?? "";
   const allowedDomains = parseDomains(env.AUTH_ALLOWED_DOMAINS);
+  const allowedEmails = parseEmails(env.AUTH_ALLOWED_EMAILS);
 
   const missing = [
     !clientId && "GOOGLE_CLIENT_ID",
@@ -26,7 +29,7 @@ export function readAuthConfig(env: Record<string, string | undefined> = process
   ].filter(Boolean) as string[];
 
   if (missing.length === 3) {
-    return { enabled: false, reason: "SSO 미설정", clientId, clientSecret, secret, allowedDomains };
+    return { enabled: false, reason: "SSO 미설정", clientId, clientSecret, secret, allowedDomains, allowedEmails };
   }
   if (missing.length > 0) {
     return {
@@ -36,6 +39,7 @@ export function readAuthConfig(env: Record<string, string | undefined> = process
       clientSecret,
       secret,
       allowedDomains,
+      allowedEmails,
     };
   }
   if (secret.length < 16) {
@@ -46,9 +50,10 @@ export function readAuthConfig(env: Record<string, string | undefined> = process
       clientSecret,
       secret,
       allowedDomains,
+      allowedEmails,
     };
   }
-  return { enabled: true, clientId, clientSecret, secret, allowedDomains };
+  return { enabled: true, clientId, clientSecret, secret, allowedDomains, allowedEmails };
 }
 
 export function parseDomains(raw: string | undefined): string[] {
@@ -58,16 +63,26 @@ export function parseDomains(raw: string | undefined): string[] {
     .filter(Boolean);
 }
 
+export function parseEmails(raw: string | undefined): string[] {
+  return (raw ?? "")
+    .split(/[,\s]+/)
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => e.includes("@"));
+}
+
 /**
- * 이메일 도메인 허용 여부. 목록이 비어 있으면 모두 허용 — 운영에서는 반드시
- * AUTH_ALLOWED_DOMAINS를 두라고 README가 말한다. 서브도메인은 허용하지
- * 않는다(`corp.example.com`은 `example.com`과 다른 도메인).
+ * 이메일 허용 여부. 개별 이메일 목록에 있으면 도메인과 무관하게 허용, 아니면
+ * 도메인 목록으로 판단. 두 목록이 모두 비어 있으면 모두 허용 — 운영에서는
+ * 반드시 하나는 두라고 README가 말한다. 서브도메인은 허용하지 않는다
+ * (`corp.example.com`은 `example.com`과 다른 도메인).
  */
-export function isEmailAllowed(email: string, domains: string[]): boolean {
+export function isEmailAllowed(email: string, domains: string[], emails: string[] = []): boolean {
   const at = email.lastIndexOf("@");
   if (at < 0) return false;
-  const domain = email.slice(at + 1).toLowerCase();
+  const lower = email.toLowerCase();
+  const domain = lower.slice(at + 1);
   if (!domain) return false;
-  if (domains.length === 0) return true;
+  if (emails.includes(lower)) return true;
+  if (domains.length === 0 && emails.length === 0) return true;
   return domains.includes(domain);
 }

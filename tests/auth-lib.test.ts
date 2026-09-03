@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isEmailAllowed, parseDomains, readAuthConfig } from "@/lib/auth/config";
+import { isEmailAllowed, parseDomains, parseEmails, readAuthConfig } from "@/lib/auth/config";
 import { signSession, verifySession } from "@/lib/auth/session";
 import { decodeIdToken, validateClaims, authorizeUrl } from "@/lib/auth/google";
 import { isPublicPath, safeNext } from "@/lib/auth/paths";
@@ -31,6 +31,20 @@ describe("SSO 설정", () => {
     });
     expect(c.enabled).toBe(true);
     expect(c.allowedDomains).toEqual(["example.com", "msp.co.kr"]);
+  });
+  it("개별 이메일 허용: 도메인 밖 계정도 명시하면 통과, 그 도메인의 다른 계정은 불가", () => {
+    const domains = ["mz.co.kr", "megazone.com"];
+    const emails = parseEmails(" JSmini3814@gmail.com , x@y.z ");
+    expect(emails).toEqual(["jsmini3814@gmail.com", "x@y.z"]);
+    expect(isEmailAllowed("jsmini3814@gmail.com", domains, emails)).toBe(true);
+    expect(isEmailAllowed("JSMINI3814@GMAIL.COM", domains, emails)).toBe(true);
+    expect(isEmailAllowed("someone@gmail.com", domains, emails)).toBe(false);
+    expect(isEmailAllowed("kim@mz.co.kr", domains, emails)).toBe(true);
+    expect(isEmailAllowed("kim@megazone.com", domains, emails)).toBe(true);
+    // 도메인 없이 이메일만 두면 그 이메일만
+    expect(isEmailAllowed("kim@mz.co.kr", [], emails)).toBe(false);
+    const c = readAuthConfig({ GOOGLE_CLIENT_ID: "x", GOOGLE_CLIENT_SECRET: "y", AUTH_SECRET: SECRET, AUTH_ALLOWED_EMAILS: "a@b.c" });
+    expect(c.allowedEmails).toEqual(["a@b.c"]);
   });
   it("도메인 허용: 대소문자 무시, 서브도메인은 별개, 목록 비면 전부 허용", () => {
     expect(isEmailAllowed("A@Example.COM", ["example.com"])).toBe(true);

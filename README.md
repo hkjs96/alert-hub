@@ -104,7 +104,8 @@ handled. Locally, point both URLs at the same Postgres.
 | `SNS_VERIFY`        | no       | SNS 봉투 서명 검증. Default **on**; `false`로만 해제.        |
 | `PAGERDUTY_WEBHOOK_SECRET` | no | Set ⇒ PagerDuty requests must carry a valid `X-PagerDuty-Signature` (v1 HMAC). |
 | `GOOGLE_CLIENT_ID` `GOOGLE_CLIENT_SECRET` `AUTH_SECRET` | no | 셋 다 있으면 **Google SSO**가 켜지고 화면·서버 액션이 로그인 뒤로 들어간다(웹훅·크론은 자체 비밀로 통과). 하나라도 없으면 지금처럼 열린 상태, 헤더에 "SSO 미설정"이 보인다. `AUTH_SECRET`은 16자 이상 무작위 문자열. |
-| `AUTH_ALLOWED_DOMAINS` | no | SSO 허용 이메일 도메인(쉼표 구분, 예 `msp.co.kr`). 비우면 어떤 Google 계정이든 들어올 수 있으니 운영에서는 반드시 둔다. |
+| `AUTH_ALLOWED_DOMAINS` | no | SSO 허용 이메일 도메인(쉼표 구분, 예 `mz.co.kr,megazone.com`). |
+| `AUTH_ALLOWED_EMAILS` | no | 도메인과 무관하게 허용할 개별 이메일(쉼표 구분). 개인 Gmail이나 외부 협력자용. 두 변수가 모두 비면 어떤 Google 계정이든 들어올 수 있으니 운영에서는 반드시 하나는 둔다. |
 
 ### 실제 고객사 투입 전 체크리스트
 
@@ -136,7 +137,7 @@ handled. Locally, point both URLs at the same Postgres.
 
 1. Google Cloud Console → APIs & Services → Credentials → **OAuth client ID (Web application)**.
    Authorized redirect URI에 `https://<host>/api/auth/callback` 추가.
-2. Vercel 환경변수: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `AUTH_SECRET`(`openssl rand -base64 32`), `AUTH_ALLOWED_DOMAINS`, `APP_URL`.
+2. Vercel 환경변수: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `AUTH_SECRET`(`openssl rand -base64 32`), `AUTH_ALLOWED_DOMAINS`(및/또는 `AUTH_ALLOWED_EMAILS`), `APP_URL`.
 3. 배포 후 `/login`. 처음 로그인하는 회사 도메인 계정은 **내부 인원(Contact, customerId=null)으로 자동 등록**되고
    `/me`(내 통지 프로필)로 안내되어 Slack 멤버 ID·전화를 직접 채운다. 이미 같은 이메일의 내부 인원이 있으면 그 행에 연결된다.
 4. 고객사 담당자 이메일, 허용 도메인 밖 계정, **비활성** 처리된 인원은 로그인이 거부된다.
