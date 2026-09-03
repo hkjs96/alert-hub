@@ -176,7 +176,7 @@ export default async function EscalationPage({
       </form>
 
       {/* v2: 세그먼트 필 대신 잉크 밑줄 탭 */}
-      <div className="flex gap-6 border-b border-stone-200 text-[13px]">
+      <div className="flex gap-6 border-b border-stone-200 text-sm">
         {LEVEL_TABS.map((t) => {
           const disabled =
             (t.level === "project" && !project) || (t.level === "service" && !service);
@@ -209,7 +209,7 @@ export default async function EscalationPage({
       </div>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4">
-        <h2 className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">{scopeName} 처리 순서</h2>
+        <h2 className="font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">{scopeName} 처리 순서</h2>
         <p className="mb-3 text-xs text-stone-400">
           이 단계에 직접 등록된 담당자의 알람 통지 순서입니다.
         </p>

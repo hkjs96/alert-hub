@@ -10,6 +10,9 @@ body {
   background: var(--background);
   color: #1b1a17;
   font-variant-numeric: tabular-nums;
+  /* 한글 가독성: 어절 단위 줄바꿈 (단어 중간에서 꺾이지 않게) */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 @layer base {

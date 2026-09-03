@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 const control =
   "h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400";
 const overline =
-  "font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400";
+  "font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400";
 const primaryBtn =
   "inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700";
 
@@ -109,7 +109,7 @@ export default async function OrgPage({
     selected && selectedScopeId ? href(selected.level, selectedScopeId) : "/admin/org";
 
   const nodeClass = (active: boolean) =>
-    `flex items-center gap-2 px-2 py-1 text-[13px] transition-colors ${
+    `flex items-center gap-2 px-2 py-1 text-sm transition-colors ${
       active
         ? "bg-stone-100 font-semibold text-stone-900 shadow-[inset_2px_0_0_#1b1a17]"
         : "text-stone-600 hover:bg-stone-50 hover:text-stone-900"
@@ -129,7 +129,7 @@ export default async function OrgPage({
         </div>
         <Link
           href="/admin/onboard"
-          className="inline-flex h-8 items-center border border-stone-900 bg-stone-900 px-[15px] text-[13px] font-semibold text-white transition-colors hover:bg-black"
+          className="inline-flex h-8 items-center border border-stone-900 bg-stone-900 px-[15px] text-sm font-semibold text-white transition-colors hover:bg-black"
         >
           + 새 고객사 온보딩
         </Link>
@@ -151,7 +151,7 @@ export default async function OrgPage({
               <h2 className={overline}>조직 트리</h2>
               <Link
                 href="/admin/customers"
-                className="text-[11px] text-stone-400 hover:text-stone-900"
+                className="text-xs text-stone-400 hover:text-stone-900"
               >
                 고객사 목록 ↗
               </Link>
@@ -168,7 +168,7 @@ export default async function OrgPage({
                     <span className="min-w-0 flex-1 truncate">
                       {c.name}
                       {c.isInternal ? (
-                        <span className="ml-1.5 text-[10px] text-stone-400">내부</span>
+                        <span className="ml-1.5 text-[11px] text-stone-400">내부</span>
                       ) : null}
                     </span>
                     <CoverageBadge direct={direct(c.id)} inheritedFrom={null} />
@@ -197,7 +197,7 @@ export default async function OrgPage({
                             )}
                           >
                             <span className="min-w-0 flex-1 truncate">{s.name}</span>
-                            <span className="font-mono text-[10px] text-stone-400">
+                            <span className="font-mono text-[11px] text-stone-400">
                               계정 {s.accounts.length}
                             </span>
                             <CoverageBadge
@@ -232,14 +232,14 @@ export default async function OrgPage({
                         ? "프로젝트"
                         : "서비스"}
                   </h2>
-                  <span className="text-[13px] font-semibold text-stone-900">
+                  <span className="text-sm font-semibold text-stone-900">
                     {selected.level === "customer"
                       ? selected.customer.name
                       : selected.level === "project"
                         ? `${selected.customer.name} › ${selected.project.name}`
                         : `${selected.customer.name} › ${selected.project.name} › ${selected.service.name}`}
                   </span>
-                  <span className="ml-auto flex gap-3 text-[11px]">
+                  <span className="ml-auto flex gap-3 text-xs">
                     <Link
                       href={
                         selected.level === "customer"
@@ -329,14 +329,14 @@ export default async function OrgPage({
                       <ul className="divide-y divide-stone-100">
                         {selected.service.accounts.map((a) => (
                           <li key={a.id} className="flex items-center gap-3 py-2">
-                            <span className="font-mono text-[13px] text-stone-900">
+                            <span className="font-mono text-sm text-stone-900">
                               {a.accountId}
                             </span>
                             {a.alias ? (
-                              <span className="text-[13px] text-stone-500">{a.alias}</span>
+                              <span className="text-sm text-stone-500">{a.alias}</span>
                             ) : null}
                             {a.environment ? (
-                              <span className="font-mono text-[11px] uppercase tracking-[0.04em] text-stone-500">
+                              <span className="font-mono text-xs uppercase tracking-[0.04em] text-stone-500">
                                 {a.environment}
                               </span>
                             ) : null}

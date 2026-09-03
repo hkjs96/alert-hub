@@ -97,7 +97,7 @@ export function StatCards({
               ) : (
                 <span className="inline-block h-[1.5px] w-2 bg-stone-300" />
               )}
-              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-500">
+              <span className="font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-500">
                 {c.label}
               </span>
             </div>

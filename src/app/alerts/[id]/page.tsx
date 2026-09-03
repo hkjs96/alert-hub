@@ -40,11 +40,11 @@ function Field({
   if (value === null || value === undefined || value === "") return null;
   return (
     <div className="flex flex-col">
-      <dt className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+      <dt className="font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
         {label}
       </dt>
       <dd
-        className={`mt-1.5 break-words text-[13px] text-stone-900 ${
+        className={`mt-1.5 break-words text-sm text-stone-900 ${
           mono ? "font-mono" : "font-medium"
         }`}
       >
@@ -72,7 +72,7 @@ function AlertActions({ id, status }: { id: string; status: string }) {
           pendingLabel="Ack 중…"
           disabled={!canAck}
           title={canAck ? undefined : "FIRING 상태에서만 Ack할 수 있습니다"}
-          className="inline-flex h-8 items-center gap-[7px] border border-indigo-600 bg-indigo-600 px-4 text-[13px] font-semibold text-white transition-colors hover:border-indigo-700 hover:bg-indigo-700 disabled:cursor-not-allowed disabled:border-stone-100 disabled:bg-stone-100 disabled:text-stone-400"
+          className="inline-flex h-8 items-center gap-[7px] border border-indigo-600 bg-indigo-600 px-4 text-sm font-semibold text-white transition-colors hover:border-indigo-700 hover:bg-indigo-700 disabled:cursor-not-allowed disabled:border-stone-100 disabled:bg-stone-100 disabled:text-stone-400"
         >
           <svg
             width="14"
@@ -97,7 +97,7 @@ function AlertActions({ id, status }: { id: string; status: string }) {
           title={
             canResolve ? undefined : "이미 종료되었거나 전이할 수 없는 상태입니다"
           }
-          className="inline-flex h-8 items-center border border-stone-200 bg-white px-3.5 text-[13px] font-medium text-stone-900 transition-colors hover:border-stone-400 disabled:cursor-not-allowed disabled:border-stone-100 disabled:bg-stone-100 disabled:text-stone-400"
+          className="inline-flex h-8 items-center border border-stone-200 bg-white px-3.5 text-sm font-medium text-stone-900 transition-colors hover:border-stone-400 disabled:cursor-not-allowed disabled:border-stone-100 disabled:bg-stone-100 disabled:text-stone-400"
         >
           Resolve
         </PendingButton>
@@ -122,10 +122,10 @@ function MuteControl({
   backHref: string;
 }) {
   const overline =
-    "font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400";
+    "font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400";
   return (
     <details className="relative">
-      <summary className="inline-flex h-8 cursor-pointer list-none items-center gap-[7px] border border-stone-200 bg-white px-3.5 text-[13px] font-medium text-stone-900 transition-colors hover:border-stone-400 [&::-webkit-details-marker]:hidden">
+      <summary className="inline-flex h-8 cursor-pointer list-none items-center gap-[7px] border border-stone-200 bg-white px-3.5 text-sm font-medium text-stone-900 transition-colors hover:border-stone-400 [&::-webkit-details-marker]:hidden">
         <svg
           width="14"
           height="14"
@@ -150,7 +150,7 @@ function MuteControl({
         <div className="text-sm font-semibold text-stone-900">알람 뮤트</div>
         <div>
           <div className={`mb-2 ${overline}`}>기간 (UTC)</div>
-          <div className="flex flex-col gap-1.5 text-[13px]">
+          <div className="flex flex-col gap-1.5 text-sm">
             <label className="flex items-center gap-1.5">
               <input type="radio" name="preset" value="1h" defaultChecked required />
               1시간
@@ -173,7 +173,7 @@ function MuteControl({
         </div>
         <div>
           <div className={`mb-2 ${overline}`}>범위</div>
-          <div className="flex flex-col gap-1.5 text-[13px]">
+          <div className="flex flex-col gap-1.5 text-sm">
             <label className="flex items-start gap-1.5">
               <input type="radio" name="scope" value="alert" defaultChecked required className="mt-0.5" />
               <span>
@@ -197,7 +197,7 @@ function MuteControl({
         <div>
           <div className="mb-2 flex items-center gap-2">
             <span className={overline}>사유</span>
-            <span className="font-mono text-[10px] font-bold tracking-[0.08em] text-[#b42318]">
+            <span className="font-mono text-[11px] font-bold tracking-[0.06em] text-[#b42318]">
               필수
             </span>
           </div>
@@ -213,7 +213,7 @@ function MuteControl({
           목록에 그대로 남고 뮤트 칩이 함께 표시됩니다.
         </p>
         <div className="flex justify-end">
-          <PendingButton pendingLabel="적용 중…" className="inline-flex h-8 items-center border border-stone-900 bg-stone-900 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-stone-700">
+          <PendingButton pendingLabel="적용 중…" className="inline-flex h-8 items-center border border-stone-900 bg-stone-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-stone-700">
             뮤트 적용
           </PendingButton>
         </div>
@@ -235,14 +235,14 @@ function MutedBanner({
   const isAlertScope = silence.alertId === alertId;
   return (
     <div className="flex flex-wrap items-center gap-3 border border-stone-200 border-l-[3px] border-l-[#8a877f] bg-white px-4 py-3">
-      <span className="font-mono text-[10px] font-bold tracking-[0.1em] text-stone-500">
+      <span className="font-mono text-[11px] font-bold tracking-[0.07em] text-stone-500">
         뮤트 중
       </span>
-      <span className="text-[13px] font-semibold text-stone-900">
+      <span className="text-sm font-semibold text-stone-900">
         {isAlertScope ? "이 알람" : "점검 창(상위 스코프)"} ·{" "}
         <span className="font-mono text-xs">{muteUntilLabel(silence.endsAt)}</span>
       </span>
-      <span className="text-[13px] text-stone-500">
+      <span className="text-sm text-stone-500">
         사유: {silence.reason} — 통지·에스컬레이션만 멈추고 수집은 계속됩니다.
       </span>
       {isAlertScope ? (
@@ -256,7 +256,7 @@ function MutedBanner({
       ) : (
         <Link
           href="/admin/silences"
-          className="ml-auto text-[13px] font-semibold text-indigo-600 hover:underline"
+          className="ml-auto text-sm font-semibold text-indigo-600 hover:underline"
         >
           점검 · 뮤트 관리 →
         </Link>
@@ -294,7 +294,7 @@ function SnapshotPanel({
   return (
     <section className="border border-stone-200 bg-white">
       <div className="border-b border-stone-200 px-6 py-3">
-        <h2 className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+        <h2 className="font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
           담당 · 수신 시점 스냅샷
         </h2>
       </div>
@@ -327,7 +327,7 @@ function SnapshotPanel({
           </>
         ) : null}
         {chain.environment ? (
-          <span className="font-mono text-[11px] uppercase tracking-[0.04em] text-stone-500">
+          <span className="font-mono text-xs uppercase tracking-[0.04em] text-stone-500">
             {chain.environment}
           </span>
         ) : null}
@@ -398,7 +398,7 @@ function OwnershipPanel({
   if (!info) {
     return (
       <section className="border border-stone-200 border-l-[3px] border-l-[#b54708] bg-white p-6">
-        <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-[#b54708]">
+        <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-[#b54708]">
           담당 · 조직
         </h2>
         <p className="text-sm text-stone-600">
@@ -422,7 +422,7 @@ function OwnershipPanel({
   return (
     <section className="border border-stone-200 bg-white">
       <div className="border-b border-stone-200 px-6 py-3">
-        <h2 className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+        <h2 className="font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
           담당 · 조직 (현재 등록 기준)
         </h2>
       </div>
@@ -453,7 +453,7 @@ function OwnershipPanel({
           {chain.account.alias ?? chain.account.accountId}
         </span>
         {chain.account.environment ? (
-          <span className="font-mono text-[11px] uppercase tracking-[0.04em] text-stone-500">
+          <span className="font-mono text-xs uppercase tracking-[0.04em] text-stone-500">
             {chain.account.environment}
           </span>
         ) : null}
@@ -562,7 +562,7 @@ export default async function AlertDetailPage({
         <span>←</span>
         <Link
           href="/"
-          className="font-sans text-[13px] font-medium text-indigo-600 hover:underline"
+          className="font-sans text-sm font-medium text-indigo-600 hover:underline"
         >
           대시보드
         </Link>
@@ -583,7 +583,7 @@ export default async function AlertDetailPage({
               <span className="h-[13px] w-px bg-stone-200" />
               <StatusBadge status={alert.status} />
               <span className="h-[13px] w-px bg-stone-200" />
-              <span className="font-mono text-[11px] text-stone-500">
+              <span className="font-mono text-xs text-stone-500">
                 최초 {formatTime(alert.firstSeenAt)} · {alert.count}회 반복
               </span>
             </div>
@@ -591,7 +591,7 @@ export default async function AlertDetailPage({
               {alert.title}
             </h1>
             {alert.description ? (
-              <p className="mt-2 text-[13px] text-stone-500">
+              <p className="mt-2 text-sm text-stone-500">
                 {alert.description}
               </p>
             ) : null}
@@ -622,7 +622,7 @@ export default async function AlertDetailPage({
 
       <section className="border border-stone-200 bg-white">
         <div className="border-b border-stone-200 px-6 py-3">
-          <h2 className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+          <h2 className="font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
             메트릭 · 임계치 · 사유
           </h2>
         </div>
@@ -646,10 +646,10 @@ export default async function AlertDetailPage({
         </dl>
         {alert.stateReason ? (
           <div className="mx-6 mb-6 border border-stone-100 bg-stone-50 px-4 py-3.5">
-            <dt className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+            <dt className="font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
               발화 사유
             </dt>
-            <dd className="mt-2 text-[13px] leading-relaxed text-stone-900">
+            <dd className="mt-2 text-sm leading-relaxed text-stone-900">
               {alert.stateReason}
             </dd>
           </div>
@@ -658,10 +658,10 @@ export default async function AlertDetailPage({
 
       <section className="border border-stone-200 bg-white">
         <div className="flex items-center justify-between border-b border-stone-200 px-6 py-3">
-          <h2 className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+          <h2 className="font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
             통지 이력
           </h2>
-          <span className="font-mono text-[11px] text-stone-400">
+          <span className="font-mono text-xs text-stone-400">
             {alert.notifications.length}
             {alert.notifyJobs.length > 0
               ? ` · 재시도 대기 ${alert.notifyJobs.length}`
@@ -674,10 +674,10 @@ export default async function AlertDetailPage({
           <ul className="divide-y divide-stone-100 border-b border-stone-100 text-sm">
             {alert.notifyJobs.map((job) => (
               <li key={job.id} className="flex flex-wrap items-center gap-3 bg-stone-50 px-6 py-3">
-                <span className="w-14 shrink-0 font-mono text-[11px] uppercase tracking-[0.04em] text-stone-500">
+                <span className="w-14 shrink-0 font-mono text-xs uppercase tracking-[0.04em] text-stone-500">
                   {job.channel}
                 </span>
-                <span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-[0.08em] text-[#b54708]">
+                <span className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold tracking-[0.06em] text-[#b54708]">
                   <Mark color="#b54708" shape="tri" />
                   재시도 {job.attempts}/5
                 </span>
@@ -707,21 +707,21 @@ export default async function AlertDetailPage({
                 key={nlog.id}
                 className="flex flex-wrap items-center gap-3 px-6 py-3.5"
               >
-                <span className="w-14 shrink-0 font-mono text-[11px] uppercase tracking-[0.04em] text-stone-500">
+                <span className="w-14 shrink-0 font-mono text-xs uppercase tracking-[0.04em] text-stone-500">
                   {nlog.channel}
                 </span>
                 {nlog.ok ? (
-                  <span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-[0.08em] text-[#067647]">
+                  <span className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold tracking-[0.06em] text-[#067647]">
                     <Mark color="#067647" shape="check" />
                     발송됨
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-[0.08em] text-[#b42318]">
+                  <span className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold tracking-[0.06em] text-[#b42318]">
                     <Mark color="#b42318" shape="dot" />
                     실패
                   </span>
                 )}
-                <span className="text-[13px] font-medium text-stone-900">
+                <span className="text-sm font-medium text-stone-900">
                   {nlog.target ?? "채널 전체"}
                 </span>
                 <span className="text-xs text-stone-500">
@@ -745,10 +745,10 @@ export default async function AlertDetailPage({
 
       <section className="border border-stone-200 bg-white">
         <div className="flex items-center justify-between border-b border-stone-200 px-6 py-3">
-          <h2 className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+          <h2 className="font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
             이벤트 타임라인
           </h2>
-          <span className="font-mono text-[10px] tracking-[0.08em] text-stone-300">
+          <span className="font-mono text-[11px] tracking-[0.06em] text-stone-300">
             APPEND-ONLY
           </span>
         </div>
@@ -767,17 +767,17 @@ export default async function AlertDetailPage({
                 <div className="pb-0.5">
                   <div className="flex flex-wrap items-center gap-2.5">
                     <span
-                      className="font-mono text-[10px] font-bold tracking-[0.08em]"
+                      className="font-mono text-[11px] font-bold tracking-[0.06em]"
                       style={{ color: tone.color }}
                     >
                       {STATUS_LABELS[ev.status] ?? ev.status}
                     </span>
-                    <time className="font-mono text-[11px] text-stone-400">
+                    <time className="font-mono text-xs text-stone-400">
                       {formatTime(ev.createdAt)}
                     </time>
                   </div>
                   {ev.stateReason ? (
-                    <p className="mt-1.5 text-[13px] leading-relaxed text-stone-600">
+                    <p className="mt-1.5 text-sm leading-relaxed text-stone-600">
                       {ev.stateReason}
                     </p>
                   ) : null}

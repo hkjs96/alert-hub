@@ -238,7 +238,7 @@ export default async function DashboardPage({
           <h1 className="text-[27px] font-semibold leading-tight tracking-[-0.025em] text-stone-900">
             알람 대시보드
           </h1>
-          <p className="mt-1.5 text-[13px] text-stone-500">
+          <p className="mt-1.5 text-sm text-stone-500">
             웹훅으로 수신한 발화 알람 · 핑거프린트 기준 중복 제거
           </p>
         </div>
@@ -253,7 +253,7 @@ export default async function DashboardPage({
             <PendingButton
               pendingLabel="Ack 처리 중…"
               title="현재 필터 결과의 FIRING 알람을 모두 Ack합니다"
-              className="inline-flex h-8 items-center border border-stone-900 bg-stone-900 px-[15px] text-[13px] font-semibold text-white transition-colors hover:bg-black"
+              className="inline-flex h-8 items-center border border-stone-900 bg-stone-900 px-[15px] text-sm font-semibold text-white transition-colors hover:bg-black"
             >
               일괄 Ack ({firingVisible.length})
             </PendingButton>
@@ -263,19 +263,19 @@ export default async function DashboardPage({
 
       {unmappedCount > 0 && !f.unmapped && (
         <div className="flex items-center gap-3 border border-stone-200 border-l-[3px] border-l-[#b54708] bg-white px-4 py-3">
-          <span className="font-mono text-[10px] font-bold tracking-[0.1em] text-[#b54708]">
+          <span className="font-mono text-[11px] font-bold tracking-[0.07em] text-[#b54708]">
             주의
           </span>
-          <p className="text-[13px] font-semibold text-stone-900">
+          <p className="text-sm font-semibold text-stone-900">
             미매핑 AWS 계정 알람 {unmappedCount}건
           </p>
-          <p className="hidden text-[13px] text-stone-500 sm:block">
+          <p className="hidden text-sm text-stone-500 sm:block">
             담당자 없이 수신된 알람입니다 — 계정을 서비스에 매핑하면 담당 해석이
             적용됩니다.
           </p>
           <Link
             href={dashboardHref({ ...f, unmapped: true })}
-            className="ml-auto shrink-0 text-[13px] font-semibold text-indigo-600 hover:underline"
+            className="ml-auto shrink-0 text-sm font-semibold text-indigo-600 hover:underline"
           >
             미매핑만 보기 →
           </Link>
@@ -284,16 +284,16 @@ export default async function DashboardPage({
 
       {f.unmapped && (
         <div className="flex items-center gap-3 border border-stone-200 border-l-[3px] border-l-[#b54708] bg-white px-4 py-3">
-          <span className="font-mono text-[10px] font-bold tracking-[0.1em] text-[#b54708]">
+          <span className="font-mono text-[11px] font-bold tracking-[0.07em] text-[#b54708]">
             주의
           </span>
-          <p className="text-[13px] text-stone-600">
+          <p className="text-sm text-stone-600">
             미매핑 계정의 알람만 보고 있습니다. 각 행의 ⚠ 매핑 필요를 누르면 그
             자리에서 서비스에 매핑할 수 있습니다.
           </p>
           <Link
             href={dashboardHref({ ...f, unmapped: false })}
-            className="ml-auto shrink-0 text-[13px] font-semibold text-indigo-600 hover:underline"
+            className="ml-auto shrink-0 text-sm font-semibold text-indigo-600 hover:underline"
           >
             전체 보기 →
           </Link>
@@ -391,7 +391,7 @@ export default async function DashboardPage({
         <div className="h-px bg-stone-100" />
 
         <div className="flex flex-wrap items-center gap-[7px]">
-          <span className="mr-1 font-mono text-[10px] font-bold tracking-[0.11em] text-stone-400">
+          <span className="mr-1 font-mono text-[11px] font-bold tracking-[0.07em] text-stone-400">
             STATUS
           </span>
           {STATUS_CHIPS.map((c) => {
@@ -422,7 +422,7 @@ export default async function DashboardPage({
                 />
                 {c.label}
                 <span
-                  className={`font-mono text-[11px] font-bold ${
+                  className={`font-mono text-xs font-bold ${
                     active ? "text-stone-600" : "text-stone-400"
                   }`}
                 >
@@ -463,10 +463,10 @@ export default async function DashboardPage({
         <aside className="w-full shrink-0 lg:w-72">
           <div className="border border-stone-200 bg-white">
             <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
-              <h2 className="font-mono text-[10px] font-bold tracking-[0.11em] text-stone-400">
+              <h2 className="font-mono text-[11px] font-bold tracking-[0.07em] text-stone-400">
                 담당 인원 · P1
               </h2>
-              <span className="font-mono text-[11px] text-stone-400">
+              <span className="font-mono text-xs text-stone-400">
                 {panelBase.length}
               </span>
             </div>
@@ -491,7 +491,7 @@ export default async function DashboardPage({
                         }`}
                       >
                         <span
-                          className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center border text-[11px] font-semibold ${
+                          className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center border text-xs font-semibold ${
                             active
                               ? "border-stone-900 bg-stone-900 text-white"
                               : "border-stone-200 bg-white text-stone-500"
@@ -500,7 +500,7 @@ export default async function DashboardPage({
                           {unassigned ? "—" : p.name.charAt(0)}
                         </span>
                         <span
-                          className={`min-w-0 flex-1 truncate text-[13px] ${
+                          className={`min-w-0 flex-1 truncate text-sm ${
                             active
                               ? "font-semibold text-stone-900"
                               : unassigned
@@ -517,7 +517,7 @@ export default async function DashboardPage({
                             background: active ? "#1b1a17" : "#ded9cf",
                           }}
                         />
-                        <span className="min-w-4 text-right font-mono text-[13px] font-bold text-stone-900">
+                        <span className="min-w-4 text-right font-mono text-sm font-bold text-stone-900">
                           {p.count}
                         </span>
                       </Link>
@@ -534,7 +534,7 @@ export default async function DashboardPage({
           {escalationQueue.length > 0 && (
             <div className="mt-[18px] border border-stone-200 bg-white">
               <div className="border-b border-stone-200 px-4 py-3">
-                <h2 className="font-mono text-[10px] font-bold tracking-[0.11em] text-stone-400">
+                <h2 className="font-mono text-[11px] font-bold tracking-[0.07em] text-stone-400">
                   에스컬레이션 대기
                 </h2>
               </div>
@@ -552,7 +552,7 @@ export default async function DashboardPage({
                       <div className="flex items-baseline justify-between gap-2.5">
                         <Link
                           href={`/alerts/${e.id}`}
-                          className="truncate text-[13px] font-medium text-stone-900 hover:text-indigo-600 hover:underline"
+                          className="truncate text-sm font-medium text-stone-900 hover:text-indigo-600 hover:underline"
                         >
                           {e.title}
                         </Link>

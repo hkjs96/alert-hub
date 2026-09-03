@@ -152,7 +152,7 @@ export default async function SilencesPage({
 
       <section className="border border-stone-200 bg-white">
         <div className="border-b border-stone-200 px-5 py-3">
-          <h2 className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+          <h2 className="font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
             새 점검 창 등록
           </h2>
         </div>
@@ -206,7 +206,7 @@ export default async function SilencesPage({
               <form action={createSilence} className="space-y-4 border-t border-stone-100 pt-4 text-sm">
                 <input type="hidden" name="back" value={back} />
                 <div>
-                  <div className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+                  <div className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
                     범위
                   </div>
                   <div className="flex flex-wrap gap-4">
@@ -233,7 +233,7 @@ export default async function SilencesPage({
                 </div>
 
                 <div>
-                  <div className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+                  <div className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
                     기간 (UTC)
                   </div>
                   <div className="flex flex-wrap items-center gap-4">
@@ -264,10 +264,10 @@ export default async function SilencesPage({
                 <div className="flex flex-wrap items-end gap-3">
                   <label className="block min-w-64 flex-1">
                     <span className="mb-1 flex items-center gap-2">
-                      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+                      <span className="font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
                         사유
                       </span>
-                      <span className="font-mono text-[10px] font-bold tracking-[0.08em] text-[#b42318]">
+                      <span className="font-mono text-[11px] font-bold tracking-[0.06em] text-[#b42318]">
                         필수
                       </span>
                     </span>
@@ -279,7 +279,7 @@ export default async function SilencesPage({
                     />
                   </label>
                   <label className="block w-36">
-                    <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+                    <span className="mb-1 block font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
                       등록자 (선택)
                     </span>
                     <input name="createdBy" placeholder="이름" className={`${control} w-full`} />
@@ -308,7 +308,7 @@ export default async function SilencesPage({
 
       <section className="border border-stone-200 bg-white">
         <div className="flex items-center gap-2 border-b border-stone-200 px-5 py-3">
-          <h2 className="font-mono text-[10px] font-bold uppercase tracking-[0.11em] text-stone-400">
+          <h2 className="font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
             점검 창 · 뮤트 일람
           </h2>
           <div className="ml-auto flex border border-stone-200 text-xs">
@@ -347,33 +347,33 @@ export default async function SilencesPage({
                   }`}
                 >
                   <span
-                    className="inline-flex w-20 items-center gap-1.5 font-mono text-[10px] font-bold tracking-[0.08em]"
+                    className="inline-flex w-20 items-center gap-1.5 font-mono text-[11px] font-bold tracking-[0.06em]"
                     style={{ color: done ? "#9a978f" : tone.color }}
                   >
                     <Mark color={done ? "#b8b2a4" : tone.color} shape={tone.shape} />
                     {STATUS_LABEL[status]}
                   </span>
                   <span className="min-w-52 flex-1">
-                    <span className="block text-[13px] font-medium text-stone-900">
+                    <span className="block text-sm font-medium text-stone-900">
                       {scopeName}
                     </span>
-                    <span className="block text-[11px] text-stone-400">{kind}</span>
+                    <span className="block text-xs text-stone-400">{kind}</span>
                   </span>
                   <span className="w-52">
                     <span className="block font-mono text-xs text-stone-600">
                       {fmtRange(s.startsAt, s.endsAt)}
                     </span>
-                    <span className="block text-[11px] text-stone-400">
+                    <span className="block text-xs text-stone-400">
                       {fmtRemain(status, s, now)}
                     </span>
                   </span>
                   <span
-                    className="w-64 truncate text-[13px] text-stone-600"
+                    className="w-64 truncate text-sm text-stone-600"
                     title={s.reason}
                   >
                     {s.reason}
                   </span>
-                  <span className="w-20 text-[13px] text-stone-600">
+                  <span className="w-20 text-sm text-stone-600">
                     {s.createdBy ?? "—"}
                   </span>
                   <span className="ml-auto">
