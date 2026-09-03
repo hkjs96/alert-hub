@@ -106,6 +106,20 @@ handled. Locally, point both URLs at the same Postgres.
 | `GOOGLE_CLIENT_ID` `GOOGLE_CLIENT_SECRET` `AUTH_SECRET` | no | 셋 다 있으면 **Google SSO**가 켜지고 화면·서버 액션이 로그인 뒤로 들어간다(웹훅·크론은 자체 비밀로 통과). 하나라도 없으면 지금처럼 열린 상태, 헤더에 "SSO 미설정"이 보인다. `AUTH_SECRET`은 16자 이상 무작위 문자열. |
 | `AUTH_ALLOWED_DOMAINS` | no | SSO 허용 이메일 도메인(쉼표 구분, 예 `msp.co.kr`). 비우면 어떤 Google 계정이든 들어올 수 있으니 운영에서는 반드시 둔다. |
 
+### 라우팅 규칙 (기능 축 온콜)
+
+조직 트리(고객사 › 프로젝트 › 서비스)는 "가장 구체적인 단계의 순서 채택"으로 담당을 정한다. 프로젝트 단위로 온콜을 도는
+고객사는 이것으로 충분하지만, 인프라팀·DB팀·야간 당직처럼 **기능 축**으로 도는 고객사는 조직 트리 고객사 패널의
+**라우팅 규칙**을 쓴다.
+
+- 규칙 = 조건(namespace · metric · severity · resource, 선택적으로 서비스 한정) → **팀**. 비운 조건은 와일드카드, `*` 글롭, 대소문자 무시.
+- 우선순위 오름차순 첫 매치가 이기고, 매치가 없으면 트리 순서. 팀은 내부 공용 팀이거나 그 고객사 전용 팀.
+- 매치되면 팀의 활성 멤버가 팀 순서대로 **순서를 통째로 대체**한다(트리 순서와 섞지 않는다). 스냅샷과 알람 상세에
+  "라우팅 규칙 X → 팀 Y"로 남는다.
+- 규칙 조회가 실패하거나 팀에 활성 멤버가 없으면 트리 순서로 통지한다 — 규칙은 통지를 막는 쪽으로 실패하지 않는다.
+
+예) 네오위즈: `AWS/RDS → DB팀` (우선 10), `severity CRITICAL → 야간 당직` (우선 50). RDS의 CRITICAL은 DB팀이 받는다.
+
 ### Google SSO · JIT 등록 (선택)
 
 1. Google Cloud Console → APIs & Services → Credentials → **OAuth client ID (Web application)**.

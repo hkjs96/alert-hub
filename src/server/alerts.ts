@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import type { NotifyContext } from "@/lib/notify";
 import { digestWindowSeconds, enqueueAndSend } from "@/server/notify-queue";
 import { buildOwnershipSnapshot, getOwnershipByAwsAccount } from "@/server/org";
+import { applyRoutingRules } from "@/server/routing";
 import { findActiveSilence } from "@/server/silences";
 import type { SilenceScope } from "@/lib/silence";
 import {
@@ -90,8 +91,15 @@ async function resolveIngestOwnership(
 ): Promise<IngestOwnership> {
   if (!n.accountId) return {};
   try {
-    const ownership = await getOwnershipByAwsAccount(n.accountId);
-    if (!ownership) return {}; // unmapped — nothing to freeze
+    const tree = await getOwnershipByAwsAccount(n.accountId);
+    if (!tree) return {}; // unmapped — nothing to freeze
+    // 라우팅 규칙(네임스페이스·메트릭·심각도·리소스 → 팀)이 트리 순서를 덮어쓴다.
+    const ownership = await applyRoutingRules(tree, {
+      namespace: n.namespace ?? null,
+      metric: n.metric ?? null,
+      severity: n.severity,
+      resource: n.resource ?? null,
+    });
     const out: IngestOwnership = {
       snapshot: buildOwnershipSnapshot(ownership) as unknown as Prisma.InputJsonValue,
       scope: {

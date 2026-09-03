@@ -293,7 +293,8 @@ export interface OwnershipInfo {
   chain: ScopeChain;
   responsibility: Responsibility;
   /** responsibility.order resolved to people, same order — [0] is 1순위. */
-  contacts: OwnershipContact[];
+  contacts: OwnershipContact[];  /** 라우팅 규칙이 트리 순서를 덮어쓴 경우 (Phase 3). */
+  rule?: { id: string; name: string; team: string } | null;
 }
 
 /**
@@ -465,6 +466,8 @@ export interface OwnershipSnapshot {
     /** 팀을 통해 배정된 경우 팀 이름 (표시용). */
     team?: string | null;
   }[];
+  /** 라우팅 규칙으로 순서가 정해졌다면 그 규칙 (없으면 트리 순서). */
+  rule?: { id: string; name: string; team: string } | null;
 }
 
 export function buildOwnershipSnapshot(info: OwnershipInfo): OwnershipSnapshot {
@@ -488,6 +491,7 @@ export function buildOwnershipSnapshot(info: OwnershipInfo): OwnershipSnapshot {
       department: c.department,
       team: c.team ?? null,
     })),
+    rule: info.rule ?? null,
   };
 }
 

@@ -11,6 +11,7 @@ import {
   type OwnershipInfo,
   type OwnershipSnapshot,
 } from "@/server/org";
+import { applyRoutingRules } from "@/server/routing";
 import { levelLabel } from "@/lib/org/resolve";
 import {
   Mark,
@@ -334,8 +335,16 @@ function SnapshotPanel({
       </div>
 
       <p className="mb-2 mt-4 text-xs text-stone-400">
-        {levelLabel(snapshot.level)} 단계의 순서 · 알람이 접수/재발화됐을 때 통지된
-        기준입니다 ({formatTime(new Date(snapshot.capturedAt))})
+        {snapshot.rule ? (
+          <>
+            라우팅 규칙 <span className="font-medium text-stone-700">{snapshot.rule.name}</span> →{" "}
+            팀 <span className="font-medium text-stone-700">{snapshot.rule.team}</span> ·{" "}
+            {levelLabel(snapshot.level)} 단계 순서를 덮어씀
+          </>
+        ) : (
+          <>{levelLabel(snapshot.level)} 단계의 순서</>
+        )}{" "}
+        · 알람이 접수/재발화됐을 때 통지된 기준입니다 ({formatTime(new Date(snapshot.capturedAt))})
       </p>
       <ol className="space-y-1.5">
         {snapshot.order.map((o, i) => (
@@ -544,6 +553,16 @@ export default async function AlertDetailPage({
       serviceId: ownership?.chain.service.id ?? null,
       projectId: ownership?.chain.project.id ?? null,
       customerId: ownership?.chain.customer.id ?? null,
+    });
+  }
+
+  // 현재 기준에도 라우팅 규칙을 적용해야 "지금은 이렇다" 비교가 같은 잣대가 된다.
+  if (ownership) {
+    ownership = await applyRoutingRules(ownership, {
+      namespace: alert.namespace,
+      metric: alert.metric,
+      severity: alert.severity,
+      resource: alert.resource,
     });
   }
 
