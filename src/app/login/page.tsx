@@ -56,6 +56,7 @@ export default function LoginPage({
           {cfg.allowedDomains.length ? (
             <span className="font-mono text-xs font-normal opacity-70">
               @{cfg.allowedDomains.join(", @")}
+              {cfg.allowedEmails.length ? ` +${cfg.allowedEmails.length}` : ""}
             </span>
           ) : null}
         </a>
