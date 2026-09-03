@@ -13,6 +13,8 @@ export interface AuthConfig {
   allowedDomains: string[];
   /** 도메인과 무관하게 허용하는 개별 이메일(소문자). 외부 협력자·개인 계정용. */
   allowedEmails: string[];
+  /** 첫 로그인에 바로 ADMIN·활성이 되는 이메일. 첫 관리자를 만드는 유일한 길. */
+  bootstrapAdmins: string[];
 }
 
 export function readAuthConfig(env: Record<string, string | undefined> = process.env): AuthConfig {
@@ -21,6 +23,7 @@ export function readAuthConfig(env: Record<string, string | undefined> = process
   const secret = env.AUTH_SECRET?.trim() ?? "";
   const allowedDomains = parseDomains(env.AUTH_ALLOWED_DOMAINS);
   const allowedEmails = parseEmails(env.AUTH_ALLOWED_EMAILS);
+  const bootstrapAdmins = parseEmails(env.AUTH_BOOTSTRAP_ADMINS);
 
   const missing = [
     !clientId && "GOOGLE_CLIENT_ID",
@@ -29,7 +32,7 @@ export function readAuthConfig(env: Record<string, string | undefined> = process
   ].filter(Boolean) as string[];
 
   if (missing.length === 3) {
-    return { enabled: false, reason: "SSO 미설정", clientId, clientSecret, secret, allowedDomains, allowedEmails };
+    return { enabled: false, reason: "SSO 미설정", clientId, clientSecret, secret, allowedDomains, allowedEmails, bootstrapAdmins };
   }
   if (missing.length > 0) {
     return {
@@ -40,6 +43,7 @@ export function readAuthConfig(env: Record<string, string | undefined> = process
       secret,
       allowedDomains,
       allowedEmails,
+      bootstrapAdmins,
     };
   }
   if (secret.length < 16) {
@@ -51,9 +55,10 @@ export function readAuthConfig(env: Record<string, string | undefined> = process
       secret,
       allowedDomains,
       allowedEmails,
+      bootstrapAdmins,
     };
   }
-  return { enabled: true, clientId, clientSecret, secret, allowedDomains, allowedEmails };
+  return { enabled: true, clientId, clientSecret, secret, allowedDomains, allowedEmails, bootstrapAdmins };
 }
 
 export function parseDomains(raw: string | undefined): string[] {

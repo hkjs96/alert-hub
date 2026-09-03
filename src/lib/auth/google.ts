@@ -13,6 +13,8 @@ export function authorizeUrl(p: {
   nonce: string;
   /** 허용 도메인이 정확히 하나면 Google 계정 선택 화면을 그 도메인으로 좁힌다. */
   hd?: string;
+  /** 사용자가 적은 회사 이메일 — 계정 선택을 건너뛴다. */
+  loginHint?: string;
 }): string {
   const q = new URLSearchParams({
     client_id: p.clientId,
@@ -24,6 +26,7 @@ export function authorizeUrl(p: {
     prompt: "select_account",
   });
   if (p.hd) q.set("hd", p.hd);
+  if (p.loginHint) q.set("login_hint", p.loginHint);
   return `${GOOGLE_AUTHORIZE}?${q.toString()}`;
 }
 

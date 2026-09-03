@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { currentActorName } from "@/server/auth";
+import { currentActorName, requireRole } from "@/server/auth";
 
 // 인시던트 액션 (Phase 2c) — 알람 상세의 Ack/Resolve 버튼 뒤.
 //
@@ -47,6 +47,7 @@ async function transition(
  * ingest) — only resolve/OK moves it on.
  */
 export async function ackAlert(formData: FormData) {
+  await requireRole("OPERATOR");
   await transition(
     requireString(formData, "id"),
     ["FIRING"],
@@ -57,6 +58,7 @@ export async function ackAlert(formData: FormData) {
 
 /** FIRING/ACKNOWLEDGED → RESOLVED: closed by hand — OK 수신과 같은 종착지. */
 export async function resolveAlert(formData: FormData) {
+  await requireRole("OPERATOR");
   await transition(
     requireString(formData, "id"),
     ["FIRING", "ACKNOWLEDGED"],
@@ -72,6 +74,7 @@ export async function resolveAlert(formData: FormData) {
  * 위해 순차 처리 (한 화면 분량이라 n이 작다).
  */
 export async function bulkAckAlerts(formData: FormData) {
+  await requireRole("OPERATOR");
   const ids = requireString(formData, "ids")
     .split(",")
     .map((s) => s.trim())

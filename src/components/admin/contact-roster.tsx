@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { createContact, deleteContact, updateContact } from "@/server/org-actions";
 import { PendingButton } from "@/components/pending-button";
+import { ROLE_LABELS, ROLES, STATUS_LABELS } from "@/lib/auth/roles";
 
 const control =
   "h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400";
@@ -223,6 +224,16 @@ export async function ContactRoster({
                           비활성
                         </span>
                       ) : null}
+                      {c.customerId === null && c.status !== "ACTIVE" ? (
+                        <span className={`ml-1.5 border px-1 font-mono text-[11px] ${c.status === "PENDING" ? "border-[#4a5568] text-[#4a5568]" : "border-stone-200 text-stone-400"}`}>
+                          {STATUS_LABELS[c.status]}
+                        </span>
+                      ) : null}
+                      {c.customerId === null && c.role === "ADMIN" ? (
+                        <span className="ml-1.5 border border-[#e0dcd3] px-1 font-mono text-[11px] text-[#b54708]" title="관리자">
+                          admin
+                        </span>
+                      ) : null}
                       {c.lastLoginAt ? (
                         <span className="ml-1.5 font-mono text-[11px] text-stone-400" title="SSO 로그인 이력 있음">
                           sso
@@ -248,6 +259,18 @@ export async function ContactRoster({
                       <input type="hidden" name="back" value={back} />
                       {renderFields(fields(c))}
                       {customerSelect(c.customerId)}
+                      {c.customerId === null ? (
+                        <label className="block w-36">
+                          <span className={`mb-1 block ${overline}`}>역할</span>
+                          <select name="role" defaultValue={c.role} className={`${control} w-full`}>
+                            {ROLES.map((r) => (
+                              <option key={r} value={r}>
+                                {ROLE_LABELS[r]}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : null}
                       <label className="flex h-8 items-center gap-1.5 text-sm text-stone-700">
                         <input type="hidden" name="activeField" value="1" />
                         <input type="checkbox" name="active" defaultChecked={c.active} className="h-4 w-4" />

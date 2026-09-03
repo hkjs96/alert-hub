@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { NavTab } from "@/components/nav-tab";
+import { redirect } from "next/navigation";
+import { authMode, getCurrentUser } from "@/server/auth";
 
 const TAB_BASE = "py-3 font-medium";
 const TAB_ACTIVE = "font-semibold text-stone-900 shadow-[inset_0_-2px_0_#1b1a17]";
@@ -13,7 +15,13 @@ const TAB_IDLE = "text-stone-500 hover:text-stone-900";
  *
  * v2: 페이지 타이틀 + 잉크 밑줄 탭 줄 (alert-hub v2.dc.html 04/05 프레임).
  */
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  // 등록 관리는 관리자 전용. SSO 모드에서 역할이 모자라면 접근 거부 화면으로.
+  if (authMode() === "sso") {
+    const me = await getCurrentUser();
+    if (!me) redirect("/login?next=/admin");
+    if (me.role !== "ADMIN") redirect("/denied?screen=" + encodeURIComponent("등록 관리"));
+  }
   return (
     <div className="space-y-6">
       <div className="border-b border-stone-200">
@@ -24,7 +32,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <NavTab
             href="/admin/org"
             label="조직 · 담당자 관리"
-            pattern="^/admin(?!/(escalation|contacts|silences|teams))"
+            pattern="^/admin(?!/(escalation|contacts|silences|teams|auth))"
             className={TAB_BASE}
             activeClassName={TAB_ACTIVE}
             inactiveClassName={TAB_IDLE}
@@ -49,6 +57,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             href="/admin/teams"
             label="팀 · 내부 인원"
             pattern="^/admin/(teams|contacts)"
+            className={TAB_BASE}
+            activeClassName={TAB_ACTIVE}
+            inactiveClassName={TAB_IDLE}
+          />
+          <NavTab
+            href="/admin/auth"
+            label="인증"
+            pattern="^/admin/auth"
             className={TAB_BASE}
             activeClassName={TAB_ACTIVE}
             inactiveClassName={TAB_IDLE}

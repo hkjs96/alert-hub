@@ -84,3 +84,22 @@ export const emailNotifier: Notifier = {
     return "sent";
   },
 };
+
+/**
+ * 알람과 무관한 단문 메일 (통지 채널 테스트 발송 등). SMTP 미설정이면 "skipped".
+ */
+export async function sendEmailText(to: string, subject: string, text: string): Promise<"sent" | "skipped"> {
+  const from = process.env.SMTP_FROM;
+  const host = process.env.SMTP_HOST;
+  if (!host || !from) return "skipped";
+  const transport = nodemailer.createTransport({
+    host,
+    port: Number(process.env.SMTP_PORT ?? 587),
+    secure: process.env.SMTP_SECURE === "true",
+    auth: process.env.SMTP_USER
+      ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS ?? "" }
+      : undefined,
+  });
+  await transport.sendMail({ from, to, subject, text });
+  return "sent";
+}
