@@ -106,6 +106,18 @@ handled. Locally, point both URLs at the same Postgres.
 | `GOOGLE_CLIENT_ID` `GOOGLE_CLIENT_SECRET` `AUTH_SECRET` | no | 셋 다 있으면 **Google SSO**가 켜지고 화면·서버 액션이 로그인 뒤로 들어간다(웹훅·크론은 자체 비밀로 통과). 하나라도 없으면 지금처럼 열린 상태, 헤더에 "SSO 미설정"이 보인다. `AUTH_SECRET`은 16자 이상 무작위 문자열. |
 | `AUTH_ALLOWED_DOMAINS` | no | SSO 허용 이메일 도메인(쉼표 구분, 예 `msp.co.kr`). 비우면 어떤 Google 계정이든 들어올 수 있으니 운영에서는 반드시 둔다. |
 
+### 실제 고객사 투입 전 체크리스트
+
+1. **데모 데이터 정리** — 운영 DB에서 `npm run demo:reset`(먼저 인자 없이 돌려 목록 확인, `--yes`로 삭제).
+   Vercel에서는 `DATABASE_URL`을 로컬 셸에 넣고 실행하면 된다. 시드 데모 고객사·알람·내부 데모 인원만 지운다.
+2. **`SEED_DEMO=false`** 를 Vercel 환경변수에 추가 — 빈 DB에 배포하면 데모 시드가 다시 들어가는 것을 막는다.
+3. **`INGEST_TOKEN`**, **`CRON_SECRET`** 설정. 웹훅 URL에는 `?token=`으로 박는다(SNS는 헤더를 못 붙인다).
+4. **SSO**(아래) — 실제 고객사 알람이 보이는 화면을 URL만으로 열어 두지 않는다.
+5. 외부 스케줄러(cron-job.org, QStash 등)로 `/api/cron/notify`·`/api/cron/escalate`를 1분 간격 호출.
+6. 조직 트리 → **새 고객사 온보딩**으로 고객사 › 프로젝트 › 서비스 › AWS 계정 매핑 › 담당자를 만들고,
+   고객사 AWS 계정마다 SNS 토픽 → HTTPS 구독(`/api/webhooks/cloudwatch?token=…`) → CloudWatch 알람 액션을 건다.
+   구독 확인은 자동, SNS 서명 검증은 기본 켜짐.
+
 ### 라우팅 규칙 (기능 축 온콜)
 
 조직 트리(고객사 › 프로젝트 › 서비스)는 "가장 구체적인 단계의 순서 채택"으로 담당을 정한다. 프로젝트 단위로 온콜을 도는
