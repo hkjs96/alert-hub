@@ -204,6 +204,7 @@ model Customer {
   silences    Silence[]
   contacts    Contact[]
   teams       Team[]
+  routingRules RoutingRule[]
   assignments Assignment[]
 }
 
@@ -237,6 +238,7 @@ model Service {
   assignments Assignment[]
 
   @@unique([projectId, name])
+  routingRules RoutingRule[]
 }
 
 model AwsAccountMap {
@@ -298,6 +300,7 @@ model Team {
 
   members     TeamMember[]
   assignments Assignment[]
+  routingRules RoutingRule[]
 
   @@index([customerId])
 }
@@ -367,4 +370,37 @@ model Assignment {
   @@index([projectId])
   @@index([serviceId])
   @@index([accountId])
+}
+
+// 라우팅 규칙 (Phase 3): 조직 트리 순서를 알람 속성으로 덮어쓴다. "RDS 네임스페이스는
+// 무조건 DB팀", "CRITICAL은 야간 당직팀"처럼 프로젝트 축이 아니라 기능 축으로
+// 온콜을 도는 고객사를 위한 것. 고객사 단위로 정의되고, 우선순위 오름차순으로
+// 첫 매치가 이긴다. 비어 있는 조건은 와일드카드, 패턴은 `*` 글롭(대소문자 무시).
+model RoutingRule {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  // 사람이 읽는 이름 (스냅샷·상세에 남는다).
+  name       String
+  priority   Int      @default(100)
+  enabled    Boolean  @default(true)
+
+  // 조건 — 모두 선택. 비면 무엇이든 매치.
+  namespace String?
+  metric    String?
+  // 쉼표 구분 목록, 예 "CRITICAL,SEV-1".
+  severity  String?
+  resource  String?
+  // 특정 서비스에만 적용하고 싶을 때. 서비스가 지워지면 규칙은 전체 적용으로 넓어지지
+  // 않도록 규칙도 함께 지운다.
+  serviceId String?
+  service   Service? @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId, priority])
 }

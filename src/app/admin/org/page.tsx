@@ -10,6 +10,7 @@ import { AssignmentEditor } from "@/components/admin/assignment-editor";
 import { CoverageBadge } from "@/components/admin/coverage-badge";
 import { ContactRoster } from "@/components/admin/contact-roster";
 import { TeamEditor } from "@/components/admin/team-editor";
+import { RoutingRulesEditor } from "@/components/admin/routing-rules";
 import { PendingButton } from "@/components/pending-button";
 
 export const dynamic = "force-dynamic";
@@ -317,6 +318,8 @@ export default async function OrgPage({
                       </ul>
                     )}
                   </section>
+
+                  <RoutingRulesEditor customerId={selected.customer.id} back={back} />
 
                   <section>
                     <div className={`mb-2 ${overline}`}>이 고객사의 담당자</div>

@@ -497,3 +497,62 @@ export async function moveTeamMember(formData: FormData) {
   }
   revalidateTeams(formData);
 }
+
+// --- 라우팅 규칙 (Phase 3) ------------------------------------------------------
+//
+// 고객사 단위. 조건은 전부 선택이고 비면 와일드카드. 팀은 내부 공용이거나 그
+// 고객사 전용이어야 한다(다른 고객사 팀 참조 금지).
+
+function revalidateRouting(formData: FormData) {
+  revalidatePath("/admin/org");
+  revalidatePath("/");
+  const back = formData.get("back");
+  if (typeof back === "string" && back.startsWith("/")) revalidatePath(back);
+}
+
+export async function createRoutingRule(formData: FormData) {
+  const customerId = requireString(formData, "customerId");
+  const teamId = requireString(formData, "teamId");
+  const team = await prisma.team.findUnique({ where: { id: teamId } });
+  if (!team) throw new Error("팀이 없습니다");
+  if (team.customerId !== null && team.customerId !== customerId) {
+    throw new Error("다른 고객사 전용 팀은 규칙에 쓸 수 없습니다");
+  }
+  const serviceId = optionalString(formData, "serviceId");
+  if (serviceId) {
+    const svc = await prisma.service.findUnique({
+      where: { id: serviceId },
+      include: { project: { select: { customerId: true } } },
+    });
+    if (!svc || svc.project.customerId !== customerId) throw new Error("이 고객사의 서비스가 아닙니다");
+  }
+  const priorityRaw = optionalString(formData, "priority");
+  const priority = priorityRaw && /^-?\d+$/.test(priorityRaw) ? Number(priorityRaw) : 100;
+  await prisma.routingRule.create({
+    data: {
+      customerId,
+      teamId,
+      name: requireString(formData, "name"),
+      priority,
+      namespace: optionalString(formData, "namespace"),
+      metric: optionalString(formData, "metric"),
+      severity: optionalString(formData, "severity"),
+      resource: optionalString(formData, "resource"),
+      serviceId,
+    },
+  });
+  revalidateRouting(formData);
+}
+
+export async function deleteRoutingRule(formData: FormData) {
+  await prisma.routingRule.delete({ where: { id: requireString(formData, "id") } });
+  revalidateRouting(formData);
+}
+
+export async function toggleRoutingRule(formData: FormData) {
+  const id = requireString(formData, "id");
+  const cur = await prisma.routingRule.findUnique({ where: { id } });
+  if (!cur) return;
+  await prisma.routingRule.update({ where: { id }, data: { enabled: !cur.enabled } });
+  revalidateRouting(formData);
+}
