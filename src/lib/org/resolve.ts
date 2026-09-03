@@ -104,3 +104,38 @@ export function levelLabel(level: ScopeLevel | null): string {
     level
   ];
 }
+
+// --- 팀 펼치기 ----------------------------------------------------------------
+
+/** 스코프에 붙은 원시 행: 사람 또는 팀 중 하나. */
+export interface AssignmentRowLite {
+  contactId: string | null;
+  teamId: string | null;
+  level: ScopeLevel;
+  order: number;
+}
+
+/**
+ * 팀 항목을 멤버 순서로 펼쳐 AssignmentLite 목록으로 만든다. 팀은 자기
+ * 순번 자리에 멤버들을 순서대로 끼워 넣는다 — [최민서, DB팀(김도윤→이서연)]
+ * 은 최민서 → 김도윤 → 이서연. 같은 사람이 직접+팀으로 겹치면
+ * resolveResponsibility의 dedup이 첫 등장만 남긴다. 멤버가 없는 팀은 빈
+ * 항목(무시). 소수 order(순번 + 멤버 인덱스/1000)로 팀 안 순서를 보존한다.
+ */
+export function expandAssignments(
+  rows: AssignmentRowLite[],
+  teamMembers: Map<string, string[]>,
+): AssignmentLite[] {
+  const out: AssignmentLite[] = [];
+  for (const r of rows) {
+    if (r.contactId) {
+      out.push({ contactId: r.contactId, level: r.level, order: r.order });
+    } else if (r.teamId) {
+      const members = teamMembers.get(r.teamId) ?? [];
+      members.forEach((contactId, i) => {
+        out.push({ contactId, level: r.level, order: r.order + i / 1000 });
+      });
+    }
+  }
+  return out;
+}

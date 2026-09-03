@@ -353,6 +353,11 @@ function SnapshotPanel({
             {o.department ? (
               <span className="text-xs text-stone-400">{o.department}</span>
             ) : null}
+            {o.team ? (
+              <span className="border border-stone-200 px-1 font-mono text-[11px] text-stone-500">
+                팀 {o.team}
+              </span>
+            ) : null}
             {i === 0 ? (
               <span className="text-xs font-medium text-indigo-600">1순위</span>
             ) : null}

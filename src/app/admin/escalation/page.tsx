@@ -109,7 +109,7 @@ export default async function EscalationPage({
   const inherited = assignments.length === 0 ? inheritedRaw : null;
   const inheritedContacts = inherited ? await getContactsByIds(inherited.order) : [];
 
-  const registered = new Set(assignments.map((a) => a.contactId));
+  const registered = new Set(assignments.map((a) => a.contactId).filter(Boolean));
   const available = choices.filter((c) => !registered.has(c.id));
 
   return (
@@ -232,7 +232,9 @@ export default async function EscalationPage({
         )}
 
         <ol className="space-y-1.5">
-          {assignments.map((a, i) => (
+          {assignments.map((a, i) => {
+            const label = a.contact ? a.contact.name : (a.team?.name ?? "?");
+            return (
             <li
               key={a.id}
               className="flex items-center gap-2 rounded-md bg-stone-50 px-2.5 py-1.5 text-sm"
@@ -240,9 +242,23 @@ export default async function EscalationPage({
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-stone-900 text-xs font-semibold tabular-nums text-white">
                 {i + 1}
               </span>
-              <span className="font-medium text-stone-800">{a.contact.name}</span>
-              {a.contact.department ? (
-                <span className="text-xs text-stone-400">{a.contact.department}</span>
+              {a.contact ? (
+                <>
+                  <span className="font-medium text-stone-800">{a.contact.name}</span>
+                  {a.contact.department ? (
+                    <span className="text-xs text-stone-400">{a.contact.department}</span>
+                  ) : null}
+                </>
+              ) : a.team ? (
+                <>
+                  <span className="font-mono text-[11px] text-stone-400">팀</span>
+                  <span className="font-medium text-stone-800">{a.team.name}</span>
+                  <span className="text-xs text-stone-400">
+                    {a.team.members.length
+                      ? a.team.members.map((m) => m.contact.name).join(" → ")
+                      : "멤버 없음 — 해석 시 건너뜀"}
+                  </span>
+                </>
               ) : null}
 
               <span className="ml-auto flex items-center gap-1">
@@ -251,7 +267,7 @@ export default async function EscalationPage({
                   <input type="hidden" name="direction" value="up" />
                   <input type="hidden" name="back" value={back} />
                   <button
-                    aria-label={`${a.contact.name} 순서 올리기`}
+                    aria-label={`${label} 순서 올리기`}
                     disabled={i === 0}
                     className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-stone-300 bg-white text-xs text-stone-600 transition-colors hover:bg-stone-50 disabled:opacity-35 disabled:hover:bg-white"
                   >
@@ -263,7 +279,7 @@ export default async function EscalationPage({
                   <input type="hidden" name="direction" value="down" />
                   <input type="hidden" name="back" value={back} />
                   <button
-                    aria-label={`${a.contact.name} 순서 내리기`}
+                    aria-label={`${label} 순서 내리기`}
                     disabled={i === assignments.length - 1}
                     className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-stone-300 bg-white text-xs text-stone-600 transition-colors hover:bg-stone-50 disabled:opacity-35 disabled:hover:bg-white"
                   >
@@ -274,7 +290,7 @@ export default async function EscalationPage({
                   <input type="hidden" name="id" value={a.id} />
                   <input type="hidden" name="back" value={back} />
                   <button
-                    aria-label={`${a.contact.name} 제거`}
+                    aria-label={`${label} 제거`}
                     className="px-1 text-stone-400 hover:text-[#b42318]"
                   >
                     ×
@@ -282,7 +298,8 @@ export default async function EscalationPage({
                 </form>
               </span>
             </li>
-          ))}
+            );
+          })}
         </ol>
 
         {available.length === 0 && assignments.length === 0 && (

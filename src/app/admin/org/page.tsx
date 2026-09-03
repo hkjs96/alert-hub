@@ -4,9 +4,12 @@ import {
   createAccountMap,
   createProject,
   createService,
+  createTeam,
 } from "@/server/org-actions";
 import { AssignmentEditor } from "@/components/admin/assignment-editor";
 import { CoverageBadge } from "@/components/admin/coverage-badge";
+import { ContactRoster } from "@/components/admin/contact-roster";
+import { TeamEditor } from "@/components/admin/team-editor";
 import { PendingButton } from "@/components/pending-button";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +42,7 @@ export default async function OrgPage({
     prisma.customer.findMany({
       orderBy: { name: "asc" },
       include: {
+        teams: { orderBy: { name: "asc" } },
         projects: {
           orderBy: { name: "asc" },
           include: {
@@ -283,6 +287,43 @@ export default async function OrgPage({
                   />
                 </div>
               </section>
+
+              {selected.level === "customer" && (
+                <>
+                  <section className="border border-stone-200 bg-white">
+                    <div className="flex items-center justify-between border-b border-stone-200 px-5 py-3">
+                      <h2 className={overline}>이 고객사의 팀</h2>
+                      <form action={createTeam} className="flex items-center gap-1.5 text-sm">
+                        <input type="hidden" name="customerId" value={selected.customer.id} />
+                        <input type="hidden" name="back" value={back} />
+                        <input name="name" required placeholder="예) 결제 도메인 온콜" className={`${control} w-44`} />
+                        <PendingButton pendingLabel="생성 중…" className="inline-flex h-8 items-center rounded-md border border-stone-900 bg-white px-3 text-sm font-medium text-stone-900 transition-colors hover:bg-stone-100">
+                          + 팀
+                        </PendingButton>
+                      </form>
+                    </div>
+                    {selected.customer.teams.length === 0 ? (
+                      <p className="px-5 py-3 text-xs text-stone-400">
+                        고객사 전용 팀이 없습니다. 도메인·기능 단위로 온콜을 돌면 팀을 만들어 서비스마다 붙이세요 —
+                        내부 공용 팀은 팀 · 내부 인원에서 만듭니다.
+                      </p>
+                    ) : (
+                      <ul className="divide-y divide-stone-100">
+                        {selected.customer.teams.map((t) => (
+                          <li key={t.id} className="px-5 py-4">
+                            <TeamEditor teamId={t.id} back={back} />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+
+                  <section>
+                    <div className={`mb-2 ${overline}`}>이 고객사의 담당자</div>
+                    <ContactRoster scope={{ customerId: selected.customer.id }} back={back} />
+                  </section>
+                </>
+              )}
 
               {selected.level === "customer" && (
                 <section className="border border-stone-200 bg-white p-5">

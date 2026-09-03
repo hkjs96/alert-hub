@@ -232,20 +232,22 @@ async function renumber(
 export async function addAssignment(formData: FormData) {
   const level = requireString(formData, "level") as ScopeLevel;
   const scopeId = requireString(formData, "scopeId");
-  const contactId = requireString(formData, "contactId");
-  await appendToScope(level, scopeId, contactId);
+  // 항목은 사람 또는 팀 — 폼이 둘 중 하나를 보낸다.
+  const teamId = optionalString(formData, "teamId");
+  const contactId = teamId ? null : requireString(formData, "contactId");
+  await appendToScope(level, scopeId, contactId ? { contactId } : { teamId: teamId! });
   revalidateBack(formData, "/admin/customers");
 }
 
 async function appendToScope(
   level: ScopeLevel,
   scopeId: string,
-  contactId: string,
+  item: { contactId: string } | { teamId: string },
 ) {
   const field = scopeField(level);
 
   const existing = await prisma.assignment.findFirst({
-    where: { [field]: scopeId, contactId },
+    where: { [field]: scopeId, ...item },
   });
   if (!existing) {
     const last = await prisma.assignment.findFirst({
@@ -256,13 +258,13 @@ async function appendToScope(
     try {
       await prisma.assignment.create({
         data: {
-          contactId,
+          ...item,
           [field]: scopeId,
           order: last ? last.order + 1 : 0,
         },
       });
     } catch (e) {
-      // Unique(contactId, scope) race — someone attached the same person
+      // Unique(contact|team, scope) race — someone attached the same item
       // between our check and the insert. Already there, so nothing to do.
       if ((e as { code?: string }).code !== "P2002") throw e;
     }
@@ -297,7 +299,7 @@ export async function createContactAndAssign(formData: FormData) {
         affiliation === "customer" ? requireString(formData, "customerId") : null,
     },
   });
-  await appendToScope(level, scopeId, contact.id);
+  await appendToScope(level, scopeId, { contactId: contact.id });
   revalidateBack(formData, "/admin/customers");
   revalidatePath("/admin/contacts");
 }
@@ -373,4 +375,123 @@ export async function moveAssignment(formData: FormData) {
     );
   }
   revalidateBack(formData, "/admin/escalation");
+}
+
+
+// --- Teams (에스컬레이션 그룹) --------------------------------------------------
+//
+// 팀은 재사용 가능한 순번 목록이다. 멤버 후보는 배정 드롭다운과 같은 규칙 —
+// 내부 인원 + (고객사 팀이면) 그 고객사 인원. 순서 조작은 Assignment와 같은
+// renumber/swap 패턴.
+
+function revalidateTeams(formData: FormData) {
+  revalidatePath("/admin/teams");
+  revalidatePath("/admin/org");
+  revalidateBack(formData, "/admin/teams");
+}
+
+export async function createTeam(formData: FormData) {
+  const name = requireString(formData, "name");
+  const customerId = optionalString(formData, "customerId");
+  const team = await prisma.team.create({ data: { name, customerId } });
+  revalidateTeams(formData);
+  redirectWithId(formData, team.id);
+}
+
+export async function renameTeam(formData: FormData) {
+  await prisma.team.update({
+    where: { id: requireString(formData, "id") },
+    data: { name: requireString(formData, "name") },
+  });
+  revalidateTeams(formData);
+}
+
+export async function deleteTeam(formData: FormData) {
+  // 팀을 참조하던 스코프 배정 행은 cascade로 함께 사라진다 — 그 스코프는
+  // 상위 상속으로 돌아간다. DangerDelete가 이를 경고한다.
+  await prisma.team.delete({ where: { id: requireString(formData, "id") } });
+  revalidateTeams(formData);
+}
+
+async function renumberTeam(teamId: string) {
+  const rows = await prisma.teamMember.findMany({
+    where: { teamId },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    select: { id: true },
+  });
+  await prisma.$transaction(
+    rows.map((r, i) => prisma.teamMember.update({ where: { id: r.id }, data: { order: i } })),
+  );
+}
+
+export async function addTeamMember(formData: FormData) {
+  const teamId = requireString(formData, "teamId");
+  const contactId = requireString(formData, "contactId");
+
+  // 테넌트 격리: 고객사 팀에는 그 고객사 인원 + 내부 인원만.
+  const [team, contact] = await Promise.all([
+    prisma.team.findUnique({ where: { id: teamId } }),
+    prisma.contact.findUnique({ where: { id: contactId } }),
+  ]);
+  if (!team || !contact) throw new Error("팀 또는 인원이 없습니다");
+  if (contact.customerId && contact.customerId !== team.customerId) {
+    throw new Error("다른 고객사 소속 인원은 이 팀에 넣을 수 없습니다");
+  }
+
+  const last = await prisma.teamMember.findFirst({
+    where: { teamId },
+    orderBy: { order: "desc" },
+    select: { order: true },
+  });
+  try {
+    await prisma.teamMember.create({
+      data: { teamId, contactId, order: last ? last.order + 1 : 0 },
+    });
+  } catch (e) {
+    if ((e as { code?: string }).code !== "P2002") throw e;
+  }
+  revalidateTeams(formData);
+}
+
+export async function removeTeamMember(formData: FormData) {
+  let row;
+  try {
+    row = await prisma.teamMember.delete({ where: { id: requireString(formData, "id") } });
+  } catch (e) {
+    if ((e as { code?: string }).code !== "P2025") throw e;
+    revalidateTeams(formData);
+    return;
+  }
+  await renumberTeam(row.teamId);
+  revalidateTeams(formData);
+}
+
+export async function moveTeamMember(formData: FormData) {
+  const id = requireString(formData, "id");
+  const direction = requireString(formData, "direction");
+  if (direction !== "up" && direction !== "down") {
+    throw new Error(`bad direction: ${direction}`);
+  }
+  const row = await prisma.teamMember.findUnique({ where: { id } });
+  if (!row) {
+    revalidateTeams(formData);
+    return;
+  }
+  const siblings = await prisma.teamMember.findMany({
+    where: { teamId: row.teamId },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    select: { id: true },
+  });
+  const index = siblings.findIndex((s) => s.id === id);
+  const target = direction === "up" ? index - 1 : index + 1;
+  if (index >= 0 && target >= 0 && target < siblings.length) {
+    const reordered = [...siblings];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    await prisma.$transaction(
+      reordered.map((r, i) =>
+        prisma.teamMember.update({ where: { id: r.id }, data: { order: i } }),
+      ),
+    );
+  }
+  revalidateTeams(formData);
 }
