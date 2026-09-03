@@ -25,3 +25,5 @@ npm-debug.log*
 design-draft/mute-reliability-design.html
 design-directions/visual-directions.html
 .next-test
+.env.vercel
+.vercel

@@ -133,6 +133,19 @@ handled. Locally, point both URLs at the same Postgres.
 
 예) 네오위즈: `AWS/RDS → DB팀` (우선 10), `severity CRITICAL → 야간 당직` (우선 50). RDS의 CRITICAL은 DB팀이 받는다.
 
+### Vercel 환경변수를 CLI로 넣기
+
+대시보드 폼 대신 터미널에서 한 번에 등록한다("No environment variables were created" 같은 폼 문제를 피한다).
+
+```bash
+npm i -g vercel            # 또는 npx vercel …
+vercel login && vercel link                 # 프로젝트당 한 번
+cp .env.vercel.example .env.vercel          # 값 채우기 (git 무시 파일)
+npm run env:push -- --deploy                # production 등록 + 재배포
+```
+
+같은 이름은 값이 갱신되고, 빈 값은 건너뛴다. `vercel env ls production`으로 확인.
+
 ### Google SSO · JIT 등록 (선택)
 
 1. Google Cloud Console → APIs & Services → Credentials → **OAuth client ID (Web application)**.
