@@ -15,7 +15,8 @@ async function loadTeamMembers(teamIds: string[]): Promise<Map<string, string[]>
   const map = new Map<string, string[]>();
   if (!ids.length) return map;
   const members = await prisma.teamMember.findMany({
-    where: { teamId: { in: ids } },
+    // 비활성 멤버는 펼치지 않는다 — 팀 소속은 남기되 통지에서 빠진다.
+    where: { teamId: { in: ids }, contact: { active: true } },
     orderBy: [{ order: "asc" }, { createdAt: "asc" }],
     select: { teamId: true, contactId: true },
   });
@@ -237,7 +238,7 @@ export async function getTeamChoices(customerId: string) {
  */
 export async function getContactChoices(customerId: string) {
   const contacts = await prisma.contact.findMany({
-    where: { OR: [{ customerId }, { customerId: null }] },
+    where: { active: true, OR: [{ customerId }, { customerId: null }] },
     orderBy: { name: "asc" },
     include: { customer: true },
   });
@@ -352,8 +353,10 @@ export async function getOwnershipByAccountIds(
       ...[...teamMembers.values()].flat(),
     ]),
   ] as string[];
+  // 비활성 인원은 순서에서 빠진다(직접 배정이든 팀 경유든). 배정 행은 남아
+  // 있어 다시 활성화하면 그 자리로 돌아온다.
   const contacts = contactIds.length
-    ? await prisma.contact.findMany({ where: { id: { in: contactIds } } })
+    ? await prisma.contact.findMany({ where: { id: { in: contactIds }, active: true } })
     : [];
   const contactById = new Map(contacts.map((c: any) => [c.id, c]));
 

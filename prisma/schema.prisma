@@ -59,6 +59,8 @@ model Alert {
   escalatedAt    DateTime?
   // 마지막 FIRING 팬아웃이 나간 시각 — 재발화 스로틀(플랩 억제)의 기준.
   // REFIRE_THROTTLE_MINUTES 안에 다시 FIRING으로 전이해도 재페이징하지 않는다.
+  // 누가 ack했는지 (SSO 세션의 이름). 세션이 없으면 null.
+  ackedBy        String?
   lastNotifiedAt DateTime?
 
   // 수신 시점 담당 스냅샷 (BR-05): the chain + ordered assignees in effect when
@@ -266,11 +268,19 @@ model Contact {
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
+  // 비활성: 퇴사·휴직 등. 배정·팀 소속은 그대로 두되 해석과 선택 목록에서
+  // 빠지고, SSO 로그인이 거부된다. 삭제와 달리 지난 알람의 이름을 지우지 않는다.
+  active      Boolean   @default(true)
+  // SSO(JIT)로 처음 만들어졌거나 로그인한 시각. null = 아직 로그인한 적 없음.
+  lastLoginAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   assignments     Assignment[]
   teamMemberships TeamMember[]
+
+  @@index([email])
 }
 
 // 팀 (에스컬레이션 그룹): 재사용 가능한 순번 목록. "누구"를 "어디"에서

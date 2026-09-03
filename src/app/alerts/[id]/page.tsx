@@ -591,6 +591,14 @@ export default async function AlertDetailPage({
               <span className="font-mono text-xs text-stone-500">
                 최초 {formatTime(alert.firstSeenAt)} · {alert.count}회 반복
               </span>
+              {alert.ackedBy ? (
+                <>
+                  <span className="h-[13px] w-px bg-stone-200" />
+                  <span className="text-xs text-stone-500">
+                    ack <span className="font-medium text-stone-900">{alert.ackedBy}</span>
+                  </span>
+                </>
+              ) : null}
             </div>
             <h1 className="mt-3.5 text-[26px] font-semibold leading-tight tracking-[-0.025em] text-stone-900">
               {alert.title}

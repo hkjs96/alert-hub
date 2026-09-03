@@ -178,6 +178,8 @@ export async function updateContact(formData: FormData) {
       slackId: optionalString(formData, "slackId"),
       department: optionalString(formData, "department"),
       customerId: nextCustomerId,
+      // 체크박스: 폼에 있을 때만 반영("on" = 활성). 필드가 없는 폼은 건드리지 않는다.
+      ...(formData.has("activeField") ? { active: formData.get("active") === "on" } : {}),
     },
   });
   revalidatePath("/admin/contacts");

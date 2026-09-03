@@ -4,6 +4,7 @@ import { Space_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { NavTab } from "@/components/nav-tab";
 import { PipelineHealth } from "@/components/pipeline-health";
+import { UserChip } from "@/components/user-chip";
 import "./globals.css";
 
 // v2(웜 페이퍼 콘솔, docs/design/tokens.md): 본문은 Pretendard(가변,
@@ -69,9 +70,7 @@ export default function RootLayout({
             <span className="flex items-center gap-5">
               <PipelineHealth />
               <span className="hidden h-[18px] w-px bg-stone-200 sm:block" />
-              <span className="font-mono text-xs text-stone-400">
-                event plane · MVP
-              </span>
+              <UserChip />
             </span>
           </div>
         </header>

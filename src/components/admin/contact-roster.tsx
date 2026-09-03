@@ -216,7 +216,19 @@ export async function ContactRoster({
               <li key={c.id}>
                 <details className="group">
                   <summary className="grid cursor-pointer list-none grid-cols-[1fr_130px_110px_170px_70px_60px] items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-stone-50 [&::-webkit-details-marker]:hidden">
-                    <span className="font-medium text-stone-900">{c.name}</span>
+                    <span className={`font-medium ${c.active ? "text-stone-900" : "text-stone-400 line-through decoration-stone-300"}`}>
+                      {c.name}
+                      {!c.active ? (
+                        <span className="ml-1.5 border border-stone-200 px-1 font-mono text-[11px] no-underline text-stone-400">
+                          비활성
+                        </span>
+                      ) : null}
+                      {c.lastLoginAt ? (
+                        <span className="ml-1.5 font-mono text-[11px] text-stone-400" title="SSO 로그인 이력 있음">
+                          sso
+                        </span>
+                      ) : null}
+                    </span>
                     <span className="truncate text-sm text-stone-500">
                       {scope === "all"
                         ? (c.customer?.name ?? "내부")
@@ -236,6 +248,11 @@ export async function ContactRoster({
                       <input type="hidden" name="back" value={back} />
                       {renderFields(fields(c))}
                       {customerSelect(c.customerId)}
+                      <label className="flex h-8 items-center gap-1.5 text-sm text-stone-700">
+                        <input type="hidden" name="activeField" value="1" />
+                        <input type="checkbox" name="active" defaultChecked={c.active} className="h-4 w-4" />
+                        활성
+                      </label>
                       <PendingButton
                         pendingLabel="저장 중…"
                         className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700"
@@ -243,6 +260,12 @@ export async function ContactRoster({
                         저장
                       </PendingButton>
                     </form>
+                    {!c.active ? (
+                      <p className="text-xs text-stone-500">
+                        비활성: 배정·팀 소속은 그대로지만 알람 순서 해석과 선택 목록에서 빠지고, SSO 로그인이 거부됩니다.
+                        다시 활성으로 바꾸면 원래 자리로 돌아옵니다.
+                      </p>
+                    ) : null}
                     {scope === "all" && c.assignments.length > 0 && c.customerId ? (
                       <p className="text-xs text-stone-400">
                         배정이 남아 있는 동안 소속은 내부로만 변경할 수 있습니다.
