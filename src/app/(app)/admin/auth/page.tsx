@@ -48,15 +48,23 @@ export default async function AuthDiagPage() {
       value: cfg.allowedEmails.join(", ") || "—",
     },
     {
-      item: "부트스트랩 관리자",
-      tone: cfg.bootstrapAdmins.length || admins ? "ok" : "warn",
-      state: admins ? `관리자 ${admins}명` : "관리자 없음",
-      value: cfg.bootstrapAdmins.length
-        ? cfg.bootstrapAdmins.join(", ")
-        : admins
-          ? "AUTH_BOOTSTRAP_ADMINS 비어 있음 (이미 관리자가 있어 무방)"
-          : "AUTH_BOOTSTRAP_ADMINS 를 두지 않으면 아무도 승인할 수 없습니다",
-      action: { label: "승인 대기 보기", href: "/admin/teams#pending" },
+      item: "관리자",
+      tone: admins ? "ok" : "warn",
+      state: admins ? `${admins}명` : "없음",
+      value: admins
+        ? cfg.bootstrapAdmins.length
+          ? `부트스트랩: ${cfg.bootstrapAdmins.join(", ")}`
+          : "팀 · 내부 인원에서 역할로 관리"
+        : "관리자가 없으므로 다음 첫 로그인 계정이 관리자가 됩니다 — 본인이 먼저 로그인하세요",
+      action: { label: "인원 보기", href: "/admin/teams" },
+    },
+    {
+      item: "가입 방식",
+      tone: cfg.autoApprove ? "ok" : "info",
+      state: cfg.autoApprove ? "자동 승인" : "승인제",
+      value: cfg.autoApprove
+        ? "허용 목록 계정은 로그인 즉시 온콜 엔지니어로 활성 (AUTH_AUTO_APPROVE=true)"
+        : "허용 목록 계정도 관리자 승인 뒤 활성 · AUTH_AUTO_APPROVE=true 로 바꿀 수 있음",
     },
     {
       item: "리디렉션 URI",
