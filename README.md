@@ -106,7 +106,8 @@ handled. Locally, point both URLs at the same Postgres.
 | `GOOGLE_CLIENT_ID` `GOOGLE_CLIENT_SECRET` `AUTH_SECRET` | no | 셋 다 있으면 **Google SSO**가 켜지고 화면·서버 액션이 로그인 뒤로 들어간다(웹훅·크론은 자체 비밀로 통과). 하나라도 없으면 지금처럼 열린 상태, 헤더에 "SSO 미설정"이 보인다. `AUTH_SECRET`은 16자 이상 무작위 문자열. |
 | `AUTH_ALLOWED_DOMAINS` | no | SSO 허용 이메일 도메인(쉼표 구분, 예 `mz.co.kr,megazone.com`). |
 | `AUTH_ALLOWED_EMAILS` | no | 도메인과 무관하게 허용할 개별 이메일(쉼표 구분). 개인 Gmail이나 외부 협력자용. 두 변수가 모두 비면 어떤 Google 계정이든 들어올 수 있으니 운영에서는 반드시 하나는 둔다. |
-| `AUTH_BOOTSTRAP_ADMINS` | no | 첫 로그인에 바로 **관리자·활성**이 되는 이메일(쉼표 구분). 첫 관리자를 만드는 유일한 길 — 이게 없으면 아무도 가입을 승인할 수 없다. |
+| `AUTH_BOOTSTRAP_ADMINS` | no | 첫 로그인에 바로 **관리자·활성**이 되는 이메일(쉼표 구분). 비어 있어도 **관리자가 한 명도 없으면 첫 로그인 계정이 관리자**가 된다. |
+| `AUTH_AUTO_APPROVE` | no | `true`면 허용 목록 계정은 승인 없이 로그인 즉시 온콜 엔지니어로 활성. 기본(승인제)은 관리자가 팀 · 내부 인원에서 승인한다. |
 
 ### 실제 고객사 투입 전 체크리스트
 
@@ -152,7 +153,8 @@ npm run env:push -- --deploy                # production 등록 + 재배포
 1. Google Cloud Console → APIs & Services → Credentials → **OAuth client ID (Web application)**.
    Authorized redirect URI에 `https://<host>/api/auth/callback` 추가.
 2. Vercel 환경변수: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `AUTH_SECRET`(`openssl rand -base64 32`), `AUTH_ALLOWED_DOMAINS`(및/또는 `AUTH_ALLOWED_EMAILS`), `APP_URL`.
-3. 배포 후 `/login`. 허용 목록의 계정이 처음 로그인하면 **내부 인원(Contact, customerId=null)으로 만들어지되 승인 대기(PENDING)** 상태다.
+3. 배포 후 `/login`. 허용 목록의 계정이 처음 로그인하면 **내부 인원(Contact, customerId=null)으로 만들어지되 승인 대기(PENDING)** 상태다
+   (`AUTH_AUTO_APPROVE=true`면 바로 활성). 관리자가 아직 없으면 첫 로그인이 관리자가 된다.
    `/pending`에서 관리자 승인을 기다리고(승인 요청 알림은 Slack 웹훅으로, 시간당 1회), 승인되면 `/welcome`(프로필 → 담당 범위 → 완료)로 안내되어
    Slack 멤버 ID·전화를 직접 채운다. 관리자가 팀 · 내부 인원에서 **미리 등록한 이메일은 승인 없이 바로 활성**(초대와 같다).
 4. **역할**: 관리자(등록 관리 전체·가입 승인) / 온콜 엔지니어(Ack·Resolve·점검 창·자기 프로필) / 조회 전용. 서버 액션마다

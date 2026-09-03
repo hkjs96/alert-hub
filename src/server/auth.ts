@@ -133,7 +133,10 @@ export async function provisionInternalContact(p: {
 }): Promise<JitResult> {
   const now = p.now ?? new Date();
   const cfg = readAuthConfig();
-  const bootstrap = cfg.bootstrapAdmins.includes(p.email.toLowerCase());
+  // 관리자가 한 명도 없으면 첫 로그인이 관리자 — 허용 목록이 이미 문을 지키므로
+  // 잠긴 채 시작하는 것보다 낫다. 진단 화면이 이 상태를 경고한다.
+  const noAdmin = (await countActiveAdmins()) === 0;
+  const bootstrap = cfg.bootstrapAdmins.includes(p.email.toLowerCase()) || noAdmin;
 
   const existing = await prisma.contact.findFirst({
     where: { email: { equals: p.email, mode: "insensitive" } },
@@ -144,14 +147,17 @@ export async function provisionInternalContact(p: {
     if (!existing.active) return { ok: false, reason: "inactive" };
     if (existing.status === "REJECTED" && !bootstrap) return { ok: false, reason: "rejected" };
     const promote = bootstrap && (existing.status !== "ACTIVE" || existing.role !== "ADMIN");
+    const autoActivate = !promote && cfg.autoApprove && existing.status === "PENDING";
     const updated = await prisma.contact.update({
       where: { id: existing.id },
       data: {
         lastLoginAt: now,
         ...(existing.name.trim() ? {} : { name: p.name }),
         ...(promote
-          ? { role: "ADMIN", status: "ACTIVE", approvedAt: now, approvedBy: "bootstrap" }
-          : {}),
+          ? { role: "ADMIN", status: "ACTIVE", approvedAt: now, approvedBy: noAdmin ? "first-login" : "bootstrap" }
+          : autoActivate
+            ? { status: "ACTIVE", approvedAt: now, approvedBy: "auto" }
+            : {}),
       },
     });
     return {
@@ -169,11 +175,19 @@ export async function provisionInternalContact(p: {
       customerId: null,
       lastLoginAt: now,
       ...(bootstrap
-        ? { role: "ADMIN", status: "ACTIVE", approvedAt: now, approvedBy: "bootstrap" }
-        : { role: "OPERATOR", status: "PENDING" }),
+        ? { role: "ADMIN", status: "ACTIVE", approvedAt: now, approvedBy: noAdmin ? "first-login" : "bootstrap" }
+        : cfg.autoApprove
+          ? { role: "OPERATOR", status: "ACTIVE", approvedAt: now, approvedBy: "auto" }
+          : { role: "OPERATOR", status: "PENDING" }),
     },
   });
   return { ok: true, contactId: created.id, created: true, status: created.status, onboarded: false };
+}
+
+export async function countActiveAdmins(): Promise<number> {
+  return prisma.contact.count({
+    where: { customerId: null, active: true, status: "ACTIVE", role: "ADMIN" },
+  });
 }
 
 /** 승인 담당(활성 ADMIN) 목록 — 승인 대기 화면·지원 요청 안내용. */

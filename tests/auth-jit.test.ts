@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   update: vi.fn(),
   create: vi.fn(),
   findUnique: vi.fn(),
+  count: vi.fn(),
   cookies: vi.fn(() => ({ get: () => undefined })),
 }));
 
@@ -18,6 +19,7 @@ vi.mock("@/lib/prisma", () => ({
       update: mocks.update,
       create: mocks.create,
       findUnique: mocks.findUnique,
+      count: mocks.count,
     },
   },
 }));
@@ -30,6 +32,8 @@ const NOW = new Date("2026-09-03T00:00:00Z");
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.update.mockResolvedValue({});
+  mocks.count.mockResolvedValue(1); // 관리자가 이미 있는 보통 상태
+  delete process.env.AUTH_AUTO_APPROVE;
 });
 
 describe("SSO 첫 로그인 → 내부 인원 JIT", () => {
@@ -41,6 +45,29 @@ describe("SSO 첫 로그인 → 내부 인원 JIT", () => {
     expect(mocks.create).toHaveBeenCalledWith({
       data: { name: "김도윤", email: "kim@msp.co.kr", customerId: null, lastLoginAt: NOW, role: "OPERATOR", status: "PENDING" },
     });
+  });
+
+  it("관리자가 한 명도 없으면 첫 로그인이 관리자가 된다", async () => {
+    mocks.count.mockResolvedValue(0);
+    mocks.findFirst.mockResolvedValue(null);
+    mocks.create.mockResolvedValue({ id: "first", status: "ACTIVE", onboardedAt: null });
+    const r = await provisionInternalContact({ email: "me@mz.co.kr", name: "나", now: NOW });
+    expect(r).toMatchObject({ ok: true, status: "ACTIVE" });
+    expect(mocks.create.mock.calls[0][0].data).toMatchObject({ role: "ADMIN", status: "ACTIVE", approvedBy: "first-login" });
+  });
+
+  it("AUTH_AUTO_APPROVE=true 면 승인 없이 온콜 엔지니어로 바로 활성", async () => {
+    process.env.AUTH_AUTO_APPROVE = "true";
+    mocks.findFirst.mockResolvedValue(null);
+    mocks.create.mockResolvedValue({ id: "n", status: "ACTIVE", onboardedAt: null });
+    const r = await provisionInternalContact({ email: "kim@mz.co.kr", name: "김", now: NOW });
+    expect(r).toMatchObject({ ok: true, status: "ACTIVE" });
+    expect(mocks.create.mock.calls[0][0].data).toMatchObject({ role: "OPERATOR", status: "ACTIVE", approvedBy: "auto" });
+    // 이미 대기 중이던 사람도 스위치를 켜면 다음 로그인에 활성
+    mocks.findFirst.mockResolvedValue({ id: "p", customerId: null, active: true, name: "n", status: "PENDING", role: "OPERATOR" });
+    mocks.update.mockResolvedValue({ id: "p", status: "ACTIVE", onboardedAt: null });
+    await provisionInternalContact({ email: "p@mz.co.kr", name: "n", now: NOW });
+    expect(mocks.update.mock.calls[0][0].data).toMatchObject({ status: "ACTIVE", approvedBy: "auto" });
   });
 
   it("AUTH_BOOTSTRAP_ADMINS 에 있는 이메일은 첫 로그인에 바로 ADMIN·활성", async () => {
