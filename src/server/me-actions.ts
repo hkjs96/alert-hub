@@ -28,7 +28,12 @@ export async function updateMyProfile(formData: FormData) {
   }
   const name = opt(formData, "name");
   if (formData.has("name") && name) data.name = name;
-  await prisma.contact.update({ where: { id: me.id }, data });
+  // Slack ID 가 바뀌면 확인 상태도 리셋 — 새 ID 로 다시 코드를 받아야 한다.
+  const resetSlack = formData.has("slackId") && (data.slackId ?? null) !== (me.slackId ?? null);
+  await prisma.contact.update({
+    where: { id: me.id },
+    data: { ...data, ...(resetSlack ? { slackVerifiedAt: null } : {}) },
+  });
   revalidatePath("/me");
   revalidatePath("/welcome");
   revalidatePath("/", "layout");

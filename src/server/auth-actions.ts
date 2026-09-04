@@ -7,6 +7,7 @@ import { isRole, ROLE_LABELS } from "@/lib/auth/roles";
 import { sendSlackText } from "@/lib/notify/slack";
 import { sendEmailText } from "@/lib/notify/email";
 import { requireRole, requireSessionUser, requireUser } from "@/server/auth";
+import { VERIFY_TTL_MS, checkCode, generateCode, hashCode } from "@/lib/auth/verify";
 
 function str(fd: FormData, k: string): string | null {
   const v = fd.get(k);
@@ -114,24 +115,76 @@ export async function completeOnboarding(formData: FormData) {
   redirect(backOf(formData, "/"));
 }
 
-/** 통지 채널 테스트 발송 — Slack DM 멘션 또는 이메일. */
-export async function sendTestNotification(formData: FormData) {
+/**
+ * 통지 채널 확인 ① 코드 보내기 — Slack DM 멘션 또는 이메일로 6자리 코드를
+ * 보내고 해시만 저장한다(10분). 서버에 채널이 없으면 "skipped".
+ */
+export async function sendVerificationCode(formData: FormData) {
   const me = await requireUser();
   const channel = str(formData, "channel");
   const back = backOf(formData, "/me");
   if (!me) redirect(back);
+  if (channel !== "slack" && channel !== "email") redirect(back);
+  const target = channel === "slack" ? me.slackId : me.email;
+  if (!target) redirect(withParam(back, "verify", `${channel}:missing`));
+  const code = generateCode();
   const appUrl = process.env.APP_URL?.replace(/\/+$/, "") ?? "";
-  let result: "sent" | "skipped" | "missing" = "missing";
-  if (channel === "slack" && me.slackId) {
+  let result: "sent" | "skipped" = "skipped";
+  if (channel === "slack") {
     result = await sendSlackText(
-      `<@${me.slackId}> alert-hub 테스트 통지 — Slack 채널이 연결되었습니다.${appUrl ? ` ${appUrl}/me` : ""}`,
+      `<@${target}> alert-hub 채널 확인 코드: *${code}* (10분 안에 입력)${appUrl ? ` · ${appUrl}/me` : ""}`,
     ).catch(() => "skipped" as const);
-  } else if (channel === "email" && me.email) {
+  } else {
     result = await sendEmailText(
-      me.email,
-      "[alert-hub] 테스트 통지",
-      `이메일 채널이 연결되었습니다. 알람은 이 주소로 전달됩니다.${appUrl ? `\n${appUrl}/me` : ""}`,
+      target,
+      `[alert-hub] 채널 확인 코드 ${code}`,
+      `alert-hub 이메일 채널 확인 코드: ${code}\n10분 안에 입력하세요.${appUrl ? `\n${appUrl}/me` : ""}`,
     ).catch(() => "skipped" as const);
   }
-  redirect(withParam(back, "test", `${channel}:${result}`));
+  if (result === "sent") {
+    await prisma.contact.update({
+      where: { id: me.id },
+      data: {
+        verifyChannel: channel,
+        verifyCodeHash: await hashCode(code, me.id),
+        verifyExpiresAt: new Date(Date.now() + VERIFY_TTL_MS),
+      },
+    });
+  }
+  redirect(withParam(back, "verify", `${channel}:${result}`));
+}
+
+/** 통지 채널 확인 ② 코드 입력 — 맞으면 해당 채널의 verifiedAt 을 찍는다. */
+export async function confirmVerificationCode(formData: FormData) {
+  const me = await requireUser();
+  const channel = str(formData, "channel");
+  const back = backOf(formData, "/me");
+  if (!me) redirect(back);
+  if (channel !== "slack" && channel !== "email") redirect(back);
+  const row = await prisma.contact.findUnique({
+    where: { id: me.id },
+    select: { verifyChannel: true, verifyCodeHash: true, verifyExpiresAt: true },
+  });
+  const ok = await checkCode({
+    input: str(formData, "code") ?? "",
+    hash: row?.verifyCodeHash ?? null,
+    salt: me.id,
+    expiresAt: row?.verifyExpiresAt ?? null,
+    channel: row?.verifyChannel ?? null,
+    expectedChannel: channel,
+  });
+  if (!ok) redirect(withParam(back, "verify", `${channel}:bad`));
+  await prisma.contact.update({
+    where: { id: me.id },
+    data: {
+      ...(channel === "slack" ? { slackVerifiedAt: new Date() } : { emailVerifiedAt: new Date() }),
+      verifyChannel: null,
+      verifyCodeHash: null,
+      verifyExpiresAt: null,
+    },
+  });
+  revalidatePath("/me");
+  revalidatePath("/welcome");
+  revalidatePath("/", "layout");
+  redirect(withParam(back, "verify", `${channel}:ok`));
 }

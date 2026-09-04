@@ -24,6 +24,8 @@ export interface CurrentUser {
   timezone: string | null;
   createdAt: Date;
   approvalPingAt: Date | null;
+  slackVerifiedAt: Date | null;
+  emailVerifiedAt: Date | null;
   /** 통지 프로필이 비어 있으면 헤더가 /me 로 유도한다. */
   profileIncomplete: boolean;
   /** 세션 만료(epoch 초). */
@@ -60,6 +62,8 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     timezone: c.timezone,
     createdAt: c.createdAt,
     approvalPingAt: c.approvalPingAt,
+    slackVerifiedAt: c.slackVerifiedAt,
+    emailVerifiedAt: c.emailVerifiedAt,
     profileIncomplete: !c.slackId && !c.phone,
     sessionExp: s.exp,
   };

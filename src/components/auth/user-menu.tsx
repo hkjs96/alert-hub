@@ -39,7 +39,12 @@ export async function UserMenu() {
     );
   }
   const scope = await getMyScope(me.id);
-  const channels = [me.slackId ? "Slack DM" : null, me.email ? "이메일" : null, me.phone ? "SMS" : null].filter(Boolean);
+  const channels = [
+    me.slackId ? `Slack DM${me.slackVerifiedAt ? "" : "(미확인)"}` : null,
+    me.email ? `이메일${me.emailVerifiedAt ? "" : "(미확인)"}` : null,
+    me.phone ? "SMS" : null,
+  ].filter(Boolean);
+  const verified = Boolean(me.slackVerifiedAt || me.emailVerifiedAt);
 
   return (
     <details className="relative">
@@ -76,10 +81,10 @@ export async function UserMenu() {
         <div className="flex flex-col gap-2 border-b border-[#eeebe4] px-[18px] py-3.5">
           <div className="flex items-center justify-between">
             <span className="font-mono text-[10px] font-bold tracking-[0.11em] text-stone-400">통지 채널</span>
-            {channels.length ? <ToneLabel tone="ok">연결됨</ToneLabel> : <ToneLabel tone="err">없음</ToneLabel>}
+            {verified ? <ToneLabel tone="ok">확인됨</ToneLabel> : channels.length ? <ToneLabel tone="warn">확인 필요</ToneLabel> : <ToneLabel tone="err">없음</ToneLabel>}
           </div>
           <div className="text-xs text-stone-500">
-            {channels.length ? channels.join(" · ") + " 활성" : "Slack ID 또는 전화를 등록해야 알람을 받습니다"}
+            {channels.length ? channels.join(" · ") : "Slack ID 또는 전화를 등록해야 알람을 받습니다"}
             {scope.assignmentCount ? ` · 배정 ${scope.assignmentCount}곳` : ""}
           </div>
         </div>
