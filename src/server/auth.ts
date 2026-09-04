@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { readAuthConfig } from "@/lib/auth/config";
 import { atLeast, type AccountStatus, type Role } from "@/lib/auth/roles";
 import { SESSION_COOKIE, verifySession, type SessionPayload } from "@/lib/auth/session";
+import { lookupUserByEmail } from "@/lib/notify/slack-api";
 
 export type AuthMode = "open" | "sso";
 
@@ -186,6 +187,22 @@ export async function provisionInternalContact(p: {
     },
   });
   return { ok: true, contactId: created.id, created: true, status: created.status, onboarded: false };
+}
+
+/**
+ * 로그인 직후: Slack ID 가 비어 있으면 봇(users:read.email)으로 이메일을 조회해
+ * 채운다. Slack 이 이메일↔ID 를 보증하므로 바로 확인됨으로 둔다. 실패는 무시.
+ */
+export async function autoLinkSlack(contactId: string, email: string): Promise<void> {
+  try {
+    const c = await prisma.contact.findUnique({ where: { id: contactId }, select: { slackId: true } });
+    if (!c || c.slackId) return;
+    const id = await lookupUserByEmail(email);
+    if (!id) return;
+    await prisma.contact.update({ where: { id: contactId }, data: { slackId: id, slackVerifiedAt: new Date() } });
+  } catch (err) {
+    console.warn("[auth] slack auto-link failed", err);
+  }
 }
 
 export async function countActiveAdmins(): Promise<number> {

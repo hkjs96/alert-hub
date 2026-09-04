@@ -206,6 +206,7 @@ model Customer {
   teams       Team[]
   routingRules RoutingRule[]
   assignments Assignment[]
+  notifyChannels NotifyChannel[]
 }
 
 model Project {
@@ -222,6 +223,7 @@ model Project {
   assignments Assignment[]
 
   @@unique([customerId, name])
+  notifyChannels NotifyChannel[]
 }
 
 model Service {
@@ -239,6 +241,7 @@ model Service {
 
   @@unique([projectId, name])
   routingRules RoutingRule[]
+  notifyChannels NotifyChannel[]
 }
 
 model AwsAccountMap {
@@ -435,4 +438,43 @@ enum AccountStatus {
   PENDING
   ACTIVE
   REJECTED
+}
+
+// 통지 채널 (스코프별 Slack 목적지). 담당자 배정과 같은 상속 규칙 — 가장
+// 구체적인 스코프에 채널이 하나라도 있으면 그 목록이 통째로 쓰이고, 없으면
+// 상위로. 어디에도 없으면 전사 기본(SLACK_DEFAULT_CHANNEL / SLACK_WEBHOOK_URL).
+// 종류: SLACK_BOT = 우리 워크스페이스 채널(봇 토큰, 채널 ID), SLACK_WEBHOOK =
+// 고객사가 자기 워크스페이스에서 발급해 준 Incoming Webhook URL.
+enum ChannelKind {
+  SLACK_BOT
+  SLACK_WEBHOOK
+}
+
+model NotifyChannel {
+  id      String      @id @default(cuid())
+  kind    ChannelKind
+  // 사람이 읽는 이름, 예 "홈닉 공유 채널", "내부 온콜".
+  label   String
+  // SLACK_BOT: 채널 ID(C…) 또는 #이름. SLACK_WEBHOOK: https://hooks.slack.com/…
+  target  String
+  enabled Boolean     @default(true)
+
+  // 스코프 — 정확히 하나.
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  projectId  String?
+  project    Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  serviceId  String?
+  service    Service?  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  // 마지막 테스트/발송 결과.
+  lastOkAt  DateTime?
+  lastError String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([projectId])
+  @@index([serviceId])
 }

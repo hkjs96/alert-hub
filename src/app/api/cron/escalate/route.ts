@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { enqueueAndSend } from "@/server/notify-queue";
+import { loadTargetsForChain } from "@/server/notify-targets";
 import { parseOwnershipSnapshot } from "@/server/org";
 import { getActiveSilences, scopeOfStoredAlert } from "@/server/silences";
 import { matchSilence } from "@/lib/silence";
@@ -129,10 +130,16 @@ export async function GET(req: Request) {
         stateReason: `${ackMinutes}분 내 ack 없음 → ${idx + 1}순위 ${assignee.name}에게 자동 에스컬레이션`,
       },
     });
+    const targets = await loadTargetsForChain({
+      customerId: snap.chain.customerId,
+      projectId: snap.chain.projectId,
+      serviceId: snap.chain.serviceId,
+    });
     await enqueueAndSend(alert.id, toNormalized(alert), {
       alertId: alert.id,
       assignees: [assignee],
       escalationStep: idx + 1,
+      ...(targets.length ? { targets } : {}),
     });
     escalated += 1;
   }

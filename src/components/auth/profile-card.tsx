@@ -234,7 +234,7 @@ export function ProfileCard({
                   ) : (
                     <span
                       className="inline-flex h-[30px] items-center border border-[#e6e2d9] bg-[#f4f1ea] px-[13px] text-xs font-medium text-[#b0aca2]"
-                      title={c.key === "slack" ? "SLACK_WEBHOOK_URL 이 설정되지 않았습니다" : "SMTP_HOST / SMTP_FROM 이 설정되지 않았습니다"}
+                      title={c.key === "slack" ? "SLACK_BOT_TOKEN 또는 SLACK_WEBHOOK_URL 이 설정되지 않았습니다" : "SMTP_HOST / SMTP_FROM 이 설정되지 않았습니다"}
                     >
                       서버 미설정
                     </span>

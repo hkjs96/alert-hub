@@ -3,7 +3,7 @@ import { isEmailAllowed, readAuthConfig } from "@/lib/auth/config";
 import { decodeIdToken, exchangeCode, validateClaims } from "@/lib/auth/google";
 import { SESSION_COOKIE, SESSION_TTL_SECONDS, signSession } from "@/lib/auth/session";
 import { safeNext } from "@/lib/auth/paths";
-import { provisionInternalContact } from "@/server/auth";
+import { autoLinkSlack, provisionInternalContact } from "@/server/auth";
 import { newRef } from "@/lib/auth/ref";
 import { STATE_COOKIE, baseUrl, cookieOpts } from "../_shared";
 
@@ -60,6 +60,8 @@ export async function GET(req: NextRequest) {
 
   const jit = await provisionInternalContact({ email: claims.email, name: claims.name });
   if (!jit.ok) return fail(jit.reason, claims.email);
+
+  await autoLinkSlack(jit.contactId, claims.email);
 
   const session = await signSession(
     { sub: jit.contactId, email: claims.email, name: claims.name },

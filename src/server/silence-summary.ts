@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { sendSlackText } from "@/lib/notify/slack";
+import { loadTargetsForChain } from "@/server/notify-targets";
 import { refireNotifications } from "@/server/alerts";
 
 // 점검 종료 요약 (v2 프레임 05 우측): 점검 창이 끝나면(만료·조기 해제)
@@ -30,12 +31,13 @@ export async function summarizeEndedSilences(now = new Date()): Promise<number> 
     },
     include: {
       customer: { select: { name: true } },
-      project: { select: { name: true, customer: { select: { name: true } } } },
+      project: { select: { name: true, customerId: true, customer: { select: { name: true } } } },
       service: {
         select: {
           name: true,
+          projectId: true,
           project: {
-            select: { name: true, customer: { select: { name: true } } },
+            select: { name: true, customerId: true, customer: { select: { name: true } } },
           },
         },
       },
@@ -114,7 +116,13 @@ export async function summarizeEndedSilences(now = new Date()): Promise<number> 
           : "지금부터 통지가 재개됩니다.",
       );
 
-      const result = await sendSlackText(lines.join("\n"));
+      // 요약도 그 스코프의 채널로 — 고객사 공유 채널이면 고객사도 같이 본다.
+      const targets = await loadTargetsForChain({
+        customerId: s.customerId ?? s.project?.customerId ?? s.service?.project?.customerId ?? null,
+        projectId: s.projectId ?? s.service?.projectId ?? null,
+        serviceId: s.serviceId ?? null,
+      });
+      const result = await sendSlackText(lines.join("\n"), targets);
       if (result === "sent") sent += 1;
 
       // 뮤트 때문에 팬아웃을 놓친 알람의 통지를 즉시(묶음 창 경유) 재개.

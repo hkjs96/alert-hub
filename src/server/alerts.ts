@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import type { NotifyContext } from "@/lib/notify";
 import { digestWindowSeconds, enqueueAndSend } from "@/server/notify-queue";
 import { buildOwnershipSnapshot, getOwnershipByAwsAccount } from "@/server/org";
+import { loadTargetsForChain } from "@/server/notify-targets";
+import type { NotifyTarget } from "@/lib/notify/targets";
 import { applyRoutingRules } from "@/server/routing";
 import { findActiveSilence } from "@/server/silences";
 import type { SilenceScope } from "@/lib/silence";
@@ -84,6 +86,8 @@ interface IngestOwnership {
   scope?: Omit<SilenceScope, "alertId">;
   /** "고객사 › 프로젝트 › 서비스" — 다이제스트 헤더용. */
   chainLabel?: string;
+  /** 스코프 채널(상속 해석 완료). 비면 전사 기본. */
+  targets?: NotifyTarget[];
 }
 
 async function resolveIngestOwnership(
@@ -108,6 +112,11 @@ async function resolveIngestOwnership(
         serviceId: ownership.chain.service.id,
       },
       chainLabel: `${ownership.chain.customer.name} › ${ownership.chain.project.name} › ${ownership.chain.service.name}`,
+      targets: await loadTargetsForChain({
+        customerId: ownership.chain.customer.id,
+        projectId: ownership.chain.project.id,
+        serviceId: ownership.chain.service.id,
+      }),
     };
     if (ownership.contacts.length > 0) {
       out.assignees = ownership.contacts.map((c) => ({
@@ -128,6 +137,7 @@ function toNotifyContext(alertId: string, own: IngestOwnership): NotifyContext {
   const ctx: NotifyContext = { alertId };
   if (own.assignees) ctx.assignees = own.assignees;
   if (own.chainLabel) ctx.chainLabel = own.chainLabel;
+  if (own.targets?.length) ctx.targets = own.targets;
   return ctx;
 }
 
