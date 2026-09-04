@@ -6,6 +6,8 @@ import { PendingButton } from "@/components/pending-button";
 import { authMode, getCurrentUser } from "@/server/auth";
 import { completeOnboarding } from "@/server/auth-actions";
 import { getMyScope } from "@/server/me";
+import { slackNotifier } from "@/lib/notify/slack";
+import { emailNotifier } from "@/lib/notify/email";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +52,7 @@ function Steps({ current }: { current: number }) {
 export default async function WelcomePage({
   searchParams,
 }: {
-  searchParams: { step?: string; test?: string; saved?: string };
+  searchParams: { step?: string; verify?: string; saved?: string };
 }) {
   if (authMode() === "open") redirect("/");
   const me = await getCurrentUser();
@@ -58,7 +60,7 @@ export default async function WelcomePage({
   if (me.status === "PENDING") redirect("/pending");
   const step = Math.min(3, Math.max(1, Number(searchParams.step ?? "1") || 1));
   const scope = step >= 2 ? await getMyScope(me.id) : null;
-  const connected = [me.slackId, me.email, me.phone].filter(Boolean).length;
+  const connected = [me.slackVerifiedAt, me.emailVerifiedAt].filter(Boolean).length;
 
   return (
     <div className="w-[600px] max-w-full">
@@ -69,7 +71,8 @@ export default async function WelcomePage({
           <ProfileCard
             me={me}
             back="/welcome?step=1"
-            test={searchParams.test}
+            verify={searchParams.verify}
+            configured={{ slack: slackNotifier.isConfigured(), email: emailNotifier.isConfigured() }}
             heading={<>환영합니다, {me.name}님</>}
             intro="알람을 받을 채널을 등록하면 설정이 끝납니다. Google 계정에서 가져온 정보는 수정할 수 있습니다."
           />
@@ -138,13 +141,13 @@ export default async function WelcomePage({
             <h1 className="text-[21px] font-semibold leading-tight tracking-[-0.025em] text-stone-900">설정이 끝났습니다</h1>
             <p className="mt-2 text-[13px] leading-relaxed text-stone-500">
               {connected
-                ? `통지 채널 ${connected}개가 연결되었습니다. 담당 알람이 발화하면 순서에 따라 연락이 갑니다.`
-                : "통지 채널이 아직 없습니다. 내 프로필에서 Slack ID나 전화를 등록해야 알람을 받을 수 있습니다."}
+                ? `확인된 통지 채널 ${connected}개. 담당 알람이 발화하면 순서에 따라 연락이 갑니다.`
+                : "아직 확인된 통지 채널이 없습니다. 내 프로필에서 코드로 확인해야 실제로 도달하는지 알 수 있습니다."}
             </p>
             <div className="my-[26px] h-px bg-[#eeebe4]" />
             <ul className="space-y-1.5 text-[13px] text-stone-700">
-              <li>· Slack DM {me.slackId ? `@${me.slackId}` : "미연결"}</li>
-              <li>· 이메일 {me.email}</li>
+              <li>· Slack DM {me.slackId ? `@${me.slackId}${me.slackVerifiedAt ? " · 확인됨" : " · 확인 필요"}` : "미등록"}</li>
+              <li>· 이메일 {me.email}{me.emailVerifiedAt ? " · 확인됨" : " · 확인 필요"}</li>
               <li>· SMS {me.phone ?? "미연결 (에스컬레이션 전용)"}</li>
               <li>· 담당 고객사 {scope?.customerNames.length ?? 0}곳 · 배정 {scope?.assignmentCount ?? 0}곳</li>
             </ul>

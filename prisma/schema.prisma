@@ -275,6 +275,12 @@ model Contact {
   active      Boolean   @default(true)
   // SSO(JIT)로 처음 만들어졌거나 로그인한 시각. null = 아직 로그인한 적 없음.
   lastLoginAt DateTime?
+  // 통지 채널 확인: 코드를 보내 받은 사람이 입력하면 확인됨. 값이 바뀌면 리셋.
+  slackVerifiedAt DateTime?
+  emailVerifiedAt DateTime?
+  verifyChannel   String?
+  verifyCodeHash  String?
+  verifyExpiresAt DateTime?
 
   // --- 계정(내부 인원만 의미 있음; 고객사 담당자는 로그인 대상이 아니다) ---
   // 역할: ADMIN(등록 관리 전체·승인), OPERATOR(알람 처리·점검 창), VIEWER(조회).

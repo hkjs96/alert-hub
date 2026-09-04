@@ -200,6 +200,9 @@ export async function updateContact(formData: FormData) {
       ...(formData.has("activeField") ? { active: formData.get("active") === "on" } : {}),
       // 역할은 내부 인원에게만 의미 있다. 폼에 있을 때만 반영.
       ...(nextCustomerId === null && isRole(roleRaw) ? { role: roleRaw } : {}),
+      // 주소가 바뀌면 확인 상태도 리셋.
+      ...((optionalString(formData, "slackId") ?? null) !== (current.slackId ?? null) ? { slackVerifiedAt: null } : {}),
+      ...((optionalString(formData, "email") ?? null) !== (current.email ?? null) ? { emailVerifiedAt: null } : {}),
     },
   });
   revalidatePath("/admin/contacts");

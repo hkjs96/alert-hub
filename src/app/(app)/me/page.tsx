@@ -3,13 +3,15 @@ import { ProfileCard } from "@/components/auth/profile-card";
 import { overline } from "@/components/auth/primitives";
 import { authMode, getCurrentUser } from "@/server/auth";
 import { getMyScope } from "@/server/me";
+import { slackNotifier } from "@/lib/notify/slack";
+import { emailNotifier } from "@/lib/notify/email";
 
 export const dynamic = "force-dynamic";
 
 /**
  * 내 프로필 · 통지 채널 — 첫 로그인 카드(A3)와 같은 본문을 앱 셸 안에서.
  */
-export default async function MePage({ searchParams }: { searchParams: { saved?: string; test?: string; rq?: string } }) {
+export default async function MePage({ searchParams }: { searchParams: { saved?: string; verify?: string; rq?: string } }) {
   const me = await getCurrentUser();
   if (!me) {
     const open = authMode() === "open";
@@ -39,7 +41,8 @@ export default async function MePage({ searchParams }: { searchParams: { saved?:
       <ProfileCard
         me={me}
         back="/me"
-        test={searchParams.test}
+        verify={searchParams.verify}
+        configured={{ slack: slackNotifier.isConfigured(), email: emailNotifier.isConfigured() }}
         heading="내 프로필 · 통지 채널"
         intro="Slack ID 또는 전화번호 중 하나는 있어야 알람 순서에서 실제로 연락을 받습니다."
       />
