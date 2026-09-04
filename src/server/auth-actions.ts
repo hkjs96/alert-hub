@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { isRole, ROLE_LABELS } from "@/lib/auth/roles";
-import { sendSlackText } from "@/lib/notify/slack";
+import { sendSlackDm, sendSlackText } from "@/lib/notify/slack";
+import { isBotConfigured } from "@/lib/notify/slack-api";
 import { sendEmailText } from "@/lib/notify/email";
 import { requireRole, requireSessionUser, requireUser } from "@/server/auth";
 import { VERIFY_TTL_MS, checkCode, generateCode, hashCode } from "@/lib/auth/verify";
@@ -131,9 +132,11 @@ export async function sendVerificationCode(formData: FormData) {
   const appUrl = process.env.APP_URL?.replace(/\/+$/, "") ?? "";
   let result: "sent" | "skipped" = "skipped";
   if (channel === "slack") {
-    result = await sendSlackText(
-      `<@${target}> alert-hub 채널 확인 코드: *${code}* (10분 안에 입력)${appUrl ? ` · ${appUrl}/me` : ""}`,
-    ).catch(() => "skipped" as const);
+    const text = `alert-hub 채널 확인 코드: *${code}* (10분 안에 입력)${appUrl ? ` · ${appUrl}/me` : ""}`;
+    // 봇이 있으면 비공개 DM, 없으면 채널 멘션(웹훅).
+    result = isBotConfigured()
+      ? await sendSlackDm(target, text).catch(() => "skipped" as const)
+      : await sendSlackText(`<@${target}> ${text}`).catch(() => "skipped" as const);
   } else {
     result = await sendEmailText(
       target,

@@ -1,4 +1,5 @@
 import type { NormalizedAlert } from "@/lib/types";
+import type { NotifyTarget } from "@/lib/notify/targets";
 import { slackNotifier } from "@/lib/notify/slack";
 import { emailNotifier } from "@/lib/notify/email";
 import { twilioNotifier } from "@/lib/notify/twilio";
@@ -29,6 +30,11 @@ export interface NotifyContext {
    * 조직 표기에 쓰인다. 미매핑 알람에는 없다.
    */
   chainLabel?: string;
+  /**
+   * 스코프에서 해석된 Slack 목적지들(고객사/프로젝트/서비스 채널). 비어 있으면
+   * 전사 기본 채널로. 아웃박스 페이로드에 함께 저장된다.
+   */
+  targets?: NotifyTarget[];
 }
 
 // A Notifier is any channel that can deliver an alert — Slack, email, Twilio.

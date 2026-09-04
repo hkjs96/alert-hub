@@ -11,6 +11,7 @@ import { CoverageBadge } from "@/components/admin/coverage-badge";
 import { ContactRoster } from "@/components/admin/contact-roster";
 import { TeamEditor } from "@/components/admin/team-editor";
 import { RoutingRulesEditor } from "@/components/admin/routing-rules";
+import { NotifyChannelsEditor } from "@/components/admin/notify-channels";
 import { PendingButton } from "@/components/pending-button";
 
 export const dynamic = "force-dynamic";
@@ -284,6 +285,23 @@ export default async function OrgPage({
                     level={selected.level}
                     scopeId={selectedScopeId!}
                     customerId={selected.customer.id}
+                    back={back}
+                  />
+                </div>
+                <div className="border-t border-stone-200 p-5">
+                  <div className={`mb-2 ${overline}`}>
+                    Slack 통지 채널{" "}
+                    <span className="font-normal normal-case tracking-normal">
+                      (하위에 별도 지정이 없으면 이 채널로 상속됩니다 · 없으면 전사 기본)
+                    </span>
+                  </div>
+                  <NotifyChannelsEditor
+                    level={selected.level}
+                    ids={{
+                      customerId: selected.customer.id,
+                      projectId: selected.level !== "customer" ? selected.project.id : undefined,
+                      serviceId: selected.level === "service" ? selected.service.id : undefined,
+                    }}
                     back={back}
                   />
                 </div>

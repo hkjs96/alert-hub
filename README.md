@@ -94,7 +94,8 @@ handled. Locally, point both URLs at the same Postgres.
 | ------------------- | -------- | ---------------------------------------------------------- |
 | `DATABASE_URL`      | yes      | Pooled Postgres URL (app runtime).                         |
 | `DIRECT_URL`        | yes      | Direct Postgres URL (migrations / `db push`).              |
-| `SLACK_WEBHOOK_URL` | no       | Slack Incoming Webhook. Unset ⇒ Slack notifications skipped. |
+| `SLACK_WEBHOOK_URL` | no       | Slack Incoming Webhook — 전사 폴백 채널. 스코프별 채널이 없을 때 쓰인다. |
+| `SLACK_BOT_TOKEN` `SLACK_DEFAULT_CHANNEL` | no | Slack 앱 봇 토큰(`xoxb-…`, scopes `chat:write` `chat:write.public` `im:write` `users:read.email`)과 전사 기본 채널. 있으면 스코프별 "우리 채널", 에스컬레이션 DM, 확인 코드 DM, 로그인 시 Slack ID 자동 연결이 켜진다. |
 | `APP_URL`           | no       | Public base URL; adds an alert deep link to notifications.   |
 | `INGEST_TOKEN`      | no       | If set, requests must carry the token (see below).            |
 | `SMTP_HOST` `SMTP_FROM` | no   | Enable the email notifier. `SMTP_PORT`/`SMTP_SECURE`/`SMTP_USER`/`SMTP_PASS` refine it. |
@@ -120,6 +121,20 @@ handled. Locally, point both URLs at the same Postgres.
 6. 조직 트리 → **새 고객사 온보딩**으로 고객사 › 프로젝트 › 서비스 › AWS 계정 매핑 › 담당자를 만들고,
    고객사 AWS 계정마다 SNS 토픽 → HTTPS 구독(`/api/webhooks/cloudwatch?token=…`) → CloudWatch 알람 액션을 건다.
    구독 확인은 자동, SNS 서명 검증은 기본 켜짐.
+
+### 통지 채널 (고객사·프로젝트별 Slack)
+
+알람이 갈 Slack 채널은 조직 트리의 스코프(고객사 › 프로젝트 › 서비스)에 붙인다. 담당자 배정과 같은 상속 — **가장 구체적인
+스코프에 채널이 하나라도 있으면 그 목록이 통째로**, 없으면 상위, 어디에도 없으면 전사 기본(`SLACK_DEFAULT_CHANNEL` → `SLACK_WEBHOOK_URL`).
+한 스코프에 여러 채널을 둘 수 있다(예: 고객사 공유 채널 + 내부 온콜).
+
+| 종류 | 언제 | 준비 |
+|---|---|---|
+| 우리 Slack 채널(봇) | 우리 워크스페이스에 만든 채널, Slack Connect 공유 채널 | `SLACK_BOT_TOKEN`, 비공개 채널이면 `/invite @alert-hub` |
+| 고객사 웹훅 URL | 고객사가 자기 워크스페이스에서 Incoming Webhook 을 발급해 준 경우 | URL 만 |
+
+각 채널에 "테스트 메시지" 버튼이 있고 마지막 성공/실패가 남는다. 다이제스트·점검 종료 요약·에스컬레이션도 같은 채널로 가며,
+봇이 있으면 에스컬레이션 당사자에게 DM 도 간다. 라우팅 규칙(누구)과 통지 채널(어디)은 독립이다.
 
 ### 라우팅 규칙 (기능 축 온콜)
 

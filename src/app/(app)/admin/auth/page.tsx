@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { readAuthConfig } from "@/lib/auth/config";
 import { SESSION_TTL_SECONDS } from "@/lib/auth/session";
 import { ToneLabel, type AuthTone } from "@/components/auth/primitives";
+import { authTest, defaultBotChannel, isBotConfigured } from "@/lib/notify/slack-api";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export default async function AuthDiagPage() {
     prisma.contact.count({ where: { customerId: null, status: "ACTIVE", active: true, role: "ADMIN" } }),
     prisma.contact.findFirst({ where: { lastLoginAt: { not: null } }, orderBy: { lastLoginAt: "desc" }, select: { lastLoginAt: true, name: true } }),
   ]);
+  const slackAuth = isBotConfigured() ? await authTest() : null;
   const appUrl = process.env.APP_URL?.replace(/\/+$/, "");
   const redirectUri = appUrl ? `${appUrl}/api/auth/callback` : null;
   const openAllow = cfg.allowedDomains.length === 0 && cfg.allowedEmails.length === 0;
@@ -84,6 +86,22 @@ export default async function AuthDiagPage() {
       state: pending ? `${pending}명` : "없음",
       value: pending ? "팀 · 내부 인원에서 승인·거절" : "대기 중인 가입 요청 없음",
       action: pending ? { label: "승인하기", href: "/admin/teams#pending" } : undefined,
+    },
+    {
+      item: "Slack 봇",
+      tone: isBotConfigured() ? (slackAuth ? "ok" : "err") : "off",
+      state: isBotConfigured() ? (slackAuth ? "연결됨" : "토큰 오류") : "없음",
+      value: slackAuth
+        ? `${slackAuth.team} 워크스페이스 · @${slackAuth.user} · 기본 채널 ${defaultBotChannel() ?? "미설정"}`
+        : isBotConfigured()
+          ? "auth.test 실패 — 토큰이 폐기됐거나 권한이 없습니다"
+          : "SLACK_BOT_TOKEN 없음 · 스코프별 채널은 웹훅 종류만, DM·자동 연결 불가",
+    },
+    {
+      item: "Slack 웹훅",
+      tone: process.env.SLACK_WEBHOOK_URL ? "ok" : "off",
+      state: process.env.SLACK_WEBHOOK_URL ? "설정됨" : "없음",
+      value: process.env.SLACK_WEBHOOK_URL ? "전사 폴백 채널로 사용" : "SLACK_WEBHOOK_URL 없음",
     },
     {
       item: "최근 로그인",
