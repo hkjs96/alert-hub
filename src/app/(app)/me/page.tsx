@@ -5,6 +5,7 @@ import { authMode, getCurrentUser } from "@/server/auth";
 import { getMyScope } from "@/server/me";
 import { slackNotifier } from "@/lib/notify/slack";
 import { emailNotifier } from "@/lib/notify/email";
+import { isSmsConfigured } from "@/lib/notify/twilio";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export default async function MePage({ searchParams }: { searchParams: { saved?:
         me={me}
         back="/me"
         verify={searchParams.verify}
-        configured={{ slack: slackNotifier.isConfigured(), email: emailNotifier.isConfigured() }}
+        configured={{ slack: slackNotifier.isConfigured(), email: emailNotifier.isConfigured(), sms: isSmsConfigured() }}
         heading="내 프로필 · 통지 채널"
         intro="Slack ID 또는 전화번호 중 하나는 있어야 알람 순서에서 실제로 연락을 받습니다."
       />

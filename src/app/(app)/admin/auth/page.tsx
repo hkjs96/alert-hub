@@ -4,6 +4,8 @@ import { readAuthConfig } from "@/lib/auth/config";
 import { SESSION_TTL_SECONDS } from "@/lib/auth/session";
 import { ToneLabel, type AuthTone } from "@/components/auth/primitives";
 import { authTest, defaultBotChannel, isBotConfigured } from "@/lib/notify/slack-api";
+import { emailNotifier } from "@/lib/notify/email";
+import { isSmsConfigured } from "@/lib/notify/twilio";
 
 export const dynamic = "force-dynamic";
 
@@ -102,6 +104,22 @@ export default async function AuthDiagPage() {
       tone: process.env.SLACK_WEBHOOK_URL ? "ok" : "off",
       state: process.env.SLACK_WEBHOOK_URL ? "설정됨" : "없음",
       value: process.env.SLACK_WEBHOOK_URL ? "전사 폴백 채널로 사용" : "SLACK_WEBHOOK_URL 없음",
+    },
+    {
+      item: "이메일 서버",
+      tone: emailNotifier.isConfigured() ? "ok" : "off",
+      state: emailNotifier.isConfigured() ? "설정됨" : "없음",
+      value: emailNotifier.isConfigured()
+        ? `SMTP ${process.env.SMTP_HOST} · 발신 ${process.env.SMTP_FROM}`
+        : "SMTP_HOST / SMTP_FROM 없음 · 이메일 통지·확인 불가",
+    },
+    {
+      item: "SMS 공급자",
+      tone: isSmsConfigured() ? "ok" : "off",
+      state: isSmsConfigured() ? "설정됨" : "없음",
+      value: isSmsConfigured()
+        ? `Twilio · 발신 ${process.env.TWILIO_FROM}`
+        : "TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM 없음 · 에스컬레이션 SMS·번호 확인 불가",
     },
     {
       item: "최근 로그인",

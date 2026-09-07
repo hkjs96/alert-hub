@@ -42,9 +42,9 @@ export async function UserMenu() {
   const channels = [
     me.slackId ? `Slack DM${me.slackVerifiedAt ? "" : "(미확인)"}` : null,
     me.email ? `이메일${me.emailVerifiedAt ? "" : "(미확인)"}` : null,
-    me.phone ? "SMS" : null,
+    me.phone ? `SMS${me.phoneVerifiedAt ? "" : "(미확인)"}` : null,
   ].filter(Boolean);
-  const verified = Boolean(me.slackVerifiedAt || me.emailVerifiedAt);
+  const verified = Boolean(me.slackVerifiedAt || me.emailVerifiedAt || me.phoneVerifiedAt);
 
   return (
     <details className="relative">

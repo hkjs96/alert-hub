@@ -3,7 +3,7 @@ import { PendingButton } from "@/components/pending-button";
 import { confirmVerificationCode, sendVerificationCode } from "@/server/auth-actions";
 import { updateMyProfile } from "@/server/me-actions";
 import type { CurrentUser } from "@/server/auth";
-import { channelState, type VerifyState } from "@/lib/auth/verify";
+import { channelState, viaLabel, type VerifyState } from "@/lib/auth/verify";
 
 const control =
   "h-[38px] w-full border border-stone-200 bg-white px-3 text-[13px] text-stone-900 transition-colors hover:border-stone-400 focus:border-stone-900 focus:outline-none";
@@ -28,6 +28,7 @@ function fmt(d: Date): string {
 export interface ChannelConfig {
   slack: boolean;
   email: boolean;
+  sms: boolean;
 }
 
 /**
@@ -86,15 +87,17 @@ export function ProfileCard({
     {
       key: "sms",
       name: "SMS",
-      state: me.phone ? "unverified" : "unregistered",
-      verifiedAt: null,
+      state: channelState(me.phone, me.phoneVerifiedAt),
+      verifiedAt: me.phoneVerifiedAt,
       detail: me.phone ?? "에스컬레이션에만 사용됩니다",
       field: "phone",
-      placeholder: "+8210…",
-      hint: "E.164 형식",
-      serverOk: false,
+      placeholder: "010-1234-5678",
+      hint: "국내 번호는 그대로, 해외는 +국가번호",
+      serverOk: configured.sms,
     },
   ];
+  const viaOf = (k: "slack" | "email" | "sms") =>
+    k === "slack" ? me.slackVerifiedVia : k === "email" ? me.emailVerifiedVia : me.phoneVerifiedVia;
   const verified = rows.filter((r) => r.state === "verified").length;
 
   return (
@@ -169,9 +172,12 @@ export function ProfileCard({
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={`text-[13px] ${on ? "font-semibold text-stone-900" : "font-medium text-stone-500"}`}>{c.name}</span>
                   {c.state === "verified" ? (
-                    <ToneLabel tone="ok">확인됨{c.verifiedAt ? ` ${fmt(c.verifiedAt)}` : ""}</ToneLabel>
+                    <ToneLabel tone="ok">
+                      확인됨{c.verifiedAt ? ` ${fmt(c.verifiedAt)}` : ""}
+                      {viaOf(c.key) ? ` · ${viaLabel(viaOf(c.key))}` : ""}
+                    </ToneLabel>
                   ) : c.state === "unverified" ? (
-                    <ToneLabel tone="warn">{c.key === "sms" ? "등록됨" : "확인 필요"}</ToneLabel>
+                    <ToneLabel tone="warn">확인 필요</ToneLabel>
                   ) : (
                     <ToneLabel tone="off">미등록</ToneLabel>
                   )}
@@ -180,7 +186,11 @@ export function ProfileCard({
                   {mine && vResult === "bad" ? <span className="text-xs text-[#b42318]">코드가 틀렸거나 만료되었습니다</span> : null}
                   {mine && vResult === "skipped" ? <span className="text-xs text-stone-500">서버에 이 채널이 설정돼 있지 않아 보내지 못했습니다</span> : null}
                 </div>
-                <div className="mt-0.5 truncate text-xs text-stone-400">{c.detail}</div>
+                <div className="mt-0.5 truncate text-xs text-stone-400">
+                  {c.key === "slack" && c.state === "unregistered" && configured.slack
+                    ? "이 이메일은 Slack 워크스페이스에서 찾지 못했습니다 — 멤버 ID를 직접 등록하세요"
+                    : c.detail}
+                </div>
                 {c.field ? (
                   <details className="mt-2">
                     <summary className="cursor-pointer list-none text-xs font-medium text-indigo-600 hover:underline [&::-webkit-details-marker]:hidden">
@@ -221,8 +231,7 @@ export function ProfileCard({
                   </form>
                 ) : null}
               </div>
-              {c.key !== "sms" ? (
-                on ? (
+              {on ? (
                   c.serverOk ? (
                     <form action={sendVerificationCode}>
                       <input type="hidden" name="channel" value={c.key} />
@@ -234,20 +243,25 @@ export function ProfileCard({
                   ) : (
                     <span
                       className="inline-flex h-[30px] items-center border border-[#e6e2d9] bg-[#f4f1ea] px-[13px] text-xs font-medium text-[#b0aca2]"
-                      title={c.key === "slack" ? "SLACK_BOT_TOKEN 또는 SLACK_WEBHOOK_URL 이 설정되지 않았습니다" : "SMTP_HOST / SMTP_FROM 이 설정되지 않았습니다"}
+                      title={
+                        c.key === "slack"
+                          ? "SLACK_BOT_TOKEN 또는 SLACK_WEBHOOK_URL 이 설정되지 않았습니다"
+                          : c.key === "email"
+                            ? "SMTP_HOST / SMTP_FROM 이 설정되지 않았습니다"
+                            : "SMS 공급자(TWILIO_*)가 설정되지 않았습니다"
+                      }
                     >
                       서버 미설정
                     </span>
                   )
-                ) : null
-              ) : null}
+                ) : null}
             </div>
           );
         })}
       </div>
-      {!configured.slack && !configured.email ? (
+      {!configured.slack && !configured.email && !configured.sms ? (
         <p className="mt-3 text-xs text-stone-400">
-          서버에 통지 채널이 하나도 설정돼 있지 않습니다. 관리자가 Slack 웹훅이나 SMTP를 연결하면 여기서 확인할 수 있습니다.
+          서버에 통지 채널이 하나도 설정돼 있지 않습니다. 관리자가 Slack 봇·SMTP·SMS 공급자를 연결하면 여기서 확인할 수 있습니다.
         </p>
       ) : null}
     </div>

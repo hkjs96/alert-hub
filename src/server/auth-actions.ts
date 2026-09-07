@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { isRole, ROLE_LABELS } from "@/lib/auth/roles";
 import { sendSlackDm, sendSlackText } from "@/lib/notify/slack";
 import { isBotConfigured } from "@/lib/notify/slack-api";
+import { sendSmsText } from "@/lib/notify/twilio";
+import { isVerifyChannel } from "@/lib/auth/verify";
 import { sendEmailText } from "@/lib/notify/email";
 import { requireRole, requireSessionUser, requireUser } from "@/server/auth";
 import { VERIFY_TTL_MS, checkCode, generateCode, hashCode } from "@/lib/auth/verify";
@@ -125,8 +127,8 @@ export async function sendVerificationCode(formData: FormData) {
   const channel = str(formData, "channel");
   const back = backOf(formData, "/me");
   if (!me) redirect(back);
-  if (channel !== "slack" && channel !== "email") redirect(back);
-  const target = channel === "slack" ? me.slackId : me.email;
+  if (!isVerifyChannel(channel)) redirect(back);
+  const target = channel === "slack" ? me.slackId : channel === "email" ? me.email : me.phone;
   if (!target) redirect(withParam(back, "verify", `${channel}:missing`));
   const code = generateCode();
   const appUrl = process.env.APP_URL?.replace(/\/+$/, "") ?? "";
@@ -137,6 +139,8 @@ export async function sendVerificationCode(formData: FormData) {
     result = isBotConfigured()
       ? await sendSlackDm(target, text).catch(() => "skipped" as const)
       : await sendSlackText(`<@${target}> ${text}`).catch(() => "skipped" as const);
+  } else if (channel === "sms") {
+    result = await sendSmsText(target, `[alert-hub] 확인 코드 ${code} (10분 안에 입력)`).catch(() => "skipped" as const);
   } else {
     result = await sendEmailText(
       target,
@@ -163,7 +167,7 @@ export async function confirmVerificationCode(formData: FormData) {
   const channel = str(formData, "channel");
   const back = backOf(formData, "/me");
   if (!me) redirect(back);
-  if (channel !== "slack" && channel !== "email") redirect(back);
+  if (!isVerifyChannel(channel)) redirect(back);
   const row = await prisma.contact.findUnique({
     where: { id: me.id },
     select: { verifyChannel: true, verifyCodeHash: true, verifyExpiresAt: true },
@@ -180,7 +184,11 @@ export async function confirmVerificationCode(formData: FormData) {
   await prisma.contact.update({
     where: { id: me.id },
     data: {
-      ...(channel === "slack" ? { slackVerifiedAt: new Date() } : { emailVerifiedAt: new Date() }),
+      ...(channel === "slack"
+        ? { slackVerifiedAt: new Date(), slackVerifiedVia: "code" }
+        : channel === "email"
+          ? { emailVerifiedAt: new Date(), emailVerifiedVia: "code" }
+          : { phoneVerifiedAt: new Date(), phoneVerifiedVia: "code" }),
       verifyChannel: null,
       verifyCodeHash: null,
       verifyExpiresAt: null,

@@ -27,6 +27,10 @@ export interface CurrentUser {
   approvalPingAt: Date | null;
   slackVerifiedAt: Date | null;
   emailVerifiedAt: Date | null;
+  phoneVerifiedAt: Date | null;
+  slackVerifiedVia: string | null;
+  emailVerifiedVia: string | null;
+  phoneVerifiedVia: string | null;
   /** 통지 프로필이 비어 있으면 헤더가 /me 로 유도한다. */
   profileIncomplete: boolean;
   /** 세션 만료(epoch 초). */
@@ -65,6 +69,10 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     approvalPingAt: c.approvalPingAt,
     slackVerifiedAt: c.slackVerifiedAt,
     emailVerifiedAt: c.emailVerifiedAt,
+    phoneVerifiedAt: c.phoneVerifiedAt,
+    slackVerifiedVia: c.slackVerifiedVia,
+    emailVerifiedVia: c.emailVerifiedVia,
+    phoneVerifiedVia: c.phoneVerifiedVia,
     profileIncomplete: !c.slackId && !c.phone,
     sessionExp: s.exp,
   };
@@ -199,9 +207,30 @@ export async function autoLinkSlack(contactId: string, email: string): Promise<v
     if (!c || c.slackId) return;
     const id = await lookupUserByEmail(email);
     if (!id) return;
-    await prisma.contact.update({ where: { id: contactId }, data: { slackId: id, slackVerifiedAt: new Date() } });
+    await prisma.contact.update({
+      where: { id: contactId },
+      data: { slackId: id, slackVerifiedAt: new Date(), slackVerifiedVia: "slack-lookup" },
+    });
   } catch (err) {
     console.warn("[auth] slack auto-link failed", err);
+  }
+}
+
+/**
+ * SSO 로그인 직후: Google 이 email_verified 를 보증했으므로 로그인 이메일은
+ * 바로 확인됨(sso). 이미 확인된 경우는 건드리지 않는다.
+ */
+export async function autoVerifyEmail(contactId: string, email: string): Promise<void> {
+  try {
+    const c = await prisma.contact.findUnique({ where: { id: contactId }, select: { email: true, emailVerifiedAt: true } });
+    if (!c || c.emailVerifiedAt) return;
+    if ((c.email ?? "").toLowerCase() !== email.toLowerCase()) return;
+    await prisma.contact.update({
+      where: { id: contactId },
+      data: { emailVerifiedAt: new Date(), emailVerifiedVia: "sso" },
+    });
+  } catch (err) {
+    console.warn("[auth] email auto-verify failed", err);
   }
 }
 

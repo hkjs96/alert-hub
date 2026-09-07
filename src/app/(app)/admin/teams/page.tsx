@@ -16,7 +16,7 @@ const control =
  * 트리의 고객사 패널로 옮겨갔고, 여기엔 (1) 어느 고객사에나 배정할 수 있는
  * 내부 공용 팀, (2) 고객사 전용 팀의 요약, (3) 내부 인원 명단이 남는다.
  */
-export default async function TeamsPage() {
+export default async function TeamsPage({ searchParams }: { searchParams: { vreq?: string } }) {
   const teams = await prisma.team.findMany({
     orderBy: [{ customerId: "asc" }, { name: "asc" }],
     include: { customer: true, _count: { select: { members: true, assignments: true } } },
@@ -112,7 +112,7 @@ export default async function TeamsPage() {
           <h2 className="text-sm font-semibold text-stone-900">내부 인원</h2>
           <span className="text-xs text-stone-400">고객사에 속하지 않은 MSP 담당자</span>
         </div>
-        <ContactRoster scope="internal" back={back} />
+        <ContactRoster scope="internal" back={back} vreq={searchParams.vreq} />
       </section>
     </div>
   );

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/server/auth";
 import { isRole } from "@/lib/auth/roles";
+import { normalizePhone } from "@/lib/phone";
 import { assertNotLastAdmin } from "@/server/auth-actions";
 import type { ScopeLevel } from "@/lib/org/resolve";
 
@@ -147,7 +148,7 @@ export async function createContact(formData: FormData) {
     data: {
       name: requireString(formData, "name"),
       email: optionalString(formData, "email"),
-      phone: optionalString(formData, "phone"),
+      phone: normalizePhone(optionalString(formData, "phone")),
       slackId: optionalString(formData, "slackId"),
       department: optionalString(formData, "department"),
       customerId: optionalString(formData, "customerId"),
@@ -192,7 +193,7 @@ export async function updateContact(formData: FormData) {
     data: {
       name: requireString(formData, "name"),
       email: optionalString(formData, "email"),
-      phone: optionalString(formData, "phone"),
+      phone: normalizePhone(optionalString(formData, "phone")),
       slackId: optionalString(formData, "slackId"),
       department: optionalString(formData, "department"),
       customerId: nextCustomerId,
@@ -201,8 +202,9 @@ export async function updateContact(formData: FormData) {
       // 역할은 내부 인원에게만 의미 있다. 폼에 있을 때만 반영.
       ...(nextCustomerId === null && isRole(roleRaw) ? { role: roleRaw } : {}),
       // 주소가 바뀌면 확인 상태도 리셋.
-      ...((optionalString(formData, "slackId") ?? null) !== (current.slackId ?? null) ? { slackVerifiedAt: null } : {}),
-      ...((optionalString(formData, "email") ?? null) !== (current.email ?? null) ? { emailVerifiedAt: null } : {}),
+      ...((optionalString(formData, "slackId") ?? null) !== (current.slackId ?? null) ? { slackVerifiedAt: null, slackVerifiedVia: null } : {}),
+      ...((optionalString(formData, "email") ?? null) !== (current.email ?? null) ? { emailVerifiedAt: null, emailVerifiedVia: null } : {}),
+      ...(normalizePhone(optionalString(formData, "phone")) !== (current.phone ?? null) ? { phoneVerifiedAt: null, phoneVerifiedVia: null } : {}),
     },
   });
   revalidatePath("/admin/contacts");

@@ -5,6 +5,7 @@ const PUBLIC_PREFIXES = [
   "/api/cron/",
   "/api/auth/",
   "/login",
+  "/verify/",
   "/_next/",
   "/fonts/",
   "/favicon",
