@@ -278,12 +278,20 @@ model Contact {
   active      Boolean   @default(true)
   // SSO(JIT)로 처음 만들어졌거나 로그인한 시각. null = 아직 로그인한 적 없음.
   lastLoginAt DateTime?
-  // 통지 채널 확인: 코드를 보내 받은 사람이 입력하면 확인됨. 값이 바뀌면 리셋.
-  slackVerifiedAt DateTime?
-  emailVerifiedAt DateTime?
-  verifyChannel   String?
-  verifyCodeHash  String?
-  verifyExpiresAt DateTime?
+  // 통지 채널 확인: 코드/링크/SSO 보증/관리자 수동. 값이 바뀌면 리셋.
+  // *VerifiedVia: "code" | "link" | "sso" | "slack-lookup" | "admin:<이름>"
+  slackVerifiedAt  DateTime?
+  slackVerifiedVia String?
+  emailVerifiedAt  DateTime?
+  emailVerifiedVia String?
+  phoneVerifiedAt  DateTime?
+  phoneVerifiedVia String?
+  verifyNote       String?
+  verifyChannel    String?
+  verifyCodeHash   String?
+  verifyExpiresAt  DateTime?
+
+  verifications ChannelVerification[]
 
   // --- 계정(내부 인원만 의미 있음; 고객사 담당자는 로그인 대상이 아니다) ---
   // 역할: ADMIN(등록 관리 전체·승인), OPERATOR(알람 처리·점검 창), VIEWER(조회).
@@ -477,4 +485,20 @@ model NotifyChannel {
   @@index([customerId])
   @@index([projectId])
   @@index([serviceId])
+}
+
+// 관리자가 대신 보내는 확인 요청(링크). 받은 사람이 로그인 없이 링크를 열면
+// 그 채널이 확인됨으로 기록된다. 토큰은 해시로만 저장, 24시간 유효, 1회용.
+model ChannelVerification {
+  id          String    @id @default(cuid())
+  contactId   String
+  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  channel     String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  sentAt      DateTime  @default(now())
+  usedAt      DateTime?
+  requestedBy String?
+
+  @@index([contactId, channel])
 }

@@ -38,7 +38,7 @@ function isLevel(v: string | undefined): v is Level {
 export default async function OrgPage({
   searchParams,
 }: {
-  searchParams: { level?: string; id?: string };
+  searchParams: { level?: string; id?: string; vreq?: string };
 }) {
   const [customers, assignments] = await Promise.all([
     prisma.customer.findMany({
@@ -341,7 +341,7 @@ export default async function OrgPage({
 
                   <section>
                     <div className={`mb-2 ${overline}`}>이 고객사의 담당자</div>
-                    <ContactRoster scope={{ customerId: selected.customer.id }} back={back} />
+                    <ContactRoster scope={{ customerId: selected.customer.id }} back={back} vreq={searchParams.vreq} />
                   </section>
                 </>
               )}

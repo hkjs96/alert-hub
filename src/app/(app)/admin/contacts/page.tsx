@@ -15,7 +15,7 @@ const control =
 export default async function ContactsPage({
   searchParams,
 }: {
-  searchParams: { q?: string; customer?: string };
+  searchParams: { q?: string; customer?: string; vreq?: string };
 }) {
   const q = searchParams.q?.trim() || undefined;
   const customerFilter = searchParams.customer || undefined;
@@ -52,7 +52,7 @@ export default async function ContactsPage({
         )}
       </form>
 
-      <ContactRoster scope="all" back={back} q={q} customerFilter={customerFilter} />
+      <ContactRoster scope="all" back={back} q={q} customerFilter={customerFilter} vreq={searchParams.vreq} />
     </div>
   );
 }

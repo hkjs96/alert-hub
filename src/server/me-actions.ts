@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/server/auth";
+import { normalizePhone } from "@/lib/phone";
 
 function opt(fd: FormData, k: string): string | null {
   const v = fd.get(k);
@@ -29,10 +30,16 @@ export async function updateMyProfile(formData: FormData) {
   const name = opt(formData, "name");
   if (formData.has("name") && name) data.name = name;
   // Slack ID 가 바뀌면 확인 상태도 리셋 — 새 ID 로 다시 코드를 받아야 한다.
+  if (formData.has("phone")) data.phone = normalizePhone(data.phone);
   const resetSlack = formData.has("slackId") && (data.slackId ?? null) !== (me.slackId ?? null);
+  const resetPhone = formData.has("phone") && (data.phone ?? null) !== (me.phone ?? null);
   await prisma.contact.update({
     where: { id: me.id },
-    data: { ...data, ...(resetSlack ? { slackVerifiedAt: null } : {}) },
+    data: {
+      ...data,
+      ...(resetSlack ? { slackVerifiedAt: null, slackVerifiedVia: null } : {}),
+      ...(resetPhone ? { phoneVerifiedAt: null, phoneVerifiedVia: null } : {}),
+    },
   });
   revalidatePath("/me");
   revalidatePath("/welcome");

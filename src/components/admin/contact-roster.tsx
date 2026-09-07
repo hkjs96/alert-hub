@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { createContact, deleteContact, updateContact } from "@/server/org-actions";
 import { PendingButton } from "@/components/pending-button";
 import { ROLE_LABELS, ROLES, STATUS_LABELS } from "@/lib/auth/roles";
+import { ChannelVerifyPanel } from "@/components/admin/channel-verify";
 
 const control =
   "h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400";
@@ -12,13 +13,20 @@ const overline =
 export function ChannelBadges({
   c,
 }: {
-  c: { slackId: string | null; email: string | null; phone: string | null };
+  c: {
+    slackId: string | null;
+    email: string | null;
+    phone: string | null;
+    slackVerifiedAt?: Date | null;
+    emailVerifiedAt?: Date | null;
+    phoneVerifiedAt?: Date | null;
+  };
 }) {
   const chans = [
-    c.slackId ? "Slack" : null,
-    c.email ? "메일" : null,
-    c.phone ? "전화" : null,
-  ].filter(Boolean);
+    c.slackId ? { label: "Slack", ok: Boolean(c.slackVerifiedAt) } : null,
+    c.email ? { label: "메일", ok: Boolean(c.emailVerifiedAt) } : null,
+    c.phone ? { label: "전화", ok: Boolean(c.phoneVerifiedAt) } : null,
+  ].filter((x): x is { label: string; ok: boolean } => Boolean(x));
   if (chans.length === 0) {
     return (
       <span
@@ -33,10 +41,13 @@ export function ChannelBadges({
     <span className="flex gap-1">
       {chans.map((ch) => (
         <span
-          key={ch}
-          className="inline-flex h-[19px] items-center border border-stone-200 bg-stone-100 px-1.5 font-mono text-[11px] text-stone-500"
+          key={ch.label}
+          title={ch.ok ? "도달 확인됨" : "등록만 됨 — 도달 미확인"}
+          className={`inline-flex h-[19px] items-center gap-1 border px-1.5 font-mono text-[11px] ${
+            ch.ok ? "border-[#067647]/30 bg-[#f0f8f3] text-[#067647]" : "border-stone-200 bg-stone-100 text-stone-500"
+          }`}
         >
-          {ch}
+          {ch.ok ? "✓" : "?"} {ch.label}
         </span>
       ))}
     </span>
@@ -63,23 +74,19 @@ function scopeLabel(a: {
 
 type Field = { name: string; label: string; value?: string | null; required?: boolean; type?: string; ph?: string; w: string };
 
-/**
- * 인원 로스터 (등록·수정·삭제). scope로 어디의 사람들인지 정한다:
- * - "internal": MSP 내부 인원 (팀 페이지)
- * - { customerId }: 그 고객사의 담당자 (조직 트리의 고객사 패널)
- * - "all": 전체 (레거시 목록, 검색·필터 포함)
- * 소속은 스코프가 정하므로 "all"에서만 소속 선택이 보인다.
- */
 export async function ContactRoster({
   scope,
   back,
   q,
   customerFilter,
+  vreq,
 }: {
   scope: "all" | "internal" | { customerId: string };
   back: string;
   q?: string;
   customerFilter?: string;
+  /** `?vreq=<channel>:<result>` — 확인 요청 결과 표시. */
+  vreq?: string;
 }) {
   const where =
     scope === "internal"
@@ -133,6 +140,7 @@ export async function ContactRoster({
           },
         },
         teamMemberships: { include: { team: { select: { name: true } } } },
+        verifications: { orderBy: { sentAt: "desc" }, take: 5 },
       },
     }),
     scope === "all" ? prisma.customer.findMany({ orderBy: { name: "asc" } }) : Promise.resolve([]),
@@ -294,6 +302,8 @@ export async function ContactRoster({
                         배정이 남아 있는 동안 소속은 내부로만 변경할 수 있습니다.
                       </p>
                     ) : null}
+
+                    <ChannelVerifyPanel c={c} back={back} vreq={vreq} />
 
                     <div>
                       <div className={`mb-1.5 ${overline}`}>배정된 스코프</div>

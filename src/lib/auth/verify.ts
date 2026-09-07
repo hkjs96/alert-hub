@@ -37,3 +37,31 @@ export async function checkCode(p: {
   if (!/^\d{6}$/.test(p.input.trim())) return false;
   return (await hashCode(p.input, p.salt)) === p.hash;
 }
+
+/** 관리자 대리 확인 링크 토큰 (URL-safe, 32바이트). 저장은 hashCode(token, "link"). */
+export function newLinkToken(): string {
+  const buf = new Uint8Array(32);
+  crypto.getRandomValues(buf);
+  let bin = "";
+  for (const b of buf) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+export const LINK_TTL_MS = 24 * 60 * 60 * 1000;
+
+export type VerifyChannel = "slack" | "email" | "sms";
+
+export function isVerifyChannel(v: unknown): v is VerifyChannel {
+  return v === "slack" || v === "email" || v === "sms";
+}
+
+/** 확인 방식 라벨. */
+export function viaLabel(via: string | null | undefined): string {
+  if (!via) return "";
+  if (via === "code") return "본인 코드";
+  if (via === "link") return "링크 클릭";
+  if (via === "sso") return "SSO 보증";
+  if (via === "slack-lookup") return "Slack 매칭";
+  if (via.startsWith("admin:")) return `관리자 수동 (${via.slice(6)})`;
+  return via;
+}

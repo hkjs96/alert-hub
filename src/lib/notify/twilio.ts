@@ -40,6 +40,20 @@ async function post(
   }
 }
 
+/** SMS 공급자(Twilio)가 설정돼 있는가 — 확인 코드·링크 발송 가능 여부. */
+export function isSmsConfigured(): boolean {
+  const c = creds();
+  return Boolean(c.sid && c.token && c.from);
+}
+
+/** 단문 하나를 보낸다(확인 코드·확인 링크). 미설정이면 "skipped". */
+export async function sendSmsText(to: string, text: string): Promise<"sent" | "skipped"> {
+  const c = creds();
+  if (!c.sid || !c.token || !c.from) return "skipped";
+  await post(c.sid, c.token, "Messages.json", { To: to, From: c.from, Body: text });
+  return "sent";
+}
+
 /** TwiML은 XML이다 — 제목이 페이로드에서 온 외부 문자열임을 잊지 말 것. */
 function xmlEscape(s: string): string {
   return s

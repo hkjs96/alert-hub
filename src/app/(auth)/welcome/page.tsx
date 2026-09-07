@@ -8,6 +8,7 @@ import { completeOnboarding } from "@/server/auth-actions";
 import { getMyScope } from "@/server/me";
 import { slackNotifier } from "@/lib/notify/slack";
 import { emailNotifier } from "@/lib/notify/email";
+import { isSmsConfigured } from "@/lib/notify/twilio";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,7 @@ export default async function WelcomePage({
   if (me.status === "PENDING") redirect("/pending");
   const step = Math.min(3, Math.max(1, Number(searchParams.step ?? "1") || 1));
   const scope = step >= 2 ? await getMyScope(me.id) : null;
-  const connected = [me.slackVerifiedAt, me.emailVerifiedAt].filter(Boolean).length;
+  const connected = [me.slackVerifiedAt, me.emailVerifiedAt, me.phoneVerifiedAt].filter(Boolean).length;
 
   return (
     <div className="w-[600px] max-w-full">
@@ -72,7 +73,7 @@ export default async function WelcomePage({
             me={me}
             back="/welcome?step=1"
             verify={searchParams.verify}
-            configured={{ slack: slackNotifier.isConfigured(), email: emailNotifier.isConfigured() }}
+            configured={{ slack: slackNotifier.isConfigured(), email: emailNotifier.isConfigured(), sms: isSmsConfigured() }}
             heading={<>환영합니다, {me.name}님</>}
             intro="알람을 받을 채널을 등록하면 설정이 끝납니다. Google 계정에서 가져온 정보는 수정할 수 있습니다."
           />
@@ -148,7 +149,7 @@ export default async function WelcomePage({
             <ul className="space-y-1.5 text-[13px] text-stone-700">
               <li>· Slack DM {me.slackId ? `@${me.slackId}${me.slackVerifiedAt ? " · 확인됨" : " · 확인 필요"}` : "미등록"}</li>
               <li>· 이메일 {me.email}{me.emailVerifiedAt ? " · 확인됨" : " · 확인 필요"}</li>
-              <li>· SMS {me.phone ?? "미연결 (에스컬레이션 전용)"}</li>
+              <li>· SMS {me.phone ? `${me.phone}${me.phoneVerifiedAt ? " · 확인됨" : " · 확인 필요"}` : "미등록 (에스컬레이션 전용)"}</li>
               <li>· 담당 고객사 {scope?.customerNames.length ?? 0}곳 · 배정 {scope?.assignmentCount ?? 0}곳</li>
             </ul>
           </div>
