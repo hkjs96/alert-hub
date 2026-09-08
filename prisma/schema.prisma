@@ -200,12 +200,12 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  projects    Project[]
-  silences    Silence[]
-  contacts    Contact[]
-  teams       Team[]
-  routingRules RoutingRule[]
-  assignments Assignment[]
+  projects       Project[]
+  silences       Silence[]
+  contacts       Contact[]
+  teams          Team[]
+  routingRules   RoutingRule[]
+  assignments    Assignment[]
   notifyChannels NotifyChannel[]
 }
 
@@ -218,12 +218,12 @@ model Project {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  services    Service[]
-  silences    Silence[]
-  assignments Assignment[]
+  services       Service[]
+  silences       Silence[]
+  assignments    Assignment[]
+  notifyChannels NotifyChannel[]
 
   @@unique([customerId, name])
-  notifyChannels NotifyChannel[]
 }
 
 model Service {
@@ -235,13 +235,13 @@ model Service {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  accounts    AwsAccountMap[]
-  silences    Silence[]
-  assignments Assignment[]
+  accounts       AwsAccountMap[]
+  silences       Silence[]
+  assignments    Assignment[]
+  routingRules   RoutingRule[]
+  notifyChannels NotifyChannel[]
 
   @@unique([projectId, name])
-  routingRules RoutingRule[]
-  notifyChannels NotifyChannel[]
 }
 
 model AwsAccountMap {
@@ -275,9 +275,9 @@ model Contact {
 
   // 비활성: 퇴사·휴직 등. 배정·팀 소속은 그대로 두되 해석과 선택 목록에서
   // 빠지고, SSO 로그인이 거부된다. 삭제와 달리 지난 알람의 이름을 지우지 않는다.
-  active      Boolean   @default(true)
+  active           Boolean   @default(true)
   // SSO(JIT)로 처음 만들어졌거나 로그인한 시각. null = 아직 로그인한 적 없음.
-  lastLoginAt DateTime?
+  lastLoginAt      DateTime?
   // 통지 채널 확인: 코드/링크/SSO 보증/관리자 수동. 값이 바뀌면 리셋.
   // *VerifiedVia: "code" | "link" | "sso" | "slack-lookup" | "admin:<이름>"
   slackVerifiedAt  DateTime?
@@ -295,15 +295,15 @@ model Contact {
 
   // --- 계정(내부 인원만 의미 있음; 고객사 담당자는 로그인 대상이 아니다) ---
   // 역할: ADMIN(등록 관리 전체·승인), OPERATOR(알람 처리·점검 창), VIEWER(조회).
-  role   Role          @default(OPERATOR)
+  role           Role          @default(OPERATOR)
   // 가입 상태: SSO로 처음 들어온 사람은 PENDING, 관리자가 승인하면 ACTIVE.
   // 관리자가 화면에서 미리 등록한 사람은 ACTIVE로 시작한다(초대와 같다).
-  status AccountStatus @default(ACTIVE)
-  approvedAt DateTime?
-  approvedBy String?
+  status         AccountStatus @default(ACTIVE)
+  approvedAt     DateTime?
+  approvedBy     String?
   // 첫 로그인 프로필 완성(환영 단계)을 마친 시각. null = 아직.
-  onboardedAt DateTime?
-  timezone    String?
+  onboardedAt    DateTime?
+  timezone       String?
   // 승인 요청 알림을 마지막으로 보낸 시각 (시간당 1회로 제한).
   approvalPingAt DateTime?
 
@@ -312,6 +312,8 @@ model Contact {
 
   assignments     Assignment[]
   teamMemberships TeamMember[]
+  shiftSlots      OnCallShiftMember[]
+  overrides       OnCallOverride[]
 
   @@index([email])
 }
@@ -325,13 +327,17 @@ model Team {
   name       String
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  // 시프트 창(요일·시각)과 대체 근무 기간을 해석하는 시간대 (IANA).
+  timezone   String    @default("Asia/Seoul")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  members     TeamMember[]
-  assignments Assignment[]
+  members      TeamMember[]
+  assignments  Assignment[]
   routingRules RoutingRule[]
+  shifts       OnCallShift[]
+  overrides    OnCallOverride[]
 
   @@index([customerId])
 }
@@ -349,6 +355,64 @@ model TeamMember {
 
   @@unique([teamId, contactId])
   @@index([contactId])
+}
+
+// 시프트 (시간대 온콜): 팀 안에서 "이 요일·이 시간 창에는 이 순서"를 정한다.
+// PagerDuty의 스케줄 레이어 + restriction 에 해당. 해석 시각이 창 안에 들면
+// 시프트 멤버 순서가 팀 기본 순서 앞에 온다(기본 순서는 뒤에 이어져
+// 에스컬레이션이 계속된다). 창이 겹치면 priority 가 큰 쪽이 이긴다.
+// endMin <= startMin 이면 자정을 넘는 창(예: 18:00 → 09:00)이고 요일은 시작
+// 요일 기준이다. 시간은 팀 timezone 으로 해석한다.
+model OnCallShift {
+  id       String  @id @default(cuid())
+  teamId   String
+  team     Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  name     String
+  // 쉼표 구분 요일 목록, 0=일 … 6=토. 예 "1,2,3,4,5".
+  weekdays String
+  startMin Int
+  endMin   Int
+  priority Int     @default(0)
+  enabled  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members OnCallShiftMember[]
+
+  @@index([teamId])
+}
+
+model OnCallShiftMember {
+  id        String      @id @default(cuid())
+  shiftId   String
+  shift     OnCallShift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  order     Int         @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@unique([shiftId, contactId])
+  @@index([contactId])
+}
+
+// 대체 근무 (오버라이드): 휴가·교대 스왑용 1회성 덮어쓰기. 기간 안에서는 이
+// 사람이 팀의 1순위가 되고, 시프트/기본 순서가 뒤에 이어진다. PagerDuty 의
+// override 와 같이 가장 아래 레이어.
+model OnCallOverride {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  startAt   DateTime
+  endAt     DateTime
+  note      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([teamId, endAt])
 }
 
 // One person (or team) attached to one scope. Exactly one of

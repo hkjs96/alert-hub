@@ -77,6 +77,8 @@ JSON으로 얼리고, **FIRING 전환 때마다 갱신**한다 — 얼려지는 
 ### 나중으로 미룬 것 (구조는 막지 않음)
 
 - 역할 축(APPLICATION/INFRA 운영자): Assignment에 role 컬럼 추가로 확장
-- 팀(부서) 단위 배정: Assignment의 대상에 Team 추가로 확장
+- ~~팀(부서) 단위 배정~~ → 됨 (Team, Assignment.teamId)
+- ~~시간대별 담당~~ → 됨 (OnCallShift/OnCallShiftMember/OnCallOverride, 팀에 붙는다. 해석: 대체 근무 > 시프트 > 팀 기본 순서)
+- 교대 로테이션(매주 A→B→C): OnCallShift 에 시작일·주기 컬럼 추가로 확장. 공휴일 달력은 대체 근무 행으로 대신
 - 공유 계정(한 계정을 여러 서비스가 사용): 리소스 패턴 오버라이드 테이블로 확장
 - 라우팅 룰 엔진(2c): 조건 매처 → 타겟("해석된 1순위에게" 포함)

@@ -8,6 +8,7 @@ import {
 } from "@/server/org-actions";
 import { PendingButton } from "@/components/pending-button";
 import { DangerDelete } from "@/components/admin/danger-delete";
+import { ShiftEditor } from "@/components/admin/shift-editor";
 
 const control =
   "h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400";
@@ -128,6 +129,8 @@ export async function TeamEditor({ teamId, back }: { teamId: string; back: strin
       ) : (
         <p className="text-xs text-stone-400">추가할 수 있는 인원이 모두 팀에 있습니다.</p>
       )}
+
+      <ShiftEditor teamId={team.id} back={back} />
     </div>
   );
 }

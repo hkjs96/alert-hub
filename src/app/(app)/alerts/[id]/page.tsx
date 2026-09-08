@@ -369,6 +369,11 @@ function SnapshotPanel({
                 팀 {o.team}
               </span>
             ) : null}
+            {o.shift ? (
+              <span className="border border-stone-900 px-1 font-mono text-[11px] text-stone-900" title="접수 시각의 시프트·대체 근무 당번">
+                {o.shift}
+              </span>
+            ) : null}
             {i === 0 ? (
               <span className="text-xs font-medium text-indigo-600">1순위</span>
             ) : null}
