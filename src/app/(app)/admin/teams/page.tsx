@@ -32,7 +32,8 @@ export default async function TeamsPage({ searchParams }: { searchParams: { vreq
         <p className="mt-1 text-sm text-stone-500">
           팀은 알람 처리 순서에 한 칸으로 들어가고, 해석할 때 팀 순서대로 멤버가 펼쳐집니다.
           인프라팀 · DB팀처럼 기능 단위로 나누는 고객사는 팀을, 프로젝트 단위로 나누는 고객사는
-          개인 배정을 쓰면 됩니다. 고객사 담당자는{" "}
+          개인 배정을 쓰면 됩니다. 주간 · 야간 · 주말로 당번이 다르면 팀 안의 <b>시간대 온콜</b>(시프트 · 대체 근무)로
+          나눕니다. 고객사 담당자는{" "}
           <Link href="/admin/org" className="text-indigo-600 underline">조직 트리</Link>에서 관리합니다.
         </p>
       </div>
@@ -64,7 +65,7 @@ export default async function TeamsPage({ searchParams }: { searchParams: { vreq
         </form>
         {internal.length === 0 ? (
           <p className="border border-dashed border-stone-200 px-3 py-4 text-sm text-stone-400">
-            아직 내부 팀이 없습니다. 위에서 만들고 멤버를 순서대로 넣으세요.
+            아직 내부 팀이 없습니다. 위에서 만들고 멤버를 순서대로 넣으세요. 시간대별 당번(시프트 · 대체 근무)은 팀 블록 안에서 설정합니다.
           </p>
         ) : (
           <div className="divide-y divide-stone-200 border border-stone-200 bg-white">
