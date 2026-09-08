@@ -95,7 +95,8 @@ handled. Locally, point both URLs at the same Postgres.
 | `DATABASE_URL`      | yes      | Pooled Postgres URL (app runtime).                         |
 | `DIRECT_URL`        | yes      | Direct Postgres URL (migrations / `db push`).              |
 | `SLACK_WEBHOOK_URL` | no       | Slack Incoming Webhook — 전사 폴백 채널. 스코프별 채널이 없을 때 쓰인다. |
-| `SLACK_BOT_TOKEN` `SLACK_DEFAULT_CHANNEL` | no | Slack 앱 봇 토큰(`xoxb-…`, scopes `chat:write` `chat:write.public` `im:write` `users:read.email`)과 전사 기본 채널. 있으면 스코프별 "우리 채널", 에스컬레이션 DM, 확인 코드 DM, 로그인 시 Slack ID 자동 연결이 켜진다. |
+| `SLACK_BOT_TOKEN` `SLACK_DEFAULT_CHANNEL` | no | Slack 앱 봇 토큰(`xoxb-…`, scopes `chat:write` `chat:write.public` `im:write` `users:read` `users:read.email`)과 전사 기본 채널. 있으면 스코프별 "우리 채널", 에스컬레이션 DM, 확인 코드 DM, 로그인 시 Slack ID 자동 연결이 켜진다. |
+| `SLACK_SIGNING_SECRET` | no | Slack 앱의 Signing Secret. 있으면 봇 메시지에 **확인 · 해결 · 1시간 뮤트 버튼**이 붙고 `/api/slack/interactive` 가 그 클릭을 받는다. 앱 설정 › Interactivity & Shortcuts 를 켜고 Request URL 을 `<APP_URL>/api/slack/interactive` 로. |
 | `APP_URL`           | no       | Public base URL; adds an alert deep link to notifications.   |
 | `INGEST_TOKEN`      | no       | If set, requests must carry the token (see below).            |
 | `SMTP_HOST` `SMTP_FROM` | no   | Enable the email notifier. `SMTP_PORT`/`SMTP_SECURE`/`SMTP_USER`/`SMTP_PASS` refine it. |
@@ -135,6 +136,22 @@ handled. Locally, point both URLs at the same Postgres.
 
 각 채널에 "테스트 메시지" 버튼이 있고 마지막 성공/실패가 남는다. 다이제스트·점검 종료 요약·에스컬레이션도 같은 채널로 가며,
 봇이 있으면 에스컬레이션 당사자에게 DM 도 간다. 라우팅 규칙(누구)과 통지 채널(어디)은 독립이다.
+
+### Slack 에서 바로 처리 (버튼 · 스레드)
+
+봇으로 나간 메시지에는 **✓ 확인 (Ack) · 해결 (Resolve) · 1시간 뮤트 · alert-hub 에서 열기** 버튼이 붙는다.
+웹훅(외부 워크스페이스) 메시지는 인터랙션이 우리 앱으로 오지 않으므로 텍스트 + 링크만 간다.
+
+- 누른 사람은 Slack ID 로 인원과 매칭한다. 활성 인원이 아니거나 조회 권한이면 본인에게만 보이는 안내를 주고 아무것도 바꾸지 않는다.
+  SSO 로그인 시 Slack ID 가 자동 연결되므로 내부 인원은 보통 바로 된다.
+- 전이는 알람 상세 버튼과 같은 경로(`transitionAlert`)를 지난다. 가드된 갱신이라 두 사람이 동시에 눌러도 한 번만 바뀌고, 이벤트에 `Ack (Slack 버튼) · 김도윤` 으로 남는다.
+- 상태가 바뀌면(웹 · Slack · 공급자 OK 어디서든) 이 알람으로 나간 **봇 메시지 전부**의 상태 줄과 버튼이 갱신되고 스레드에 "✓ 김도윤 님이 확인했습니다 (Slack)" 한 줄이 남는다.
+  메시지 좌표는 `SlackMessage` 에 저장된다.
+- 뮤트 버튼은 이 알람만 1시간 조용히 한다(점검 · 뮤트 화면에 `Slack 뮤트 (1시간) · 이름` 으로 보인다).
+- 묶음 통지(같은 서비스 알람 여러 건을 한 메시지로)에는 버튼이 없고 알람별 링크만 있다. 창 안에 한 건이면 평소 단건 메시지로 나가 버튼이 붙는다.
+
+설정: Slack 앱 › **Interactivity & Shortcuts** 켜기 → Request URL `https://<APP_URL>/api/slack/interactive` → Basic Information 의
+Signing Secret 을 `SLACK_SIGNING_SECRET` 으로. 봇 scope 에 `users:read` 가 필요하다(누른 사람 이름). 진단 화면의 "Slack 버튼" 행이 상태를 보여 준다.
 
 ### 통지 채널 확인 (도달 확인)
 
@@ -492,7 +509,7 @@ to let the payload be auto-detected.
 
 - **Ingest:** per-source signature verification (SNS message signatures,
   PagerDuty `X-PagerDuty-Signature`); more providers behind the same interface.
-- **Product:** Slack 메시지에 Ack/Resolve 버튼 + 런북 링크 → 테넌트 스코프
+- **Product:** 런북 링크 · CloudWatch 딥링크 → 테넌트 스코프
   (온콜이 담당 고객사만) → 온콜 호출 사다리(문자·전화, 솔라피 — 조사 완료·보류,
   [docs/oncall-paging.md](docs/oncall-paging.md)).
 

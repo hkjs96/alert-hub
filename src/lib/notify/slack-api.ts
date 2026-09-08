@@ -36,19 +36,94 @@ async function call<T extends { ok: boolean; error?: string }>(
   return json;
 }
 
-/** 채널(ID 또는 #이름)에 텍스트. chat:write (+ 공개 채널 미초대 시 chat:write.public). */
-export async function postMessage(channel: string, text: string, fetchImpl?: typeof fetch): Promise<void> {
-  await call("chat.postMessage", { channel, text, unfurl_links: false }, fetchImpl);
+export interface MessageRef {
+  channel: string;
+  ts: string;
+}
+
+type PostResult = { ok: boolean; error?: string; channel?: string; ts?: string };
+
+/**
+ * 채널(ID 또는 #이름)에 텍스트(+블록). chat:write (+ 공개 채널 미초대 시
+ * chat:write.public). 보낸 메시지 좌표를 돌려준다 — 나중에 chat.update 용.
+ */
+export async function postMessage(
+  channel: string,
+  text: string,
+  fetchImpl?: typeof fetch,
+  blocks?: unknown[],
+): Promise<MessageRef | null> {
+  const r = await call<PostResult>(
+    "chat.postMessage",
+    { channel, text, unfurl_links: false, ...(blocks ? { blocks } : {}) },
+    fetchImpl,
+  );
+  return r.channel && r.ts ? { channel: r.channel, ts: r.ts } : null;
 }
 
 /** 사용자에게 DM. im:write. */
-export async function postDm(userId: string, text: string, fetchImpl?: typeof fetch): Promise<void> {
+export async function postDm(
+  userId: string,
+  text: string,
+  fetchImpl?: typeof fetch,
+  blocks?: unknown[],
+): Promise<MessageRef | null> {
   const opened = await call<{ ok: boolean; error?: string; channel: { id: string } }>(
     "conversations.open",
     { users: userId },
     fetchImpl,
   );
-  await call("chat.postMessage", { channel: opened.channel.id, text, unfurl_links: false }, fetchImpl);
+  const r = await call<PostResult>(
+    "chat.postMessage",
+    { channel: opened.channel.id, text, unfurl_links: false, ...(blocks ? { blocks } : {}) },
+    fetchImpl,
+  );
+  return r.channel && r.ts ? { channel: r.channel, ts: r.ts } : null;
+}
+
+/** 보낸 메시지 고치기 (상태 줄·버튼 갱신). chat:write. */
+export async function updateMessage(
+  ref: MessageRef,
+  text: string,
+  blocks: unknown[],
+  fetchImpl?: typeof fetch,
+): Promise<void> {
+  await call("chat.update", { channel: ref.channel, ts: ref.ts, text, blocks }, fetchImpl);
+}
+
+/** 메시지 스레드에 한 줄. */
+export async function postThread(ref: MessageRef, text: string, fetchImpl?: typeof fetch): Promise<void> {
+  await call("chat.postMessage", { channel: ref.channel, thread_ts: ref.ts, text, unfurl_links: false }, fetchImpl);
+}
+
+/** 인터랙션 응답 URL 로 답하기 (원문 교체 또는 본인만 보이는 메시지). 토큰 불필요. */
+export async function respondToInteraction(
+  responseUrl: string,
+  body: Record<string, unknown>,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const res = await fetchImpl(responseUrl, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`slack response_url ${res.status}`);
+}
+
+/** Slack 사용자 표시 이름. users:read. 실패하면 null. */
+export async function userDisplayName(userId: string, fetchImpl: typeof fetch = fetch): Promise<string | null> {
+  const token = botToken();
+  if (!token) return null;
+  try {
+    const res = await fetchImpl(`${API}/users.info?user=${encodeURIComponent(userId)}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const json = (await res.json()) as { ok: boolean; user?: { real_name?: string; name?: string; profile?: { display_name?: string } } };
+    if (!json.ok || !json.user) return null;
+    return json.user.profile?.display_name || json.user.real_name || json.user.name || null;
+  } catch {
+    return null;
+  }
 }
 
 /** 이메일 → Slack 사용자 ID. users:read.email. 없거나 권한 없으면 null. */

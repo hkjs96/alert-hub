@@ -2,6 +2,8 @@ import type { Notifier, NotifyContext } from "@/lib/notify";
 import type { NormalizedAlert } from "@/lib/types";
 import type { NotifyTarget } from "@/lib/notify/targets";
 import { defaultBotChannel, isBotConfigured, postDm, postMessage } from "@/lib/notify/slack-api";
+import { buildAlertBlocks } from "@/lib/notify/slack-blocks";
+import { recordSlackRef } from "@/lib/notify/slack-refs";
 
 const SEVERITY_EMOJI: Record<string, string> = {
   "SEV-0": "🚨",
@@ -72,14 +74,20 @@ export function defaultTargets(): NotifyTarget[] {
   return out;
 }
 
-/** 목적지 하나에 보낸다. 봇 채널은 토큰이 없으면 건너뛴다(에러 아님). */
-export async function sendToTarget(t: NotifyTarget, text: string): Promise<"sent" | "skipped"> {
+/**
+ * 목적지 하나에 보낸다. 봇 채널은 토큰이 없으면 건너뛴다(에러 아님). alertId 가
+ * 있으면 봇 메시지에 Ack/Resolve/뮤트 버튼을 붙이고 좌표를 기록한다 — 웹훅은
+ * 인터랙션이 우리 앱으로 오지 않으므로 텍스트만.
+ */
+export async function sendToTarget(t: NotifyTarget, text: string, alertId?: string): Promise<"sent" | "skipped"> {
   if (t.kind === "SLACK_WEBHOOK") {
     await postWebhook(t.target, text);
     return "sent";
   }
   if (!isBotConfigured()) return "skipped";
-  await postMessage(t.target, text);
+  const blocks = alertId ? buildAlertBlocks(text, { alertId, status: "FIRING", appUrl: process.env.APP_URL }) : undefined;
+  const ref = await postMessage(t.target, text, undefined, blocks);
+  if (alertId) await recordSlackRef(alertId, ref, text);
   return "sent";
 }
 
@@ -88,14 +96,18 @@ export async function sendToTarget(t: NotifyTarget, text: string): Promise<"sent
  * 그 목적지들(스코프 채널)로, 없으면 전사 기본으로. 하나라도 나가면 "sent";
  * 한 목적지의 실패는 다른 목적지를 막지 않고 마지막에 throw 한다.
  */
-export async function sendSlackText(text: string, targets?: NotifyTarget[]): Promise<"sent" | "skipped"> {
+export async function sendSlackText(
+  text: string,
+  targets?: NotifyTarget[],
+  alertId?: string,
+): Promise<"sent" | "skipped"> {
   const list = targets && targets.length ? targets : defaultTargets();
   if (!list.length) return "skipped";
   let sent = 0;
   let lastErr: unknown = null;
   for (const t of list) {
     try {
-      if ((await sendToTarget(t, text)) === "sent") sent++;
+      if ((await sendToTarget(t, text, alertId)) === "sent") sent++;
     } catch (err) {
       lastErr = err;
       console.error(`[notify:slack] target ${t.label ?? t.target} failed`, err);
@@ -105,10 +117,12 @@ export async function sendSlackText(text: string, targets?: NotifyTarget[]): Pro
   return sent ? "sent" : "skipped";
 }
 
-/** 개인 DM (봇 필요). 토큰이 없으면 "skipped". */
-export async function sendSlackDm(userId: string, text: string): Promise<"sent" | "skipped"> {
+/** 개인 DM (봇 필요). 토큰이 없으면 "skipped". alertId 가 있으면 버튼도. */
+export async function sendSlackDm(userId: string, text: string, alertId?: string): Promise<"sent" | "skipped"> {
   if (!isBotConfigured()) return "skipped";
-  await postDm(userId, text);
+  const blocks = alertId ? buildAlertBlocks(text, { alertId, status: "FIRING", appUrl: process.env.APP_URL }) : undefined;
+  const ref = await postDm(userId, text, undefined, blocks);
+  if (alertId) await recordSlackRef(alertId, ref, text);
   return "sent";
 }
 
@@ -180,13 +194,15 @@ export const slackNotifier: Notifier = {
 
   async notify(alert, ctx = {}) {
     const text = buildText(alert, ctx);
-    const result = await sendSlackText(text, ctx.targets);
+    // 버튼은 아직 열려 있는 알람에만 — RESOLVED 통지에 Ack 버튼이 붙으면 이상하다.
+    const actionable = alert.status === "FIRING" ? ctx.alertId : undefined;
+    const result = await sendSlackText(text, ctx.targets, actionable);
     // 에스컬레이션은 채널 글에 더해 당사자에게 DM — 밤에 채널을 안 보고 있어도
     // 닿게. 봇이 없으면 조용히 건너뛴다.
     const target = ctx.escalationStep ? ctx.assignees?.[0] : undefined;
     if (target?.slackId) {
       try {
-        await sendSlackDm(target.slackId, text);
+        await sendSlackDm(target.slackId, text, actionable);
       } catch (err) {
         console.error("[notify:slack] escalation DM failed", err);
       }

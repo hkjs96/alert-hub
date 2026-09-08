@@ -7,6 +7,7 @@ import { loadTargetsForChain } from "@/server/notify-targets";
 import type { NotifyTarget } from "@/lib/notify/targets";
 import { applyRoutingRules } from "@/server/routing";
 import { findActiveSilence } from "@/server/silences";
+import { syncSlackMessages } from "@/server/slack-sync";
 import type { SilenceScope } from "@/lib/silence";
 import {
   refireThrottleMinutesFromEnv,
@@ -296,7 +297,24 @@ async function updateExisting(
   } else {
     // RESOLVED (or a provider-side ACKNOWLEDGED, e.g. PagerDuty) applies from
     // any state — resolve/OK is exactly what releases an ack.
+    const before = await prisma.alert.findUnique({
+      where: { fingerprint: n.fingerprint },
+      select: { id: true, status: true },
+    });
     await prisma.alert.updateMany({ where: { fingerprint: n.fingerprint }, data });
+    // 채널에 나간 봇 메시지도 닫는다 — OK 가 왔는데 Slack 엔 아직 "확인" 버튼이
+    // 살아 있으면 사람이 헛일을 한다. 부수 효과라 실패는 삼킨다.
+    if (before && before.status !== n.status && (n.status === "RESOLVED" || n.status === "ACKNOWLEDGED")) {
+      try {
+        await syncSlackMessages(
+          before.id,
+          { status: n.status, note: n.source },
+          { status: n.status, actor: null, via: `${n.source} ${n.status === "RESOLVED" ? "OK" : "ack"}` },
+        );
+      } catch (err) {
+        console.error("[ingest] slack sync failed", err);
+      }
+    }
   }
 
   let alertId = knownId;
