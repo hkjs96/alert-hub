@@ -1,9 +1,11 @@
 // 로그인 없이 통과하는 경로 — 미들웨어와 테스트가 같은 목록을 본다.
-// 웹훅·크론은 자체 비밀(INGEST_TOKEN, CRON_SECRET)로 지키므로 세션과 무관.
+// 웹훅·크론·Slack 인터랙션은 자체 비밀(INGEST_TOKEN, CRON_SECRET, SLACK_SIGNING_SECRET)로
+// 지키므로 세션과 무관.
 const PUBLIC_PREFIXES = [
   "/api/webhooks/",
   "/api/cron/",
   "/api/auth/",
+  "/api/slack/",
   "/login",
   "/verify/",
   "/_next/",

@@ -78,6 +78,7 @@ model Alert {
   notifications NotificationLog[]
   silences      Silence[]
   notifyJobs    NotificationJob[]
+  slackMessages SlackMessage[]
 
   @@index([status])
   @@index([severity])
@@ -124,6 +125,24 @@ model NotificationLog {
 // 통지가 증발하면 안 된다. 발화 시 인라인으로 1회 즉시 시도(지연 없음)하고,
 // 실패분만 큐에 남아 틱(/api/cron/notify)이 마저 민다. 5회 실패 시 포기하고
 // NotificationLog에 남긴다. 선점은 attempts 낙관적 갱신으로 한다.
+// 봇으로 보낸 Slack 메시지의 좌표. 웹·웹훅에서 상태가 바뀌면 이 메시지를
+// chat.update 로 고치고 스레드에 한 줄 남긴다 — 채널에서 보는 사람이 "누가
+// 잡았는지"를 alert-hub 에 들어오지 않고도 안다. 웹훅(외부) 메시지는 좌표를
+// 돌려주지 않으므로 기록되지 않는다.
+model SlackMessage {
+  id      String @id @default(cuid())
+  alertId String
+  alert   Alert  @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  channel String
+  ts      String
+  // 원문 — 상태 줄만 갈아끼우고 본문은 유지하기 위해 저장.
+  text    String
+
+  createdAt DateTime @default(now())
+
+  @@index([alertId])
+}
+
 model NotificationJob {
   id      String @id @default(cuid())
   alertId String

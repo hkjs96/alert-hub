@@ -100,6 +100,16 @@ export default async function AuthDiagPage() {
           : "SLACK_BOT_TOKEN 없음 · 스코프별 채널은 웹훅 종류만, DM·자동 연결 불가",
     },
     {
+      item: "Slack 버튼",
+      tone: process.env.SLACK_SIGNING_SECRET ? (isBotConfigured() ? "ok" : "warn") : "off",
+      state: process.env.SLACK_SIGNING_SECRET ? (isBotConfigured() ? "켜짐" : "봇 없음") : "없음",
+      value: process.env.SLACK_SIGNING_SECRET
+        ? isBotConfigured()
+          ? `메시지의 확인 · 해결 · 뮤트 버튼 동작 · Request URL ${(process.env.APP_URL ?? "<APP_URL>").replace(/\/+$/, "")}/api/slack/interactive`
+          : "서명 시크릿은 있지만 봇 토큰이 없어 버튼이 붙지 않습니다"
+        : "SLACK_SIGNING_SECRET 없음 · 메시지 버튼(확인·해결·뮤트)이 동작하지 않습니다. Slack 앱 › Basic Information › Signing Secret",
+    },
+    {
       item: "Slack 웹훅",
       tone: process.env.SLACK_WEBHOOK_URL ? "ok" : "off",
       state: process.env.SLACK_WEBHOOK_URL ? "설정됨" : "없음",
