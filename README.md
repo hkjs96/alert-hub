@@ -158,7 +158,7 @@ handled. Locally, point both URLs at the same Postgres.
 |---|---|---|---|
 | Slack | 봇 토큰 (구현됨) | 무료 | Slack 앱 1개 |
 | 이메일 | Amazon SES (SMTP 인터페이스, 코드 변경 없음) | 1,000통당 $0.10, 신규 계정은 12개월 월 3,000통 무료 | 도메인 인증(SPF/DKIM), 샌드박스 해제. 급하면 Google Workspace SMTP(요금 없음, 계정당 일 2,000통) |
-| 문자 | 국내 공급자(솔라피 등) 어댑터 추가 예정 · Twilio 는 구현됨 | 솔라피 SMS 건당 약 13~18원(월 발송량 할인) · Twilio 한국 발신 건당 $0.0494(≈70원) · NCP SENS 는 콘솔 요금표 확인 | 국내 공급자는 발신번호 사전 등록(사업자·통신서비스 이용증명원) |
+| 문자 | 국내 공급자(솔라피) 어댑터 — **보류**, 결정은 [docs/oncall-paging.md](docs/oncall-paging.md) · Twilio 는 구현됨 | 솔라피 SMS 건당 약 13~18원(월 발송량 할인) · Twilio 한국 발신 건당 $0.0494(≈70원) · NCP SENS 는 콘솔 요금표 확인 | 국내 공급자는 발신번호 사전 등록(사업자·통신서비스 이용증명원) |
 
 에스컬레이션 SMS 는 "미ack 10분 뒤 다음 순위 한 명"에게만 가므로, 고객사 5곳·월 300건 알람 기준 문자 100통 안팎 = 월 2천 원 미만이다.
 이메일은 알람당 담당자 수만큼 과금(SES 는 수신자 단위)되어도 월 1달러가 안 된다. 실질 비용은 Slack 이 아니라 **문자 발신번호 등록 절차**다.
@@ -472,8 +472,9 @@ to let the payload be auto-detected.
 
 - **Ingest:** per-source signature verification (SNS message signatures,
   PagerDuty `X-PagerDuty-Signature`); more providers behind the same interface.
-- **Product:** email channel → ack/resolve actions → on-call/escalation →
-  Twilio SMS/voice paging.
+- **Product:** Slack 메시지에 Ack/Resolve 버튼 + 런북 링크 → 테넌트 스코프
+  (온콜이 담당 고객사만) → 온콜 호출 사다리(문자·전화, 솔라피 — 조사 완료·보류,
+  [docs/oncall-paging.md](docs/oncall-paging.md)).
 
 Each is additive on top of this MVP's provider interface, notifier interface,
 explicit status transitions, and append-only event history.
