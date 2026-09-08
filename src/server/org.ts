@@ -8,24 +8,16 @@ import {
   type Responsibility,
   type ScopeLevel,
 } from "@/lib/org/resolve";
+import { resolveTeamOrders } from "@/server/oncall";
 
-/** 팀 id들의 멤버 순서(contactId[])를 한 번에 읽는다. */
-async function loadTeamMembers(teamIds: string[]): Promise<Map<string, string[]>> {
-  const ids = [...new Set(teamIds.filter(Boolean))];
-  const map = new Map<string, string[]>();
-  if (!ids.length) return map;
-  const members = await prisma.teamMember.findMany({
-    // 비활성 멤버는 펼치지 않는다 — 팀 소속은 남기되 통지에서 빠진다.
-    where: { teamId: { in: ids }, contact: { active: true } },
-    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
-    select: { teamId: true, contactId: true },
-  });
-  for (const m of members) {
-    const list = map.get(m.teamId) ?? [];
-    list.push(m.contactId);
-    map.set(m.teamId, list);
-  }
-  return map;
+/**
+ * 팀 id들의 "지금 순서"(contactId[])를 한 번에 읽는다. 시프트·대체 근무가
+ * 있으면 그 레이어가 앞에 오고 팀 기본 순서가 뒤에 이어진다 (src/server/oncall.ts).
+ * 비활성 멤버는 펼치지 않는다 — 팀 소속은 남기되 통지에서 빠진다.
+ */
+async function loadTeamMembers(teamIds: string[], at: Date = new Date()): Promise<Map<string, string[]>> {
+  const res = await resolveTeamOrders(teamIds, at);
+  return new Map([...res].map(([id, r]) => [id, r.order]));
 }
 
 function levelOf(r: {
@@ -287,6 +279,8 @@ export interface OwnershipContact {
   phone: string | null;
   /** 팀 항목을 통해 들어온 사람이면 그 팀 이름. 직접 등록이면 null. */
   team?: string | null;
+  /** 팀의 시프트·대체 근무 레이어로 앞당겨진 사람이면 그 라벨 ("야간", "대체 근무"). */
+  shift?: string | null;
 }
 
 export interface OwnershipInfo {
@@ -338,15 +332,9 @@ export async function getOwnershipByAccountIds(
   // 팀 항목은 멤버로 펼친다 — 스냅샷에 "어느 팀을 통해"가 남도록 출처 팀
   // 이름도 함께 기억한다.
   const teamIds = [...new Set(rows.map((r: any) => r.teamId).filter(Boolean))] as string[];
-  const teamMembers = await loadTeamMembers(teamIds);
-  const teamNames = new Map<string, string>(
-    teamIds.length
-      ? (await prisma.team.findMany({ where: { id: { in: teamIds } } })).map((t) => [
-          t.id,
-          t.name,
-        ])
-      : [],
-  );
+  const teamRes = await resolveTeamOrders(teamIds);
+  const teamMembers = new Map<string, string[]>([...teamRes].map(([id, r]) => [id, r.order]));
+  const teamNames = new Map<string, string>([...teamRes].map(([id, r]) => [id, r.name]));
 
   const contactIds = [
     ...new Set([
@@ -391,14 +379,20 @@ export async function getOwnershipByAccountIds(
     // 레벨의 행만 본다 — 다른 레벨의 직접 등록은 이 알람에 쓰이지 않는다.
     const adopted = chainRows.filter((r: any) => levelOf(r) === responsibility.level);
     const viaTeam = new Map<string, string>();
+    const viaShift = new Map<string, string>();
     for (const r of adopted) {
       if (r.teamId) {
+        const res = teamRes.get(r.teamId);
         for (const cid of teamMembers.get(r.teamId) ?? []) {
-          if (!viaTeam.has(cid)) viaTeam.set(cid, teamNames.get(r.teamId) ?? "팀");
+          if (!viaTeam.has(cid)) {
+            viaTeam.set(cid, teamNames.get(r.teamId) ?? "팀");
+            const label = res?.labelOf.get(cid);
+            if (label) viaShift.set(cid, label);
+          }
         }
       }
     }
-    for (const r of adopted) if (r.contactId) viaTeam.delete(r.contactId);
+    for (const r of adopted) if (r.contactId) { viaTeam.delete(r.contactId); viaShift.delete(r.contactId); }
     map.set(account.accountId, {
       chain: {
         account: {
@@ -423,6 +417,7 @@ export async function getOwnershipByAccountIds(
           email: c.email,
           phone: c.phone,
           team: viaTeam.get(c.id) ?? null,
+          shift: viaShift.get(c.id) ?? null,
         })),
     });
   }
@@ -465,6 +460,8 @@ export interface OwnershipSnapshot {
     department: string | null;
     /** 팀을 통해 배정된 경우 팀 이름 (표시용). */
     team?: string | null;
+    /** 시프트·대체 근무로 앞당겨진 경우 그 라벨 (표시용). */
+    shift?: string | null;
   }[];
   /** 라우팅 규칙으로 순서가 정해졌다면 그 규칙 (없으면 트리 순서). */
   rule?: { id: string; name: string; team: string } | null;
@@ -490,6 +487,7 @@ export function buildOwnershipSnapshot(info: OwnershipInfo): OwnershipSnapshot {
       name: c.name,
       department: c.department,
       team: c.team ?? null,
+      shift: c.shift ?? null,
     })),
     rule: info.rule ?? null,
   };

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { matchRoutingRule, type RoutingSubject } from "@/lib/routing";
 import type { OwnershipInfo } from "@/server/org";
+import { resolveTeamOrders } from "@/server/oncall";
 
 /**
  * 라우팅 규칙 적용: 트리에서 해석된 담당(OwnershipInfo)을 알람 속성으로 덮어쓴다.
@@ -22,32 +23,34 @@ export async function applyRoutingRules(
     const hit = matchRoutingRule(rules, { ...subject, serviceId: info.chain.service.id });
     if (!hit) return info;
 
-    const members = await prisma.teamMember.findMany({
-      where: { teamId: hit.teamId, contact: { active: true } },
-      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
-      include: { contact: true, team: { select: { name: true } } },
-    });
-    if (!members.length) {
+    // 팀의 "지금 순서" — 시프트·대체 근무가 있으면 그 레이어가 앞에 온다.
+    const res = (await resolveTeamOrders([hit.teamId])).get(hit.teamId);
+    if (!res || !res.order.length) {
       console.warn(`[routing] rule "${hit.name}" matched but team has no active members — keeping tree order`);
       return info;
     }
-    const teamName = members[0].team.name;
+    const contacts = await prisma.contact.findMany({ where: { id: { in: res.order } } });
+    const byId = new Map(contacts.map((c) => [c.id, c]));
+    const ordered = res.order.map((id) => byId.get(id)).filter((c): c is NonNullable<typeof c> => Boolean(c));
+    if (!ordered.length) return info;
+    const teamName = res.name;
     return {
       ...info,
       rule: { id: hit.id, name: hit.name, team: teamName },
       responsibility: {
         level: info.responsibility.level,
-        order: members.map((m) => m.contactId),
-        primaryId: members[0].contactId,
+        order: ordered.map((c) => c.id),
+        primaryId: ordered[0].id,
       },
-      contacts: members.map((m) => ({
-        id: m.contact.id,
-        name: m.contact.name,
-        department: m.contact.department,
-        slackId: m.contact.slackId,
-        email: m.contact.email,
-        phone: m.contact.phone,
+      contacts: ordered.map((c) => ({
+        id: c.id,
+        name: c.name,
+        department: c.department,
+        slackId: c.slackId,
+        email: c.email,
+        phone: c.phone,
         team: teamName,
+        shift: res.labelOf.get(c.id) ?? null,
       })),
     };
   } catch (err) {
