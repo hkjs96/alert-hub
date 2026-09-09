@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { getVisibleScope } from "@/server/scope";
+import { canSeeCustomer } from "@/lib/scope";
 import { getAlert } from "@/server/alerts";
 import { ackAlert, resolveAlert } from "@/server/alert-actions";
 import { muteAlert, revokeSilence } from "@/server/silence-actions";
@@ -535,6 +537,8 @@ export default async function AlertDetailPage({
 }) {
   const alert = await getAlert(params.id);
   if (!alert) notFound();
+  // 테넌트 스코프: 담당 고객사 밖의 알람은 존재를 알려주지 않는다 (미매핑은 전체 스코프만).
+  if (!canSeeCustomer(await getVisibleScope(), alert.customerId)) redirect("/denied?screen=%EC%95%8C%EB%9E%8C&scope=1");
 
   const snapshot = parseOwnershipSnapshot(alert.ownershipSnapshot);
   const readOnly = await isReadOnly();

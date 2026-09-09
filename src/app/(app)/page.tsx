@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAlerts } from "@/server/alerts";
+import { getVisibleScope } from "@/server/scope";
+import { alertWhere, canSeeCustomer } from "@/lib/scope";
 import {
   getOwnershipByAccountIds,
   parseOwnershipSnapshot,
@@ -98,8 +100,10 @@ export default async function DashboardPage({
     unmapped: searchParams.unmapped === "1",
   };
 
-  const [allAlerts, customers, allProjects, envRows, silences] = await Promise.all([
-    getAlerts(),
+  // 테넌트 스코프: 온콜은 담당 고객사의 알람만, 드롭다운도 그 고객사만.
+  const scope = await getVisibleScope();
+  const [allAlerts, customersAll, projectsAll, envRows, silences] = await Promise.all([
+    getAlerts(undefined, alertWhere(scope)),
     prisma.customer.findMany({ orderBy: { name: "asc" } }),
     prisma.project.findMany({
       orderBy: [{ customer: { name: "asc" } }, { name: "asc" }],
@@ -112,6 +116,10 @@ export default async function DashboardPage({
     }),
     getActiveSilences(),
   ]);
+  const customers = customersAll.filter((c) => canSeeCustomer(scope, c.id));
+  const allProjects = projectsAll.filter((p) => canSeeCustomer(scope, p.customerId));
+  if (f.customer && !canSeeCustomer(scope, f.customer)) f.customer = undefined;
+  if (!scope.all) f.unmapped = false;
   const envs = envRows
     .map((r) => r.environment)
     .filter((e): e is string => Boolean(e))

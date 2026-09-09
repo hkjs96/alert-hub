@@ -15,12 +15,15 @@ export function AccessDenied({
   requiredRole,
   userName,
   pinged,
+  reason,
 }: {
   screen: string;
   currentRole: Role;
   requiredRole: Role;
   userName: string;
   pinged?: string;
+  /** 역할이 아니라 범위(테넌트 스코프) 때문에 막혔을 때의 설명. */
+  reason?: string;
 }) {
   const ref = newRef("RQ");
   console.warn(`[authz] ${ref} denied ${userName} (${currentRole}) → ${screen} needs ${requiredRole}`);
@@ -32,10 +35,14 @@ export function AccessDenied({
           이 페이지를 볼 권한이 없습니다
         </h1>
         <p className="mt-2.5 text-[13px] leading-[1.65] text-[#4a4842]">
-          {screen}은(는) {ROLE_LABELS[requiredRole]} 권한이 필요합니다. 현재 계정은 {ROLE_LABELS[currentRole]} 권한으로,
-          {currentRole === "OPERATOR"
-            ? " 담당 고객사의 알람 조회와 처리까지 가능합니다."
-            : " 알람 조회만 가능합니다."}
+          {reason ?? (
+            <>
+              {screen}은(는) {ROLE_LABELS[requiredRole]} 권한이 필요합니다. 현재 계정은 {ROLE_LABELS[currentRole]} 권한으로,
+              {currentRole === "OPERATOR"
+                ? " 담당 고객사의 알람 조회와 처리까지 가능합니다."
+                : " 알람 조회만 가능합니다."}
+            </>
+          )}
         </p>
         <div className="mt-6">
           <KvTable

@@ -153,6 +153,21 @@ handled. Locally, point both URLs at the same Postgres.
 설정: Slack 앱 › **Interactivity & Shortcuts** 켜기 → Request URL `https://<APP_URL>/api/slack/interactive` → Basic Information 의
 Signing Secret 을 `SLACK_SIGNING_SECRET` 으로. 봇 scope 에 `users:read` 가 필요하다(누른 사람 이름). 진단 화면의 "Slack 버튼" 행이 상태를 보여 준다.
 
+### 테넌트 스코프 (담당 고객사만 보기)
+
+SSO 모드에서 내부 인원이 보는 범위:
+
+| 누가 | 보는 것 |
+|---|---|
+| 관리자(ADMIN) · "전체 보기" 체크된 인원 | 모든 고객사 + 미매핑 알람 |
+| 온콜·조회 | 직접 배정 + 팀 경유 배정이 걸린 고객사의 알람만 (어느 레벨에 배정돼도 고객사로 올라간다) |
+| 배정이 없는 인원 | 아무 알람도 안 보임 — 배정을 받거나 "전체 보기"를 켠다 |
+
+- 대시보드 목록·고객사/프로젝트 드롭다운·알람 상세·Ack/Resolve/뮤트·점검 창 등록·Slack 버튼이 모두 같은 판정을 쓴다. 범위 밖 알람 상세는 `/denied` 로.
+- 알람에 `customerId` 를 비정규화해 두고(스냅샷 체인의 고객사) 그 열로 거른다. 배포 시 시드 스크립트가 빈 값을 스냅샷에서 멱등 백필한다.
+- "전체 보기"는 팀 · 내부 인원 목록에서 관리자가 켠다(관제·리드용). open 모드(SSO 꺼짐)는 지금처럼 전부 보인다.
+- 고객사 담당자 로그인(자기 고객사만 보는 외부 계정)은 아직 없다 — 지금은 내부 인원만 로그인한다.
+
 ### 런북 · CloudWatch 딥링크
 
 서비스와 라우팅 규칙에 **런북**(링크 + markdown 본문)을 둔다. 규칙 런북이 있으면 그 규칙에 걸린 알람은 규칙 런북이 우선(더 구체적).
@@ -531,7 +546,7 @@ to let the payload be auto-detected.
 
 - **Ingest:** per-source signature verification (SNS message signatures,
   PagerDuty `X-PagerDuty-Signature`); more providers behind the same interface.
-- **Product:** 테넌트 스코프(온콜이 담당 고객사만) → AI 메모(해결 기록 + 런북 근거, [docs/aiops-market.md](docs/aiops-market.md) 5·7절)
+- **Product:** 고객사 담당자 로그인(외부 계정, 자기 고객사만) → AI 메모(해결 기록 + 런북 근거, [docs/aiops-market.md](docs/aiops-market.md) 5·7절)
   (온콜이 담당 고객사만) → 온콜 호출 사다리(문자·전화, 솔라피 — 조사 완료·보류,
   [docs/oncall-paging.md](docs/oncall-paging.md)).
 

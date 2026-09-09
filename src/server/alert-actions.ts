@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { currentActorName, requireRole } from "@/server/auth";
 import { transitionAlert } from "@/server/alert-transitions";
+import { assertAlertInScope } from "@/server/scope";
 
 // 인시던트 액션 (Phase 2c) — 알람 상세의 Ack/Resolve 버튼 뒤.
 //
@@ -26,6 +27,7 @@ async function transition(
   to: "ACKNOWLEDGED" | "RESOLVED",
   stateReason: string,
 ) {
+  await assertAlertInScope(id);
   // SSO 세션이 있으면 누가 했는지 남긴다. 없으면(SSO 꺼짐) null 그대로.
   const actor = await currentActorName();
   await transitionAlert({ id, from, to, reason: stateReason, actor, via: "알람 상세" });
@@ -74,6 +76,7 @@ export async function bulkAckAlerts(formData: FormData) {
   const back = formData.get("back");
   const actor = await currentActorName();
   for (const id of ids) {
+    await assertAlertInScope(id);
     await transitionAlert({
       id,
       from: ["FIRING"],

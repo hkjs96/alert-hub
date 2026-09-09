@@ -284,6 +284,13 @@ export async function ContactRoster({
                         <input type="checkbox" name="active" defaultChecked={c.active} className="h-4 w-4" />
                         활성
                       </label>
+                      {c.customerId === null ? (
+                        <label className="flex h-8 items-center gap-1.5 text-sm text-stone-700" title="배정과 무관하게 모든 고객사의 알람을 봅니다 (관제·리드). 관리자는 항상 전체.">
+                          <input type="hidden" name="seeAllField" value="1" />
+                          <input type="checkbox" name="seeAll" defaultChecked={c.seeAll} className="h-4 w-4" />
+                          전체 보기
+                        </label>
+                      ) : null}
                       <PendingButton
                         pendingLabel="저장 중…"
                         className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700"

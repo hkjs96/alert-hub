@@ -21,6 +21,8 @@ export interface CurrentUser {
   phone: string | null;
   role: Role;
   status: AccountStatus;
+  /** 배정과 무관하게 모든 고객사를 본다 (관제·리드). */
+  seeAll: boolean;
   onboardedAt: Date | null;
   timezone: string | null;
   createdAt: Date;
@@ -63,6 +65,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     phone: c.phone,
     role: c.role,
     status: c.status,
+    seeAll: c.seeAll,
     onboardedAt: c.onboardedAt,
     timezone: c.timezone,
     createdAt: c.createdAt,

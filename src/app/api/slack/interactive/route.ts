@@ -8,6 +8,8 @@ import { transitionAlert } from "@/server/alert-transitions";
 import { postThreadNote, syncSlackMessages, type ThreadNote } from "@/server/slack-sync";
 import { isResolutionKind, KIND_LABELS } from "@/lib/history";
 import { setResolutionKind } from "@/server/history";
+import { scopeForContact } from "@/server/scope";
+import { canSeeCustomer } from "@/lib/scope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,7 +59,7 @@ export async function POST(req: Request) {
   // 누가 눌렀나
   const contact = await prisma.contact.findFirst({
     where: { slackId: payload.user.id, active: true, status: "ACTIVE" },
-    select: { id: true, name: true, role: true },
+    select: { id: true, name: true, role: true, seeAll: true },
   });
   if (!contact) {
     await reply(
@@ -87,9 +89,13 @@ export async function POST(req: Request) {
   }
 
   const alertId = action.value;
-  const alert = await prisma.alert.findUnique({ where: { id: alertId }, select: { id: true, status: true } });
+  const alert = await prisma.alert.findUnique({ where: { id: alertId }, select: { id: true, status: true, customerId: true } });
   if (!alert) {
     await reply(ephemeral("이 알람은 더 이상 존재하지 않습니다."));
+    return new NextResponse(null, { status: 200 });
+  }
+  if (!canSeeCustomer(await scopeForContact(contact), alert.customerId)) {
+    await reply(ephemeral(`${contact.name} 님의 담당 고객사 밖 알람입니다. 담당자가 처리해야 합니다.`));
     return new NextResponse(null, { status: 200 });
   }
   const actor = contact.name || (await userDisplayName(payload.user.id)) || payload.user.name || null;
