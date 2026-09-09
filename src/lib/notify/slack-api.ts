@@ -91,9 +91,18 @@ export async function updateMessage(
   await call("chat.update", { channel: ref.channel, ts: ref.ts, text, blocks }, fetchImpl);
 }
 
-/** 메시지 스레드에 한 줄. */
-export async function postThread(ref: MessageRef, text: string, fetchImpl?: typeof fetch): Promise<void> {
-  await call("chat.postMessage", { channel: ref.channel, thread_ts: ref.ts, text, unfurl_links: false }, fetchImpl);
+/** 메시지 스레드에 한 줄 (+블록). */
+export async function postThread(
+  ref: MessageRef,
+  text: string,
+  fetchImpl?: typeof fetch,
+  blocks?: unknown[],
+): Promise<void> {
+  await call(
+    "chat.postMessage",
+    { channel: ref.channel, thread_ts: ref.ts, text, unfurl_links: false, ...(blocks ? { blocks } : {}) },
+    fetchImpl,
+  );
 }
 
 /** 인터랙션 응답 URL 로 답하기 (원문 교체 또는 본인만 보이는 메시지). 토큰 불필요. */

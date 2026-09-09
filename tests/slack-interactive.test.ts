@@ -16,14 +16,19 @@ const mocks = vi.hoisted(() => ({
   updateMessage: vi.fn(),
   postThread: vi.fn(),
   userDisplayName: vi.fn(),
+  resolutionUpdate: vi.fn(),
+  resolutionCreate: vi.fn(),
+  eventFindFirst: vi.fn(),
+  silenceCount: vi.fn(),
 }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     contact: { findFirst: mocks.contactFindFirst },
     alert: { findUnique: mocks.alertFindUnique, updateMany: mocks.alertUpdateMany },
-    alertEvent: { create: mocks.eventCreate },
-    silence: { create: mocks.silenceCreate },
+    alertEvent: { create: mocks.eventCreate, findFirst: mocks.eventFindFirst },
+    silence: { create: mocks.silenceCreate, count: mocks.silenceCount },
     slackMessage: { findMany: mocks.slackFindMany, create: mocks.slackCreate },
+    resolution: { update: mocks.resolutionUpdate, create: mocks.resolutionCreate },
   },
 }));
 vi.mock("@/lib/notify/slack-api", () => ({
@@ -64,6 +69,15 @@ beforeEach(() => {
   mocks.contactFindFirst.mockResolvedValue({ id: "c1", name: "김도윤", role: "OPERATOR" });
   mocks.alertFindUnique.mockResolvedValue({ id: "a1", status: "FIRING" });
   mocks.alertUpdateMany.mockResolvedValue({ count: 1 });
+  mocks.alertFindUnique.mockImplementation(async ({ select }: any) =>
+    select?.ownershipSnapshot !== undefined
+      ? { id: "a1", title: "CPU high", namespace: null, metric: "CPU", resource: "db", ackedBy: "김도윤", escalationStep: 1, ownershipSnapshot: null, firstSeenAt: new Date("2026-09-08T00:00:00Z") }
+      : { id: "a1", status: "FIRING" },
+  );
+  mocks.eventFindFirst.mockResolvedValue({ createdAt: new Date("2026-09-08T00:00:00Z") });
+  mocks.silenceCount.mockResolvedValue(0);
+  mocks.resolutionCreate.mockResolvedValue({ id: "r1" });
+  mocks.resolutionUpdate.mockResolvedValue({});
   mocks.eventCreate.mockResolvedValue({});
   mocks.silenceCreate.mockResolvedValue({});
   mocks.slackFindMany.mockResolvedValue([
@@ -135,12 +149,29 @@ describe("Ack 버튼", () => {
 });
 
 describe("Resolve · 뮤트", () => {
-  it("Resolve 는 ACKNOWLEDGED 에서도 된다", async () => {
-    mocks.alertFindUnique.mockResolvedValue({ id: "a1", status: "ACKNOWLEDGED" });
+  it("Resolve 는 ACKNOWLEDGED 에서도 되고, 해결 기록을 남기며 스레드에 분류 버튼이 붙는다", async () => {
+    mocks.alertFindUnique.mockImplementation(async ({ select }: any) =>
+      select?.ownershipSnapshot !== undefined
+        ? { id: "a1", title: "CPU high", namespace: null, metric: "CPU", resource: "db", ackedBy: "김도윤", escalationStep: 1, ownershipSnapshot: null, firstSeenAt: new Date("2026-09-08T00:00:00Z") }
+        : { id: "a1", status: "ACKNOWLEDGED" },
+    );
     await POST(request(click("ah_resolve")));
     expect(mocks.alertUpdateMany.mock.calls[0][0].where).toEqual({ id: "a1", status: { in: ["FIRING", "ACKNOWLEDGED"] } });
     const actions = mocks.respond.mock.calls[0][1].blocks.find((b: any) => b.type === "actions");
     expect(actions).toBeUndefined(); // RESOLVED 엔 버튼 없음 (APP_URL 없음)
+    // 해결 기록: 사람이 닫음
+    expect(mocks.resolutionCreate.mock.calls[0][0].data).toMatchObject({ alertId: "a1", via: "manual", resolvedBy: "김도윤", kind: null });
+    // 누른 메시지 스레드: 분류 버튼 4개 (value = resolutionId:kind)
+    const here = mocks.postThread.mock.calls.find((c) => c[0].channel === "C1");
+    const kinds = here![3].find((b: any) => b.type === "actions").elements.map((e: any) => e.value);
+    expect(kinds).toEqual(["r1:restart", "r1:config", "r1:auto", "r1:other"]);
+  });
+
+  it("분류 버튼을 누르면 기록만 갱신하고 메시지를 '기록됨' 으로 바꾼다", async () => {
+    await POST(request(click("ah_kind:restart", { actions: [{ action_id: "ah_kind:restart", value: "r1:restart" }] })));
+    expect(mocks.resolutionUpdate.mock.calls[0][0]).toEqual({ where: { id: "r1" }, data: { kind: "restart", kindBy: "김도윤" } });
+    expect(mocks.alertUpdateMany).not.toHaveBeenCalled();
+    expect(mocks.respond.mock.calls[0][1]).toEqual({ replace_original: true, text: "✓ 재시작 으로 기록 · 김도윤" });
   });
 
   it("뮤트는 이 알람 1시간 Silence 를 만들고 상태는 그대로", async () => {

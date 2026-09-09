@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { atLeast } from "@/lib/auth/roles";
 import { parseInteractionBody, verifySlackSignature } from "@/lib/slack/verify";
-import { buildAlertBlocks, isActionId, threadLine } from "@/lib/notify/slack-blocks";
-import { postThread, respondToInteraction, userDisplayName } from "@/lib/notify/slack-api";
+import { ACTION_KIND, buildAlertBlocks, isActionId } from "@/lib/notify/slack-blocks";
+import { respondToInteraction, userDisplayName } from "@/lib/notify/slack-api";
 import { transitionAlert } from "@/server/alert-transitions";
-import { syncSlackMessages } from "@/server/slack-sync";
+import { postThreadNote, syncSlackMessages, type ThreadNote } from "@/server/slack-sync";
+import { isResolutionKind, KIND_LABELS } from "@/lib/history";
+import { setResolutionKind } from "@/server/history";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,7 +44,6 @@ export async function POST(req: Request) {
   if (!action || !isActionId(action.action_id) || !action.value) {
     return new NextResponse(null, { status: 200 });
   }
-  const alertId = action.value;
   const responseUrl = payload.response_url;
   const reply = async (b: Record<string, unknown>) => {
     if (!responseUrl) return;
@@ -71,6 +72,21 @@ export async function POST(req: Request) {
     return new NextResponse(null, { status: 200 });
   }
 
+  // 해결 분류 한 번 클릭 — 알람 전이가 아니라 기록 갱신.
+  if (action.action_id.startsWith(`${ACTION_KIND}:`)) {
+    const [resolutionId, kind] = action.value.split(":", 2);
+    if (!resolutionId || !isResolutionKind(kind)) return new NextResponse(null, { status: 200 });
+    const by = contact.name || payload.user.name || null;
+    const ok = await setResolutionKind({ id: resolutionId, kind, by });
+    await reply(
+      ok
+        ? { replace_original: true, text: `✓ ${KIND_LABELS[kind]} 으로 기록 · ${by ?? ""}`.trim() }
+        : ephemeral("기록에 실패했습니다. 잠시 후 다시 눌러 주세요."),
+    );
+    return new NextResponse(null, { status: 200 });
+  }
+
+  const alertId = action.value;
   const alert = await prisma.alert.findUnique({ where: { id: alertId }, select: { id: true, status: true } });
   if (!alert) {
     await reply(ephemeral("이 알람은 더 이상 존재하지 않습니다."));
@@ -110,7 +126,7 @@ export async function POST(req: Request) {
       blocks: buildAlertBlocks(originalText, { alertId, status: alert.status as "FIRING" | "ACKNOWLEDGED", muted, appUrl }),
     });
     await syncSlackMessages(alertId, { status: alert.status as "FIRING" | "ACKNOWLEDGED", muted }, { status: "MUTED", actor, via: "Slack" }, here);
-    if (here) await threadHere(here, threadLine("MUTED", actor, "Slack"));
+    if (here) await threadHere(here, { status: "MUTED", actor, via: "Slack" });
     return new NextResponse(null, { status: 200 });
   }
 
@@ -139,7 +155,7 @@ export async function POST(req: Request) {
       appUrl,
     }),
   });
-  const moved = await transitionAlert({
+  const result = await transitionAlert({
     id: alertId,
     from,
     to,
@@ -148,18 +164,18 @@ export async function POST(req: Request) {
     via: "Slack",
     skipSlackMessage: here,
   });
-  if (!moved) {
+  if (!result.moved) {
     await reply(ephemeral("그 사이 상태가 바뀌어 처리하지 않았습니다."));
   } else if (here) {
-    // 누른 메시지의 스레드는 동기화가 건너뛰었으니 여기서 한 줄.
-    await threadHere(here, threadLine(to, actor, "Slack"));
+    // 누른 메시지의 스레드는 동기화가 건너뛰었으니 여기서 한 줄 (+해결이면 분류 버튼).
+    await threadHere(here, { status: to, actor, via: "Slack", resolutionId: result.resolutionId });
   }
   return new NextResponse(null, { status: 200 });
 }
 
-async function threadHere(ref: { channel: string; ts: string }, text: string) {
+async function threadHere(ref: { channel: string; ts: string }, note: ThreadNote) {
   try {
-    await postThread(ref, text);
+    await postThreadNote(ref, note);
   } catch (err) {
     console.error("[slack:interactive] thread reply failed", err);
   }

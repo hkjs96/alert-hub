@@ -8,6 +8,7 @@ import type { NotifyTarget } from "@/lib/notify/targets";
 import { applyRoutingRules } from "@/server/routing";
 import { findActiveSilence } from "@/server/silences";
 import { syncSlackMessages } from "@/server/slack-sync";
+import { findPriorResolutions, markRecurrence, recordResolution } from "@/server/history";
 import type { SilenceScope } from "@/lib/silence";
 import {
   refireThrottleMinutesFromEnv,
@@ -134,11 +135,29 @@ async function resolveIngestOwnership(
   }
 }
 
-function toNotifyContext(alertId: string, own: IngestOwnership): NotifyContext {
+async function idOf(fingerprint: string): Promise<string | null> {
+  try {
+    return (await prisma.alert.findUnique({ where: { fingerprint }, select: { id: true } }))?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function toNotifyContext(alertId: string, n: NormalizedAlert, own: IngestOwnership): Promise<NotifyContext> {
   const ctx: NotifyContext = { alertId };
   if (own.assignees) ctx.assignees = own.assignees;
   if (own.chainLabel) ctx.chainLabel = own.chainLabel;
   if (own.targets?.length) ctx.targets = own.targets;
+  // 이전 처리 한 줄 — 같은 고객사·서비스의 해결 기록. 조회 실패는 빈 값(best-effort).
+  if (own.scope?.customerId && own.scope?.serviceId) {
+    const prior = await findPriorResolutions({
+      customerId: own.scope.customerId,
+      serviceId: own.scope.serviceId,
+      metric: n.metric ?? null,
+      resource: n.resource ?? null,
+    });
+    ctx.history = prior.line;
+  }
   return ctx;
 }
 
@@ -185,7 +204,7 @@ async function notifyUnlessSilenced(
   // 아웃박스 경유: 채널별 잡 생성 + 인라인 1회 시도, 실패분은 틱이 재시도.
   // 서비스가 식별되면 Slack은 묶음 창(기본 60초)만큼 미뤄 다이제스트 후보로.
   // lastNotifiedAt 스탬프는 잡 생성과 함께 큐가 찍는다.
-  await enqueueAndSend(alertId, n, toNotifyContext(alertId, own), {
+  await enqueueAndSend(alertId, n, await toNotifyContext(alertId, n, own), {
     groupKey: own.scope?.serviceId ? `service:${own.scope.serviceId}` : undefined,
     digestDelaySeconds: digestWindowSeconds(),
   });
@@ -274,6 +293,10 @@ async function updateExisting(
       data: { ...data, count: { increment: 1 }, escalationStep: 1, escalatedAt: null },
     });
     firedTransition = transitioned.count > 0;
+    if (firedTransition) {
+      // 24시간 안의 재발이면 지난 해결 기록에 표시 ("그 조치는 오답" 신호).
+      await markRecurrence(knownId ?? (await idOf(n.fingerprint)) ?? "", new Date());
+    }
     if (!firedTransition) {
       // Already FIRING (refresh fields) or ACKNOWLEDGED (keep the ack): the
       // payload's fields still apply, the status does not.
@@ -304,6 +327,10 @@ async function updateExisting(
     await prisma.alert.updateMany({ where: { fingerprint: n.fingerprint }, data });
     // 채널에 나간 봇 메시지도 닫는다 — OK 가 왔는데 Slack 엔 아직 "확인" 버튼이
     // 살아 있으면 사람이 헛일을 한다. 부수 효과라 실패는 삼킨다.
+    if (before && before.status !== n.status && n.status === "RESOLVED") {
+      // 해결 기록(사실 층) — 공급자 OK 로 저절로 풀림.
+      await recordResolution({ alertId: before.id, via: "auto" });
+    }
     if (before && before.status !== n.status && (n.status === "RESOLVED" || n.status === "ACKNOWLEDGED")) {
       try {
         await syncSlackMessages(

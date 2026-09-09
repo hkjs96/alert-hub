@@ -43,6 +43,7 @@ function buildText(alert: NormalizedAlert, ctx: NotifyContext): string {
   }
 
   if (alert.stateReason) lines.push(`> ${alert.stateReason}`);
+  if (ctx.history && !ctx.escalationStep) lines.push(ctx.history);
 
   // Deep link to the alert detail page when the app knows its public URL.
   const appUrl = process.env.APP_URL?.replace(/\/+$/, "");

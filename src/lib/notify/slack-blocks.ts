@@ -20,11 +20,15 @@ export interface AlertMsgState {
 export const ACTION_ACK = "ah_ack";
 export const ACTION_RESOLVE = "ah_resolve";
 export const ACTION_MUTE = "ah_mute";
-export const ACTIONS = [ACTION_ACK, ACTION_RESOLVE, ACTION_MUTE] as const;
+/** 해결 뒤 한 번 클릭 분류. value = "<resolutionId>:<kind>". */
+export const ACTION_KIND = "ah_kind";
+export const ACTIONS = [ACTION_ACK, ACTION_RESOLVE, ACTION_MUTE, ACTION_KIND] as const;
 export type ActionId = (typeof ACTIONS)[number];
 
 export function isActionId(v: unknown): v is ActionId {
-  return typeof v === "string" && (ACTIONS as readonly string[]).includes(v);
+  if (typeof v !== "string") return false;
+  if (v.startsWith(`${ACTION_KIND}:`)) return true;
+  return (ACTIONS as readonly string[]).includes(v);
 }
 
 type Block = Record<string, unknown>;
@@ -79,4 +83,30 @@ export function threadLine(status: AlertMsgStatus | "MUTED", actor: string | nul
     default:
       return actor ? `${actor} 님이 상태를 바꿨습니다 (${via})` : `상태가 바뀌었습니다 (${via})`;
   }
+}
+
+/**
+ * 해결 스레드에 붙는 "어떻게 해결했나요?" 버튼 4개. 타이핑 없이 한 번 클릭.
+ * 누르면 route 가 같은 메시지를 "✓ 재시작 으로 기록 · 김도윤" 으로 바꾼다.
+ */
+export function buildKindPromptBlocks(text: string, resolutionId: string): Block[] {
+  const kinds: [string, string][] = [
+    ["restart", "재시작"],
+    ["config", "설정/용량 변경"],
+    ["auto", "저절로 회복"],
+    ["other", "기타"],
+  ];
+  return [
+    { type: "section", text: { type: "mrkdwn", text: `${text}\n어떻게 해결했나요? 한 번만 눌러 주세요 — 다음에 같은 알람이 오면 힌트로 보입니다.` } },
+    {
+      type: "actions",
+      block_id: `ahk:${resolutionId}`,
+      elements: kinds.map(([k, label]) => ({
+        type: "button",
+        action_id: `${ACTION_KIND}:${k}`,
+        text: { type: "plain_text", text: label, emoji: true },
+        value: `${resolutionId}:${k}`,
+      })),
+    },
+  ];
 }

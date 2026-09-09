@@ -23,6 +23,7 @@ import {
   statusTone,
 } from "@/components/badges";
 import { PendingButton } from "@/components/pending-button";
+import { PriorResolutionsPanel } from "@/components/alerts/prior-resolutions";
 
 export const dynamic = "force-dynamic";
 
@@ -659,6 +660,15 @@ export default async function AlertDetailPage({
       ) : alert.accountId ? (
         <OwnershipPanel accountId={alert.accountId} info={ownership} />
       ) : null}
+
+      <PriorResolutionsPanel
+        alert={{ id: alert.id, status: alert.status, metric: alert.metric, resource: alert.resource }}
+        scope={{
+          customerId: snapshot?.chain.customerId ?? ownership?.chain.customer.id ?? null,
+          serviceId,
+        }}
+        readOnly={readOnly}
+      />
 
       <section className="border border-stone-200 bg-white">
         <div className="border-b border-stone-200 px-6 py-3">
