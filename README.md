@@ -531,7 +531,7 @@ to let the payload be auto-detected.
 
 - **Ingest:** per-source signature verification (SNS message signatures,
   PagerDuty `X-PagerDuty-Signature`); more providers behind the same interface.
-- **Product:** 테넌트 스코프(온콜이 담당 고객사만) → 웹훅 서명 검증 → AI 메모(해결 기록 + 런북 근거, [docs/aiops-market.md](docs/aiops-market.md) 5·7절)
+- **Product:** 테넌트 스코프(온콜이 담당 고객사만) → AI 메모(해결 기록 + 런북 근거, [docs/aiops-market.md](docs/aiops-market.md) 5·7절)
   (온콜이 담당 고객사만) → 온콜 호출 사다리(문자·전화, 솔라피 — 조사 완료·보류,
   [docs/oncall-paging.md](docs/oncall-paging.md)).
 
