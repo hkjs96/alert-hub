@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { isBotConfigured, postThread, updateMessage } from "@/lib/notify/slack-api";
 import { setSlackRefRecorder } from "@/lib/notify/slack-refs";
-import { buildAlertBlocks, threadLine, type AlertMsgStatus } from "@/lib/notify/slack-blocks";
+import { buildAlertBlocks, buildKindPromptBlocks, threadLine, type AlertMsgStatus } from "@/lib/notify/slack-blocks";
 
 // 웹·웹훅·Slack 버튼 어디서 상태가 바뀌든, 이 알람으로 나간 봇 메시지들을
 // 같은 모양으로 맞춘다: 본문은 그대로, 상태 줄과 버튼만 갈아끼우고 스레드에
@@ -23,6 +23,21 @@ export interface SlackSyncState {
   muted?: string | null;
 }
 
+export interface ThreadNote {
+  status: AlertMsgStatus | "MUTED";
+  actor: string | null;
+  via: string;
+  /** 사람이 닫은 해결이면 그 기록 id — 스레드에 분류 버튼이 붙는다. */
+  resolutionId?: string;
+}
+
+/** 스레드 한 줄 + (해결이면) 분류 버튼. route 와 sync 가 같은 모양을 쓴다. */
+export async function postThreadNote(ref: { channel: string; ts: string }, note: ThreadNote): Promise<void> {
+  const text = threadLine(note.status, note.actor, note.via);
+  if (note.resolutionId) await postThread(ref, text, undefined, buildKindPromptBlocks(text, note.resolutionId));
+  else await postThread(ref, text);
+}
+
 function nowLabel(): string {
   return new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
@@ -40,7 +55,7 @@ function nowLabel(): string {
 export async function syncSlackMessages(
   alertId: string,
   state: SlackSyncState,
-  thread: { status: AlertMsgStatus | "MUTED"; actor: string | null; via: string } | null,
+  thread: ThreadNote | null,
   except?: { channel: string; ts: string },
 ): Promise<void> {
   if (!isBotConfigured()) return;
@@ -62,7 +77,7 @@ export async function syncSlackMessages(
         m.text,
         buildAlertBlocks(m.text, { alertId, status: state.status, note, muted: state.muted, appUrl }),
       );
-      if (thread) await postThread(ref, threadLine(thread.status, thread.actor, thread.via));
+      if (thread) await postThreadNote(ref, thread);
     } catch (err) {
       console.error(`[slack-sync] update ${m.channel}/${m.ts} failed`, err);
     }

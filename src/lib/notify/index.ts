@@ -35,6 +35,11 @@ export interface NotifyContext {
    * 전사 기본 채널로. 아웃박스 페이로드에 함께 저장된다.
    */
   targets?: NotifyTarget[];
+  /**
+   * "이전 처리" 한 줄 (같은 고객사·서비스의 해결 기록 요약). 없으면 생략.
+   * 서버가 발화 시점에 계산해 넣는다 — 노티파이어는 그대로 붙이기만 한다.
+   */
+  history?: string;
 }
 
 // A Notifier is any channel that can deliver an alert — Slack, email, Twilio.

@@ -79,6 +79,7 @@ model Alert {
   silences      Silence[]
   notifyJobs    NotificationJob[]
   slackMessages SlackMessage[]
+  resolutions   Resolution[]
 
   @@index([status])
   @@index([severity])
@@ -125,6 +126,46 @@ model NotificationLog {
 // 통지가 증발하면 안 된다. 발화 시 인라인으로 1회 즉시 시도(지연 없음)하고,
 // 실패분만 큐에 남아 틱(/api/cron/notify)이 마저 민다. 5회 실패 시 포기하고
 // NotificationLog에 남긴다. 선점은 attempts 낙관적 갱신으로 한다.
+// 해결 기록 (사실 층). 알람이 RESOLVED 로 갈 때마다 한 행 — 사람이 닫았든
+// 공급자 OK 로 저절로 풀렸든. 사람이 타이핑하는 칸은 없고, 나중에 한 번 클릭
+// (kind)이나 스레드 요약이 덧붙는다. "이전 처리" 카드와 AI 메모의 재료.
+// 스코프 id 는 FK 없이 값으로 남긴다 — 서비스가 지워져도 기록은 남아야 한다.
+model Resolution {
+  id      String @id @default(cuid())
+  alertId String
+  alert   Alert  @relation(fields: [alertId], references: [id], onDelete: Cascade)
+
+  customerId String?
+  serviceId  String?
+  namespace  String?
+  metric     String?
+  resource   String?
+  title      String
+
+  firedAt        DateTime
+  resolvedAt     DateTime
+  durationSec    Int
+  // "auto"(공급자 OK) | "manual"(사람이 닫음)
+  via            String
+  ackedBy        String?
+  resolvedBy     String?
+  escalationStep Int      @default(1)
+  muted          Boolean  @default(false)
+
+  // 한 번 클릭 분류: restart | config | auto | other. 자동 회복은 "auto" 로 미리 채운다.
+  kind       String?
+  kindBy     String?
+  note       String?
+  // 24시간 안에 같은 알람이 다시 FIRING 되면 그 시각 — "그 조치는 오답" 신호.
+  recurredAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([alertId])
+  @@index([serviceId, resolvedAt])
+  @@index([customerId, resolvedAt])
+}
+
 // 봇으로 보낸 Slack 메시지의 좌표. 웹·웹훅에서 상태가 바뀌면 이 메시지를
 // chat.update 로 고치고 스레드에 한 줄 남긴다 — 채널에서 보는 사람이 "누가
 // 잡았는지"를 alert-hub 에 들어오지 않고도 안다. 웹훅(외부) 메시지는 좌표를
