@@ -69,9 +69,22 @@
 6. **피드백 루프를 처음부터.** 스레드 답변에 "도움됨 / 틀림" 버튼을 두고 저장. 정밀도를 측정하지 않으면 자율 확대 판단을 못 한다(시장이 배운 것 3번).
 7. **자동 조치(3단계)는 고객사 계약 문제.** 실행 권한(SSM/Lambda)은 고객사 AWS 계정 안이고, 되돌릴 수 있는 조치만 허용 목록으로. AWS DevOps Agent 가 서울 리전에 오면 "실행"은 그쪽에 맡기고 우리는 판단·라우팅·기록에 집중하는 선택지도 있다.
 
-## 5. 2단계 설계 초안 (다음 대화에서 확정)
+## 5. 설계 원칙 — 정답이 아니라 학습 루프
 
-- 데이터: `Service.runbook`(markdown), `RoutingRule.runbook`(선택, 규칙별 절), `AlertInsight { alertId, summary, similar: alertId[], runbookRef, suggestion, model, tokens, feedback? }`
+과거 자료로 원인을 분석해 조치에 쓰는 것에 온전한 정답은 없다. 그래서 중심은 **해결할 때마다 배운 것을 남기고
+다음에 꺼내 쓰는 루프**다. 근사값이 시간이 갈수록 좋아지는 구조.
+
+1. **기록** — Resolve 할 때 "뭘 했더니 풀렸나" 한 줄(Slack 스레드 답장 또는 상세 폼). 강제 아님. 없으면 AI 가 "지난번 처리 기록 없음"이라고 솔직히 말한다.
+2. **꺼내 쓰기** — 유사 알람(같은 서비스·메트릭·리소스 패턴)의 AI 메모에 그 기록들이 근거로 들어간다. 런북에 없던 해법이 여기서 처음 등장한다.
+3. **승격** — 같은 해법이 반복되면 AI 가 "런북에 이 절을 추가할까요?" 초안을 만들고 **사람이 승인해야** 런북 텍스트에 들어간다. 런북 = 승인된 것, 해결 기록 = 날것. 섞지 않는다.
+4. **채점** — 👍/👎 + "제안대로 했다/다르게 했다". 다르게 했으면 그것이 새 해결 기록. 알람 유형별 정밀도가 나와야 그 유형만 자율을 넓힐 수 있다.
+
+우리 재료는 로그가 아니라 **사람의 해결 기록**이다. MSP 는 같은 고객사·서비스에서 같은 알람을 반복해 받으므로 빨리 쌓인다.
+기록은 **고객사별 격리**: A 사에서 배운 해법을 B 사 알람의 근거로 쓰지 않는다(유형이 같아도 참고 표시만).
+
+## 6. 2단계 설계 초안 (다음 대화에서 확정)
+
+- 데이터: `Service.runbook`(markdown), `RoutingRule.runbook`(선택, 규칙별 절), `Alert.resolutionNote`(해결 한 줄 · 누가), `AlertInsight { alertId, summary, similar: alertId[], runbookRef, suggestion, model, tokens, feedback?, followed? }`, `RunbookProposal { serviceId, draft, basedOn: alertId[], approvedBy? }`
 - 트리거: FIRING 팬아웃 직후 비동기 잡(아웃박스에 `insight` 채널 추가). 실패해도 통지는 이미 나감.
 - 입력: 알람 정규화 본문 + 같은 서비스 최근 알람 5건(상태·처리 시간·마지막 이벤트 사유·ackedBy) + 런북 텍스트(라우팅 규칙 → 서비스 순).
 - 출력(구조화): `{ summary, likely_cause?, evidence: [{kind:"alert"|"runbook", ref}], next_steps: [..], confidence }`. 근거 없는 next_step 은 버림.
