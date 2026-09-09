@@ -4,6 +4,7 @@ import type { NotifyTarget } from "@/lib/notify/targets";
 import { defaultBotChannel, isBotConfigured, postDm, postMessage } from "@/lib/notify/slack-api";
 import { buildAlertBlocks } from "@/lib/notify/slack-blocks";
 import { recordSlackRef } from "@/lib/notify/slack-refs";
+import { linksLine } from "@/lib/links";
 
 const SEVERITY_EMOJI: Record<string, string> = {
   "SEV-0": "🚨",
@@ -44,6 +45,8 @@ function buildText(alert: NormalizedAlert, ctx: NotifyContext): string {
 
   if (alert.stateReason) lines.push(`> ${alert.stateReason}`);
   if (ctx.history && !ctx.escalationStep) lines.push(ctx.history);
+  const links = ctx.links ? linksLine(ctx.links) : null;
+  if (links) lines.push(links);
 
   // Deep link to the alert detail page when the app knows its public URL.
   const appUrl = process.env.APP_URL?.replace(/\/+$/, "");

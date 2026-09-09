@@ -153,6 +153,15 @@ handled. Locally, point both URLs at the same Postgres.
 설정: Slack 앱 › **Interactivity & Shortcuts** 켜기 → Request URL `https://<APP_URL>/api/slack/interactive` → Basic Information 의
 Signing Secret 을 `SLACK_SIGNING_SECRET` 으로. 봇 scope 에 `users:read` 가 필요하다(누른 사람 이름). 진단 화면의 "Slack 버튼" 행이 상태를 보여 준다.
 
+### 런북 · CloudWatch 딥링크
+
+서비스와 라우팅 규칙에 **런북**(링크 + markdown 본문)을 둔다. 규칙 런북이 있으면 그 규칙에 걸린 알람은 규칙 런북이 우선(더 구체적).
+
+- Slack 알람 본문 마지막 줄: `📖 런북 (서비스 이체API)  ·  🔎 CloudWatch 콘솔`. 에스컬레이션 메시지에도 붙는다.
+- 알람 상세 "런북 · 콘솔" 카드: 같은 링크 + 런북 본문 펼치기. 본문은 이후 AI 메모가 인용하는 재료다(링크만 있으면 LLM 이 읽을 수 없다).
+- CloudWatch 콘솔 URL 은 지문(`cw:<AlarmArn>`)에서 리전·알람 이름을 뽑아 만든다. 콘솔은 로그인된 AWS 계정으로 열리므로 MSP 는 그 고객사 계정으로 스위치한 뒤 눌러야 한다.
+- 편집: 조직 트리 › 서비스 패널의 "런북" 섹션, 라우팅 규칙 행의 "📖 런북" 펼치기(규칙 생성 폼에도 링크 칸).
+
 ### 해결 기록 · 이전 처리 (사실 층)
 
 알람이 RESOLVED 로 갈 때마다 `Resolution` 행이 자동으로 남는다 — 사람이 닫았든(`manual`) 공급자 OK 로 저절로 풀렸든(`auto`).
@@ -522,7 +531,7 @@ to let the payload be auto-detected.
 
 - **Ingest:** per-source signature verification (SNS message signatures,
   PagerDuty `X-PagerDuty-Signature`); more providers behind the same interface.
-- **Product:** 런북 링크 · CloudWatch 딥링크 → AI 메모(시장 조사: [docs/aiops-market.md](docs/aiops-market.md)) → 테넌트 스코프
+- **Product:** 테넌트 스코프(온콜이 담당 고객사만) → 웹훅 서명 검증 → AI 메모(해결 기록 + 런북 근거, [docs/aiops-market.md](docs/aiops-market.md) 5·7절)
   (온콜이 담당 고객사만) → 온콜 호출 사다리(문자·전화, 솔라피 — 조사 완료·보류,
   [docs/oncall-paging.md](docs/oncall-paging.md)).
 

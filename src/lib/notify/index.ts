@@ -40,6 +40,8 @@ export interface NotifyContext {
    * 서버가 발화 시점에 계산해 넣는다 — 노티파이어는 그대로 붙이기만 한다.
    */
   history?: string;
+  /** 런북·콘솔 링크. 서버가 발화 시점에 계산한다. */
+  links?: { label: string; url: string }[];
 }
 
 // A Notifier is any channel that can deliver an alert — Slack, email, Twilio.

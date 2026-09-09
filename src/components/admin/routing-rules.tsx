@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { describeConditions } from "@/lib/routing";
 import { getTeamChoices } from "@/server/org";
-import { createRoutingRule, deleteRoutingRule, toggleRoutingRule } from "@/server/org-actions";
+import { createRoutingRule, deleteRoutingRule, toggleRoutingRule, updateRuleRunbook } from "@/server/org-actions";
 import { PendingButton } from "@/components/pending-button";
 
 const control =
@@ -66,6 +66,22 @@ export async function RoutingRulesEditor({ customerId, back }: { customerId: str
               {r.team._count.members === 0 ? (
                 <span className="text-xs text-[#b42318]">멤버 없음 — 매치돼도 트리 순서 유지</span>
               ) : null}
+              <details className="text-xs">
+                <summary className={`cursor-pointer select-none ${r.runbookUrl || r.runbook ? "text-stone-700" : "text-stone-400"}`}>
+                  {r.runbookUrl || r.runbook ? "📖 런북 있음" : "런북 없음"}
+                </summary>
+                <form action={updateRuleRunbook} className="mt-2 flex w-[28rem] max-w-full flex-col gap-1.5">
+                  <input type="hidden" name="id" value={r.id} />
+                  <input type="hidden" name="back" value={back} />
+                  <input name="runbookUrl" type="url" defaultValue={r.runbookUrl ?? ""} placeholder="https://… (이 규칙 전용 런북 링크)" className={`${control} w-full font-mono`} />
+                  <textarea name="runbook" defaultValue={r.runbook ?? ""} rows={4} placeholder="본문 (markdown · 선택)" className="w-full rounded-md border border-stone-300 bg-white px-2.5 py-2 font-mono text-xs" />
+                  <span>
+                    <PendingButton pendingLabel="저장 중…" className="inline-flex h-7 items-center rounded-md border border-stone-300 bg-white px-2 text-xs font-medium text-stone-700 hover:bg-stone-50">
+                      런북 저장
+                    </PendingButton>
+                  </span>
+                </form>
+              </details>
               <span className="ml-auto flex items-center gap-2">
                 <form action={toggleRoutingRule}>
                   <input type="hidden" name="id" value={r.id} />
@@ -142,6 +158,10 @@ export async function RoutingRulesEditor({ customerId, back }: { customerId: str
                 </option>
               ))}
             </select>
+          </label>
+          <label className="block w-56">
+            <span className={`mb-1 block ${overline}`}>런북 링크 (선택)</span>
+            <input name="runbookUrl" type="url" placeholder="https://…" className={`${control} w-full font-mono`} />
           </label>
           <PendingButton
             pendingLabel="추가 중…"
