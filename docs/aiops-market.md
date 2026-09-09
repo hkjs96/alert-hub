@@ -105,3 +105,42 @@
 - 정확도·환각 https://incident.io/blog/ai-root-cause-analysis-accuracy-testing-guide · Causely 벤치마크 https://arxiv.org/pdf/2605.18327
 - 국내 MSP https://www.comworld.co.kr/news/articleView.html?idxno=51898 · http://www.newstheai.com/news/articleView.html?idxno=10670
 - Claude API 가격(Opus 5 $5/$25 per 1M) — 이 세션의 claude-api 스킬 표(2026-06-24 캐시)
+
+## 7. 사례 — 다른 곳은 "과거 처리"를 어떻게 남기고 꺼내 쓰나 (2026-09-09 추가)
+
+| 어디 | 기록은 어떻게 남나 (사람 타이핑 0 인가) | 꺼내 쓰기 | 배울 점 |
+|---|---|---|---|
+| **PagerDuty Past Incidents** | 같은 서비스의 과거 인시던트를 메타데이터 유사도(ML)로 자동 매칭. 사람이 적는 건 없음 | 현재 인시던트 옆에 "비슷한 과거 N건 · 누가 대응 · 언제 · 당시 조치". SRE Agent 는 과거 인시던트와 사용자 행동을 기억해 다음 대응에 씀 | **같은 서비스 + 메타데이터 유사**가 업계 표준 검색 키. 우리 3단 키와 같다 |
+| **incident.io** | Slack 타임라인이 곧 기록. 채널 대화·조사 결과·이미지까지 자동 캡처 → 포스트모템 초안을 AI 가 섹션별로 씀. 사람은 다듬기만 | Co-Pilot 이 Slack 안에서 유사 과거 인시던트·관련 문서 제시. Investigations 는 원인 PR 을 근거 링크와 함께 | **대화가 기록이다.** 사람은 평소처럼 스레드에서 떠들고, 요약은 기계가 |
+| **Cleric (self-learning AI SRE)** | 세 가지 신호를 자동 수집: ① 제안 후 시스템이 실제로 나아졌나(post-change monitoring) ② 사람이 제안대로 코드/설정을 바꿨나 ③ 대화 톤("이거 아니야, 다른 거")의 암묵적 피드백. 엔지니어의 지시는 그대로 메모리로 | 다음 조사에서 "어떤 진단 경로가 답으로 이어졌나"를 재사용. 신뢰도 점수 표시, 피드백으로 S/N 개선 | **피드백은 버튼이 아니라 결과다.** "재발했나 / 따라 했나"가 가장 정직한 채점 |
+| **Resolve AI** | 시스템·배포·설정 변경을 지식 그래프로 자동 갱신. 런북과 과거 인시던트 학습을 "지식 에이전트"가 흡수 | 그래프를 따라가며 원인·상관 탐색 | 우리 규모(고객사 5곳)엔 과함. 그래프 대신 조직 트리 + 알람 이력이면 충분 |
+| **Meta (2024)** | 과거 조사(investigation) 수천 건을 학습 데이터로. 휴리스틱 검색으로 후보 변경을 좁힌 뒤 fine-tuned Llama 2 가 순위 | 조사 생성 시점에 상위 5개 후보 코드 변경 제시, **42%** 적중(백테스트). 사람이 확인 | **백테스트**: 과거 조사에 "그때 알 수 있던 정보만" 주고 답을 맞히는지 잰다. 우리도 append-only 이벤트가 있어 가능 |
+| **Microsoft RCACopilot (2024)** | 사전 정의된 핸들러가 진단 데이터를 자동 수집(4년 운영). 유사 과거 인시던트 검색 포함 | LLM 이 원인 **카테고리**를 예측, 1년치 운영 인시던트에서 **76.6%** 정확도. fine-tuning 없음 | 자유 문장보다 **카테고리 예측**이 정확도가 높고 채점이 쉽다. "재시작 · 설정/용량 · 자동 회복 · 기타" 같은 분류가 그것 |
+| **Microsoft ICSE'23** | 인시던트 4만 건으로 GPT-3.x 를 zero-shot/fine-tune 비교 | 원인·완화 조치 추천. fine-tune 이 zero-shot 보다 낫지만 자유 문장 생성은 여전히 부정확 | 2026 관점: fine-tune 보다 **검색 + 구조화된 근거 + 강한 모델**이 현실적 |
+| **Uber Genie (2024~)** | 내부 문서·위키·과거 Slack 스레드를 RAG 로. 답변은 SME 검수 + 피드백 | 온콜 Slack 채널에서 질문에 답. 7만 건 답변, 1.3만 엔지니어-시간 절감. 정확도 문제로 Enhanced Agentic RAG 전환 → 오답 60% 감소 | **Slack 스레드가 지식 원천**이 된 실제 사례. 첫 RAG 는 부정확했고, 검색·검증 단계를 더해 고쳤다 |
+
+### 우리에게 맞는 학습 구성 (제안)
+
+규모가 작다(고객사 5곳, 월 알람 수백 건). 벡터 DB · 지식 그래프 · fine-tuning 은 필요 없고, 있으면 오히려 채점을 흐린다.
+**"기록은 기계가, 판단은 사람이, 채점은 결과가"** 세 층으로 간다.
+
+1. **사실 층 (자동, 오늘 가능)** — 해결된 알람마다 구조화된 사실을 남긴다: 소요 시간, 누가 ack/resolve, 에스컬레이션 단계, 자동 회복 여부, 뮤트 여부, 24시간 내 재발 여부, 한 번 클릭 분류(재시작 · 설정/용량 · 자동 회복 · 기타). 나중에 CloudTrail 변경 이력(읽기 전용 역할)이 붙으면 "실제로 무엇을 했나"가 여기 들어간다.
+2. **대화 층 (자동, AI 메모와 함께)** — Resolve 시점에 Slack 스레드를 LLM 이 두 줄로 요약해 저장(원문 링크 포함). incident.io · Uber 방식. 사람은 평소처럼 대화만.
+3. **승인 층 (사람)** — 런북 텍스트. 같은 분류·같은 해법이 반복되면 AI 가 런북 절 초안을 내고 사람이 승인해야 들어간다.
+
+**꺼내 쓰기**: 같은 고객사 안에서 서비스+메트릭+리소스 → 서비스+메트릭 → 서비스 순으로 최근 5건. 구조화 매치로 충분하고, 제목·사유 유사도(임베딩)는 재료가 쌓인 뒤 필요할 때만.
+
+**채점 (Cleric 방식, 버튼 없이도)**: ① 제안한 분류와 실제 분류가 같았나 ② 제안 후 소요 시간이 그 유형의 평균보다 짧았나 ③ 24시간 내 재발했나(재발 = 그 조치는 오답). 👍/👎 버튼은 보조. 신뢰도는 모델 점수 대신 **건수**로 보여 준다("지난 4건 중 3건 재시작으로 해결"). 근거 건수가 2건 미만이면 제안 자체를 숨긴다.
+
+**백테스트 (Meta 방식)**: 이벤트가 append-only 라 "그때 알 수 있던 정보만"으로 과거 알람에 제안을 내보고 실제 분류와 비교할 수 있다. 자율 확대 전 이 수치가 먼저다.
+
+**격리**: 고객사 밖 기록은 근거로 쓰지 않는다. 같은 유형이 다른 고객사에 있으면 "다른 고객사에서 같은 유형 N건"이라는 힌트만, 내용은 없이.
+
+### 근거
+- PagerDuty Past Incidents https://support.pagerduty.com/main/docs/past-incidents · Generative AI https://www.pagerduty.com/platform/generative-ai/
+- incident.io AI postmortem https://docs.incident.io/post-incident/postmortem-ai
+- Cleric self-learning https://cleric.ai/blog/the-self-improving-ai-sre · 발표 https://www.businesswire.com/news/home/20251209625361/en/Cleric-Launches-the-First-Self-Learning-AI-SRE
+- Resolve AI 지식 그래프 https://resolve.ai/blog/knowledge-graph-agentic-ai-incident-response
+- Meta 2024 https://engineering.fb.com/2024/06/24/data-infrastructure/leveraging-ai-for-efficient-incident-response/
+- Microsoft RCACopilot (EuroSys'24) https://dl.acm.org/doi/10.1145/3627703.3629553 · ICSE'23 https://arxiv.org/abs/2301.03797
+- Uber Genie https://www.uber.com/gb/en/blog/genie-ubers-gen-ai-on-call-copilot/ · Enhanced Agentic RAG https://www.uber.com/gb/en/blog/enhanced-agentic-rag/
