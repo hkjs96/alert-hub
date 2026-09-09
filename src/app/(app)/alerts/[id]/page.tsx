@@ -24,6 +24,7 @@ import {
 } from "@/components/badges";
 import { PendingButton } from "@/components/pending-button";
 import { PriorResolutionsPanel } from "@/components/alerts/prior-resolutions";
+import { AlertLinksPanel } from "@/components/alerts/alert-links";
 
 export const dynamic = "force-dynamic";
 
@@ -660,6 +661,12 @@ export default async function AlertDetailPage({
       ) : alert.accountId ? (
         <OwnershipPanel accountId={alert.accountId} info={ownership} />
       ) : null}
+
+      <AlertLinksPanel
+        alert={{ fingerprint: alert.fingerprint }}
+        ruleId={snapshot?.rule?.id ?? ownership?.rule?.id ?? null}
+        serviceId={serviceId}
+      />
 
       <PriorResolutionsPanel
         alert={{ id: alert.id, status: alert.status, metric: alert.metric, resource: alert.resource }}

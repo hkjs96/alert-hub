@@ -10,6 +10,7 @@ import { AssignmentEditor } from "@/components/admin/assignment-editor";
 import { CoverageBadge } from "@/components/admin/coverage-badge";
 import { ContactRoster } from "@/components/admin/contact-roster";
 import { TeamEditor } from "@/components/admin/team-editor";
+import { ServiceRunbookEditor } from "@/components/admin/runbook-editor";
 import { RoutingRulesEditor } from "@/components/admin/routing-rules";
 import { NotifyChannelsEditor } from "@/components/admin/notify-channels";
 import { PendingButton } from "@/components/pending-button";
@@ -374,6 +375,10 @@ export default async function OrgPage({
                     </PendingButton>
                   </form>
                 </section>
+              )}
+
+              {selected.level === "service" && (
+                <ServiceRunbookEditor service={selected.service} back={back} />
               )}
 
               {selected.level === "service" && (

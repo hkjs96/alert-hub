@@ -576,6 +576,43 @@ export async function createRoutingRule(formData: FormData) {
       severity: optionalString(formData, "severity"),
       resource: optionalString(formData, "resource"),
       serviceId,
+      runbookUrl: httpUrl(optionalString(formData, "runbookUrl")),
+      runbook: optionalString(formData, "runbook")?.slice(0, 20000) ?? null,
+    },
+  });
+  revalidateRouting(formData);
+}
+
+function httpUrl(v: string | null): string | null {
+  if (!v) return null;
+  if (!/^https?:\/\//i.test(v)) throw new Error("런북 링크는 http(s):// 로 시작해야 합니다");
+  return v.slice(0, 2000);
+}
+
+/** 서비스 런북 (링크 + 본문). 둘 다 비우면 지운다. */
+export async function updateServiceRunbook(formData: FormData) {
+  await requireRole("ADMIN");
+  const id = requireString(formData, "serviceId");
+  await prisma.service.update({
+    where: { id },
+    data: {
+      runbookUrl: httpUrl(optionalString(formData, "runbookUrl")),
+      runbook: optionalString(formData, "runbook")?.slice(0, 20000) ?? null,
+    },
+  });
+  revalidatePath("/admin/org");
+  revalidateBack(formData, "/admin/org");
+}
+
+/** 규칙 런북 갱신. */
+export async function updateRuleRunbook(formData: FormData) {
+  await requireRole("ADMIN");
+  const id = requireString(formData, "id");
+  await prisma.routingRule.update({
+    where: { id },
+    data: {
+      runbookUrl: httpUrl(optionalString(formData, "runbookUrl")),
+      runbook: optionalString(formData, "runbook")?.slice(0, 20000) ?? null,
     },
   });
   revalidateRouting(formData);

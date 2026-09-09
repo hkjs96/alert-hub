@@ -9,6 +9,7 @@ import { applyRoutingRules } from "@/server/routing";
 import { findActiveSilence } from "@/server/silences";
 import { syncSlackMessages } from "@/server/slack-sync";
 import { findPriorResolutions, markRecurrence, recordResolution } from "@/server/history";
+import { linksForAlert } from "@/server/runbook";
 import type { SilenceScope } from "@/lib/silence";
 import {
   refireThrottleMinutesFromEnv,
@@ -148,6 +149,10 @@ async function toNotifyContext(alertId: string, n: NormalizedAlert, own: IngestO
   if (own.assignees) ctx.assignees = own.assignees;
   if (own.chainLabel) ctx.chainLabel = own.chainLabel;
   if (own.targets?.length) ctx.targets = own.targets;
+  // 런북·콘솔 링크. 규칙 런북 → 서비스 런북. 조회 실패는 빈 목록.
+  const ruleId = (own.snapshot as { rule?: { id?: string } | null } | undefined)?.rule?.id ?? null;
+  const { links } = await linksForAlert({ fingerprint: n.fingerprint, ruleId, serviceId: own.scope?.serviceId ?? null });
+  if (links.length) ctx.links = links;
   // 이전 처리 한 줄 — 같은 고객사·서비스의 해결 기록. 조회 실패는 빈 값(best-effort).
   if (own.scope?.customerId && own.scope?.serviceId) {
     const prior = await findPriorResolutions({

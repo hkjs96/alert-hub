@@ -287,10 +287,14 @@ model Project {
 }
 
 model Service {
-  id        String  @id @default(cuid())
-  name      String
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id         String  @id @default(cuid())
+  name       String
+  projectId  String
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  // 런북: 링크(Confluence·Notion·GitHub 문서)와 본문(markdown). 링크는 Slack 메시지에,
+  // 본문은 알람 상세와 이후 AI 메모의 인용 재료로. 라우팅 규칙의 런북이 있으면 그것이 우선.
+  runbookUrl String?
+  runbook    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -553,6 +557,10 @@ model RoutingRule {
 
   teamId String
   team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  // 규칙별 런북 (예: "RDS CPU" 규칙엔 RDS 절만). 서비스 런북보다 구체적이라 우선.
+  runbookUrl String?
+  runbook    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

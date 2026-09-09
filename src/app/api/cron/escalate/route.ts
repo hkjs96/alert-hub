@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { enqueueAndSend } from "@/server/notify-queue";
 import { loadTargetsForChain } from "@/server/notify-targets";
+import { linksForAlert } from "@/server/runbook";
 import { parseOwnershipSnapshot } from "@/server/org";
 import { getActiveSilences, scopeOfStoredAlert } from "@/server/silences";
 import { matchSilence } from "@/lib/silence";
@@ -135,11 +136,17 @@ export async function GET(req: Request) {
       projectId: snap.chain.projectId,
       serviceId: snap.chain.serviceId,
     });
+    const { links } = await linksForAlert({
+      fingerprint: alert.fingerprint,
+      ruleId: snap.rule?.id ?? null,
+      serviceId: snap.chain.serviceId,
+    });
     await enqueueAndSend(alert.id, toNormalized(alert), {
       alertId: alert.id,
       assignees: [assignee],
       escalationStep: idx + 1,
       ...(targets.length ? { targets } : {}),
+      ...(links.length ? { links } : {}),
     });
     escalated += 1;
   }
