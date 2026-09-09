@@ -124,11 +124,17 @@ export async function GET(req: Request) {
       phone: contact?.phone ?? null,
     };
 
+    // 기준 시각을 문구에 남긴다 — "N분 내"가 무엇으로부터인지(이전 통지 또는 발화)
+    // 이벤트 시각만 보면 모순처럼 읽히는 것을 막는다 (personas 백로그 P2).
+    const base = alert.escalatedAt ?? (snap.capturedAt ? new Date(snap.capturedAt) : null);
+    const baseLabel = base
+      ? `${alert.escalatedAt ? "이전 통지" : "발화"} ${base.toISOString().replace("T", " ").slice(0, 16)}Z 이후 `
+      : "";
     await prisma.alertEvent.create({
       data: {
         alertId: alert.id,
         status: "ESCALATED",
-        stateReason: `${ackMinutes}분 내 ack 없음 → ${idx + 1}순위 ${assignee.name}에게 자동 에스컬레이션`,
+        stateReason: `${baseLabel}${ackMinutes}분 내 ack 없음 → ${idx + 1}순위 ${assignee.name}에게 자동 에스컬레이션`,
       },
     });
     const targets = await loadTargetsForChain({
