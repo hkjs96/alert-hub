@@ -70,6 +70,9 @@ model Alert {
   // for past alerts. Names are denormalized so the record survives renames and
   // deletions. JSON on purpose — an append-style audit shape, never joined.
   ownershipSnapshot Json?
+  // 테넌트 스코프용 비정규화: 스냅샷 체인의 고객사 id (FK 없음 — 스냅샷과 같은 이유).
+  // 온콜은 자기 담당 고객사의 알람만 보므로 이 열로 거른다. 미매핑 알람은 null.
+  customerId        String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -84,6 +87,7 @@ model Alert {
   @@index([status])
   @@index([severity])
   @@index([lastSeenAt])
+  @@index([customerId])
 }
 
 model AlertEvent {
@@ -370,6 +374,8 @@ model Contact {
   timezone       String?
   // 승인 요청 알림을 마지막으로 보낸 시각 (시간당 1회로 제한).
   approvalPingAt DateTime?
+  // 테넌트 스코프 예외: 배정과 무관하게 모든 고객사를 본다(관제·리드). ADMIN 은 항상 전체.
+  seeAll         Boolean       @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

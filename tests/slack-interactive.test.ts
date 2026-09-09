@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   updateMessage: vi.fn(),
   postThread: vi.fn(),
   userDisplayName: vi.fn(),
+  scopeForContact: vi.fn(),
   resolutionUpdate: vi.fn(),
   resolutionCreate: vi.fn(),
   eventFindFirst: vi.fn(),
@@ -38,6 +39,9 @@ vi.mock("@/lib/notify/slack-api", () => ({
   postThread: mocks.postThread,
   userDisplayName: mocks.userDisplayName,
 }));
+
+// 테넌트 스코프: 기본은 전체. 담당 밖 케이스는 개별 테스트에서 좁힌다.
+vi.mock("@/server/scope", () => ({ scopeForContact: mocks.scopeForContact }));
 
 import { POST } from "@/app/api/slack/interactive/route";
 
@@ -66,7 +70,8 @@ const click = (action: string, extra: object = {}) => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.contactFindFirst.mockResolvedValue({ id: "c1", name: "김도윤", role: "OPERATOR" });
+  mocks.contactFindFirst.mockResolvedValue({ id: "c1", name: "김도윤", role: "OPERATOR", seeAll: false });
+  mocks.scopeForContact.mockResolvedValue({ all: true });
   mocks.alertFindUnique.mockResolvedValue({ id: "a1", status: "FIRING" });
   mocks.alertUpdateMany.mockResolvedValue({ count: 1 });
   mocks.alertFindUnique.mockImplementation(async ({ select }: any) =>
@@ -138,6 +143,14 @@ describe("Ack 버튼", () => {
     await POST(request(click("ah_ack")));
     expect(mocks.alertUpdateMany).not.toHaveBeenCalled();
     expect(mocks.respond.mock.calls[0][1].text).toContain("연결된 Slack 계정이 아닙니다");
+  });
+
+  it("담당 고객사 밖 알람이면 안내만 (테넌트 스코프)", async () => {
+    mocks.scopeForContact.mockResolvedValue({ all: false, customerIds: ["cu-other"] });
+    mocks.alertFindUnique.mockResolvedValue({ id: "a1", status: "FIRING", customerId: "cu-kb" });
+    await POST(request(click("ah_ack")));
+    expect(mocks.alertUpdateMany).not.toHaveBeenCalled();
+    expect(mocks.respond.mock.calls[0][1].text).toContain("담당 고객사 밖");
   });
 
   it("조회 권한은 거절", async () => {

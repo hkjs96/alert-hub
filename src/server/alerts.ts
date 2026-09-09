@@ -256,6 +256,7 @@ export async function ingestAlert(n: NormalizedAlert): Promise<IngestResult> {
         data: {
           ...toCreateData(n),
           ownershipSnapshot: own.snapshot,
+          customerId: own.scope?.customerId ?? null,
           events: { create: eventData },
         },
         select: { id: true },
@@ -370,7 +371,7 @@ async function updateExisting(
       // actually notified for the current incident, not the very first one.
       await prisma.alert.updateMany({
         where: { fingerprint: n.fingerprint },
-        data: { ownershipSnapshot: own.snapshot },
+        data: { ownershipSnapshot: own.snapshot, customerId: own.scope?.customerId ?? null },
       });
     }
     await notifyUnlessSilenced(alertId, n, own);
@@ -443,9 +444,9 @@ export async function refireNotifications(row: {
 
 // --- Read helpers used by the dashboard ------------------------------------
 
-export async function getAlerts(status?: AlertStatus) {
+export async function getAlerts(status?: AlertStatus, where: Prisma.AlertWhereInput = {}) {
   return prisma.alert.findMany({
-    where: status ? { status } : undefined,
+    where: { ...where, ...(status ? { status } : {}) },
     orderBy: { lastSeenAt: "desc" },
   });
 }

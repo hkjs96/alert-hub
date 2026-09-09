@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getSilencesForDisplay } from "@/server/silences";
 import { createSilence, revokeSilence } from "@/server/silence-actions";
+import { getVisibleScope } from "@/server/scope";
+import { canSeeCustomer } from "@/lib/scope";
 import { silenceStatus, type SilenceStatus } from "@/lib/silence";
 import { Mark } from "@/components/badges";
 import { PendingButton } from "@/components/pending-button";
@@ -63,7 +65,8 @@ export default async function SilencesPage({
     ? (searchParams.f as Filter)
     : "all";
 
-  const customers = await prisma.customer.findMany({ orderBy: { name: "asc" } });
+  const tenantScope = await getVisibleScope();
+  const customers = (await prisma.customer.findMany({ orderBy: { name: "asc" } })).filter((c) => canSeeCustomer(tenantScope, c.id));
   const customer =
     customers.find((c) => c.id === searchParams.customerId) ?? customers[0] ?? null;
   const projects = customer
@@ -83,7 +86,14 @@ export default async function SilencesPage({
   const service =
     services.find((s) => s.id === searchParams.serviceId) ?? services[0] ?? null;
 
-  const rows = (await getSilencesForDisplay()).map((s) => {
+  const rows = (await getSilencesForDisplay())
+    .filter((s) =>
+      canSeeCustomer(
+        tenantScope,
+        s.customerId ?? s.project?.customerId ?? s.service?.project.customerId ?? s.alertCustomerId ?? null,
+      ),
+    )
+    .map((s) => {
     const status = silenceStatus(s, now);
     const scopeName = s.service
       ? `${s.service.project.customer.name} › ${s.service.project.name} › ${s.service.name}`

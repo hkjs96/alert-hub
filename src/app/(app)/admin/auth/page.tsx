@@ -132,6 +132,16 @@ export default async function AuthDiagPage() {
         : "TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM 없음 · 에스컬레이션 SMS·번호 확인 불가",
     },
     {
+      item: "웹훅 인증",
+      tone: process.env.INGEST_TOKEN ? (process.env.SNS_VERIFY === "false" ? "warn" : "ok") : "warn",
+      state: process.env.INGEST_TOKEN ? "토큰 필수" : "토큰 없음",
+      value: [
+        process.env.INGEST_TOKEN ? "INGEST_TOKEN 설정됨 — 웹훅 URL 에 ?token= 필요" : "INGEST_TOKEN 없음 — URL 을 아는 누구나 알람을 넣을 수 있습니다. 실제 고객사 투입 전 설정",
+        process.env.SNS_VERIFY === "false" ? "SNS 서명 검증 꺼짐(SNS_VERIFY=false)" : "SNS 서명 검증 켜짐",
+        process.env.PAGERDUTY_WEBHOOK_SECRET ? "PagerDuty 서명 필수" : "PagerDuty 서명 미설정",
+      ].join(" · "),
+    },
+    {
       item: "최근 로그인",
       tone: lastLogin ? "ok" : "off",
       state: lastLogin ? "기록 있음" : "없음",

@@ -55,20 +55,22 @@ export function scopeOfStoredAlert(alert: {
 
 /** 점검 · 뮤트 일람 — 관계를 함께 읽어 스코프 이름을 그린다. */
 export async function getSilencesForDisplay() {
-  return prisma.silence.findMany({
+  const rows = await prisma.silence.findMany({
     include: {
-      alert: { select: { id: true, title: true } },
+      alert: { select: { id: true, title: true, customerId: true } },
       customer: { select: { name: true } },
-      project: { select: { name: true, customer: { select: { name: true } } } },
+      project: { select: { name: true, customerId: true, customer: { select: { name: true } } } },
       service: {
         select: {
           name: true,
           project: {
-            select: { name: true, customer: { select: { name: true } } },
+            select: { name: true, customerId: true, customer: { select: { name: true } } },
           },
         },
       },
     },
     orderBy: { createdAt: "desc" },
   });
+  // 테넌트 스코프 필터용: 알람 뮤트는 알람의 고객사를 따른다.
+  return rows.map((r) => ({ ...r, alertCustomerId: r.alert?.customerId ?? null }));
 }

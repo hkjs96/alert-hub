@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/server/auth";
 import { resolveWindow } from "@/lib/silence-window";
+import { assertAlertInScope, getVisibleScope } from "@/server/scope";
+import { canSeeCustomer } from "@/lib/scope";
 
 // 점검 창 · 뮤트 액션. 기간 프리셋은 제출 시점 서버에서 계산한다("use server"
 // 모듈은 async export만 허용되므로 계산 자체는 lib/silence-window에 있다).
@@ -48,6 +50,17 @@ export async function createSilence(formData: FormData) {
           ? { serviceId: scopeId }
           : null;
   if (!scope) throw new Error(`invalid level: ${level}`);
+  // 테넌트 스코프: 담당 밖 고객사에 점검 창을 걸 수 없다.
+  const visible = await getVisibleScope();
+  if (!visible.all) {
+    const owner =
+      level === "customer"
+        ? scopeId
+        : level === "project"
+          ? (await prisma.project.findUnique({ where: { id: scopeId }, select: { customerId: true } }))?.customerId
+          : (await prisma.service.findUnique({ where: { id: scopeId }, select: { project: { select: { customerId: true } } } }))?.project.customerId;
+    if (!canSeeCustomer(visible, owner ?? null)) throw new Error("담당 고객사 밖의 범위입니다");
+  }
 
   await prisma.silence.create({ data: { ...scope, ...window, reason, createdBy } });
 
@@ -61,6 +74,7 @@ export async function createSilence(formData: FormData) {
 export async function muteAlert(formData: FormData) {
   await requireRole("OPERATOR");
   const alertId = requireString(formData, "alertId");
+  await assertAlertInScope(alertId);
   const scopeKind = requireString(formData, "scope");
   const reason = requireString(formData, "reason");
   const window = resolveWindow(requireString(formData, "preset"), new Date(), {

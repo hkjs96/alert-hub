@@ -10,6 +10,9 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// 스키마 변경 뒤의 멱등 백필 — 데모 시드와 무관하게 매 배포마다 돈다.
+await backfillAlertCustomer();
+
 // 운영에서 데모 시드를 완전히 끄는 스위치. 실제 고객사를 넣기 전 데모를 정리한
 // 뒤(빈 DB) 다음 배포가 다시 채우는 일을 막는다.
 if (process.env.SEED_DEMO === "false") {
@@ -136,3 +139,20 @@ await prisma.assignment.createMany({
 console.log("데모 시드 완료 — 고객사 2 · 인원 6 · 배정 6");
 console.log("알람은 웹훅으로 흘려보내세요 (README의 curl 예시).");
 await prisma.$disconnect();
+
+// 테넌트 스코프 열 백필: 스냅샷은 있는데 customerId 가 비어 있는 알람. 멱등.
+async function backfillAlertCustomer() {
+  const rows = await prisma.alert.findMany({
+    where: { customerId: null, NOT: { ownershipSnapshot: { equals: null } } },
+    select: { id: true, ownershipSnapshot: true },
+  });
+  let n = 0;
+  for (const r of rows) {
+    const cid = r.ownershipSnapshot?.chain?.customerId;
+    if (typeof cid === "string" && cid) {
+      await prisma.alert.update({ where: { id: r.id }, data: { customerId: cid } });
+      n++;
+    }
+  }
+  if (n) console.log(`알람 customerId 백필 ${n}건`);
+}
