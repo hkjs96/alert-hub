@@ -29,12 +29,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <NavTab
                 href="/"
                 label="대시보드"
-                pattern="^/(?!admin)"
+                pattern="^/(?!admin|portal)"
                 className="flex h-[52px] items-center"
                 activeClassName="font-semibold text-stone-900 shadow-[inset_0_-2px_0_#1b1a17]"
                 inactiveClassName="text-stone-500 hover:text-stone-900"
               />
-              {me?.customerId ? null : (
+              {me?.customerId ? (
+                <NavTab
+                  href="/portal"
+                  label="우리 회사"
+                  pattern="^/portal"
+                  className="flex h-[52px] items-center"
+                  activeClassName="font-semibold text-stone-900 shadow-[inset_0_-2px_0_#1b1a17]"
+                  inactiveClassName="text-stone-500 hover:text-stone-900"
+                />
+              ) : (
                 <NavTab
                   href="/admin"
                   label="등록 관리"
