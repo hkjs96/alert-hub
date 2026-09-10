@@ -47,6 +47,17 @@ export async function approveAccount(formData: FormData) {
   revalidatePath("/admin/auth");
 }
 
+/** 가입 방식 스위치 (진단 화면): 승인제 / 자동 승인. 환경변수보다 우선한다. */
+export async function setSignupPolicy(formData: FormData) {
+  const admin = await requireRole("ADMIN");
+  const mode = str(formData, "mode");
+  if (mode !== "on" && mode !== "off") throw new Error("잘못된 요청");
+  const { setSetting, SIGNUP_AUTO_APPROVE } = await import("@/server/settings");
+  await setSetting(SIGNUP_AUTO_APPROVE, mode, admin?.name ?? "open");
+  revalidatePath("/admin/auth");
+  revalidatePath("/admin/teams");
+}
+
 export async function rejectAccount(formData: FormData) {
   const admin = await requireRole("ADMIN");
   const id = str(formData, "id");
