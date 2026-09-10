@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { readAuthConfig } from "@/lib/auth/config";
+import { isAutoApprove } from "@/server/settings";
 import { atLeast, type AccountStatus, type Role } from "@/lib/auth/roles";
 import { SESSION_COOKIE, verifySession, type SessionPayload } from "@/lib/auth/session";
 import { lookupUserByEmail } from "@/lib/notify/slack-api";
@@ -191,7 +192,9 @@ export async function provisionInternalContact(p: {
 }): Promise<JitResult> {
   const now = p.now ?? new Date();
   const cfg = readAuthConfig();
-  if (p.customer) return provisionCustomerContact({ ...p, customer: p.customer, now, autoApprove: cfg.autoApprove });
+  // 가입 방식은 화면 설정이 환경변수보다 우선 (src/server/settings.ts).
+  const autoApprove = await isAutoApprove();
+  if (p.customer) return provisionCustomerContact({ ...p, customer: p.customer, now, autoApprove });
   // 관리자가 한 명도 없으면 첫 로그인이 관리자 — 허용 목록이 이미 문을 지키므로
   // 잠긴 채 시작하는 것보다 낫다. 진단 화면이 이 상태를 경고한다.
   const noAdmin = (await countActiveAdmins()) === 0;
@@ -206,7 +209,7 @@ export async function provisionInternalContact(p: {
     if (!existing.active) return { ok: false, reason: "inactive" };
     if (existing.status === "REJECTED" && !bootstrap) return { ok: false, reason: "rejected" };
     const promote = bootstrap && (existing.status !== "ACTIVE" || existing.role !== "ADMIN");
-    const autoActivate = !promote && cfg.autoApprove && existing.status === "PENDING";
+    const autoActivate = !promote && autoApprove && existing.status === "PENDING";
     const updated = await prisma.contact.update({
       where: { id: existing.id },
       data: {
@@ -236,7 +239,7 @@ export async function provisionInternalContact(p: {
       lastLoginAt: now,
       ...(bootstrap
         ? { role: "ADMIN", status: "ACTIVE", approvedAt: now, approvedBy: noAdmin ? "first-login" : "bootstrap" }
-        : cfg.autoApprove
+        : autoApprove
           ? { role: "OPERATOR", status: "ACTIVE", approvedAt: now, approvedBy: "auto" }
           : { role: "OPERATOR", status: "PENDING" }),
     },

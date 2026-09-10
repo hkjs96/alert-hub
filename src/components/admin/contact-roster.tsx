@@ -247,6 +247,14 @@ export async function ContactRoster({
                           sso
                         </span>
                       ) : null}
+                      {c.approvedBy ? (
+                        <span
+                          className="ml-1.5 font-mono text-[11px] text-stone-400"
+                          title={`승인 ${c.approvedAt ? c.approvedAt.toISOString().slice(0, 16).replace("T", " ") + "Z" : ""}`}
+                        >
+                          승인: {c.approvedBy === "auto" ? "자동" : c.approvedBy}
+                        </span>
+                      ) : null}
                     </span>
                     <span className="truncate text-sm text-stone-500">
                       {scope === "all"

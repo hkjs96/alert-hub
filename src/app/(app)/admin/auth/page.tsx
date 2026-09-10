@@ -6,6 +6,10 @@ import { ToneLabel, type AuthTone } from "@/components/auth/primitives";
 import { authTest, defaultBotChannel, isBotConfigured } from "@/lib/notify/slack-api";
 import { emailNotifier } from "@/lib/notify/email";
 import { isSmsConfigured } from "@/lib/notify/twilio";
+import { getSignupPolicy } from "@/server/settings";
+import { setSignupPolicy } from "@/server/auth-actions";
+import { PendingApprovals } from "@/components/admin/pending-approvals";
+import { PendingButton } from "@/components/pending-button";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +23,9 @@ function fmt(d: Date | null): string {
  */
 export default async function AuthDiagPage() {
   const cfg = readAuthConfig();
+  const policy = await getSignupPolicy();
   const [pending, admins, lastLogin] = await Promise.all([
-    prisma.contact.count({ where: { customerId: null, status: "PENDING" } }),
+    prisma.contact.count({ where: { status: "PENDING" } }),
     prisma.contact.count({ where: { customerId: null, status: "ACTIVE", active: true, role: "ADMIN" } }),
     prisma.contact.findFirst({ where: { lastLoginAt: { not: null } }, orderBy: { lastLoginAt: "desc" }, select: { lastLoginAt: true, name: true } }),
   ]);
@@ -64,11 +69,14 @@ export default async function AuthDiagPage() {
     },
     {
       item: "가입 방식",
-      tone: cfg.autoApprove ? "ok" : "info",
-      state: cfg.autoApprove ? "자동 승인" : "승인제",
-      value: cfg.autoApprove
-        ? "허용 목록 계정은 로그인 즉시 온콜 엔지니어로 활성 (AUTH_AUTO_APPROVE=true)"
-        : "허용 목록 계정도 관리자 승인 뒤 활성 · AUTH_AUTO_APPROVE=true 로 바꿀 수 있음",
+      tone: policy.autoApprove ? "ok" : "info",
+      state: policy.autoApprove ? "자동 승인" : "승인제",
+      value:
+        (policy.autoApprove
+          ? "허용 목록·고객사 도메인 계정은 로그인 즉시 활성(내부는 온콜 엔지니어, 고객사는 조회)"
+          : "처음 로그인한 계정은 승인 대기 → 관리자가 아래에서 승인") +
+        (policy.source === "setting" ? " · 화면에서 설정함" : policy.source === "env" ? " · AUTH_AUTO_APPROVE 환경변수" : " · 기본값"),
+      action: { label: "바꾸기", href: "#signup" },
     },
     {
       item: "리디렉션 URI",
@@ -208,6 +216,38 @@ export default async function AuthDiagPage() {
           </div>
         ) : null}
       </div>
+
+      <section id="signup" className="border border-stone-200 bg-white">
+        <div className="flex flex-wrap items-baseline gap-2 border-b border-stone-200 px-5 py-3">
+          <h2 className="text-[13px] font-semibold text-stone-900">가입 방식</h2>
+          <span className="text-xs text-stone-400">
+            처음 SSO 로그인한 계정(내부 허용 목록 · 고객사 로그인 도메인)을 어떻게 받을지. 여기서 바꾸면 환경변수보다 우선합니다.
+          </span>
+        </div>
+        <form action={setSignupPolicy} className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-4 text-sm">
+          <label className="inline-flex cursor-pointer items-center gap-2 text-stone-800">
+            <input type="radio" name="mode" value="off" defaultChecked={!policy.autoApprove} className="accent-stone-900" />
+            승인제 <span className="text-xs text-stone-400">— 승인 대기에 올라오고 관리자가 승인해야 활성</span>
+          </label>
+          <label className="inline-flex cursor-pointer items-center gap-2 text-stone-800">
+            <input type="radio" name="mode" value="on" defaultChecked={policy.autoApprove} className="accent-stone-900" />
+            자동 승인 <span className="text-xs text-stone-400">— 허용된 계정은 로그인 즉시 활성</span>
+          </label>
+          <PendingButton
+            pendingLabel="저장 중…"
+            className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+          >
+            저장
+          </PendingButton>
+          <span className="basis-full text-xs text-stone-400">
+            현재: {policy.autoApprove ? "자동 승인" : "승인제"} ·{" "}
+            {policy.source === "setting" ? "화면에서 설정한 값" : policy.source === "env" ? "AUTH_AUTO_APPROVE 환경변수 값" : "기본값(승인제)"}
+            . 부트스트랩 관리자(AUTH_BOOTSTRAP_ADMINS)와 관리자가 미리 등록한 인원은 어느 쪽이든 바로 활성입니다.
+          </span>
+        </form>
+      </section>
+
+      <PendingApprovals always />
     </div>
   );
 }

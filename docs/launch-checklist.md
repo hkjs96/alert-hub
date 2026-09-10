@@ -24,7 +24,7 @@
 ## 4. 인증
 
 - [ ] `AUTH_ALLOWED_DOMAINS=mz.co.kr,megazone.com`, `AUTH_ALLOWED_EMAILS=jsmini3814@gmail.com` 확인.
-- [ ] `AUTH_AUTO_APPROVE` 결정(true = 허용 도메인이면 즉시 활성, 아니면 관리자 승인).
+- [ ] 가입 방식 결정 — 등록 관리 › 인증 › "가입 방식"에서 승인제 / 자동 승인 선택(환경변수 `AUTH_AUTO_APPROVE` 보다 우선).
 - [ ] 관리자 계정 1명 이상 확인(진단 "관리자" 행).
 - [ ] 홈닉 담당자에게 화면을 열어 줄 경우: 조직 트리 › 홈닉 패널 › **담당자 로그인**에 `homenic.co.kr` 등록. 첫 로그인은 승인 대기에 "고객사 · 홈닉"으로 올라온다.
 

@@ -644,3 +644,12 @@ model ChannelVerification {
 
   @@index([contactId, channel])
 }
+
+// 운영 설정 (환경변수 대신 화면에서 바꾸는 값). 키/값 문자열.
+// 지금 쓰는 키: "signup.autoApprove" = "on" | "off" (없으면 AUTH_AUTO_APPROVE 환경변수).
+model Setting {
+  key       String   @id
+  value     String
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+}

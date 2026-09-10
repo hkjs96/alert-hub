@@ -15,13 +15,26 @@ function fmt(d: Date): string {
  * 가입 승인 대기 목록 — SSO로 처음 들어와 PENDING 인 내부 인원. 역할을 고르고
  * 승인하거나 거절한다. 비어 있으면 아무것도 그리지 않는다.
  */
-export async function PendingApprovals() {
+export async function PendingApprovals({ always = false }: { always?: boolean } = {}) {
   const pending = await prisma.contact.findMany({
     where: { status: "PENDING" },
     orderBy: { createdAt: "asc" },
     include: { customer: { select: { name: true } } },
   });
-  if (!pending.length) return null;
+  if (!pending.length && !always) return null;
+  if (!pending.length) {
+    return (
+      <section id="pending" className="space-y-2">
+        <div className="flex flex-wrap items-baseline gap-3">
+          <h2 className="text-sm font-semibold text-stone-900">가입 승인 대기</h2>
+          <span className="text-xs text-stone-400">대기 중인 가입 요청이 없습니다</span>
+        </div>
+        <p className="border border-dashed border-stone-200 px-3 py-3 text-xs text-stone-400">
+          승인제일 때 처음 SSO 로그인한 사람이 여기 올라옵니다. 자동 승인이면 바로 활성이 되어 여기 오지 않고, 인원 목록에 "승인: auto"로 남습니다.
+        </p>
+      </section>
+    );
+  }
   return (
     <section id="pending" className="space-y-2">
       <div className="flex flex-wrap items-baseline gap-3">
