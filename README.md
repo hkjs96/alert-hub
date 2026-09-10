@@ -113,6 +113,8 @@ handled. Locally, point both URLs at the same Postgres.
 
 ### 실제 고객사 투입 전 체크리스트
 
+> 사람이 할 일의 체크박스 목록은 [docs/launch-checklist.md](docs/launch-checklist.md) 에서 관리한다.
+
 1. **데모 데이터 정리** — 운영 DB에서 `npm run demo:reset`(먼저 인자 없이 돌려 목록 확인, `--yes`로 삭제).
    Vercel에서는 `DATABASE_URL`을 로컬 셸에 넣고 실행하면 된다. 시드 데모 고객사·알람·내부 데모 인원만 지운다.
 2. **`SEED_DEMO=false`** 를 Vercel 환경변수에 추가 — 빈 DB에 배포하면 데모 시드가 다시 들어가는 것을 막는다.
