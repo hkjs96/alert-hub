@@ -11,6 +11,7 @@ import { CoverageBadge } from "@/components/admin/coverage-badge";
 import { ContactRoster } from "@/components/admin/contact-roster";
 import { TeamEditor } from "@/components/admin/team-editor";
 import { ServiceRunbookEditor } from "@/components/admin/runbook-editor";
+import { CustomerLoginEditor } from "@/components/admin/customer-login";
 import { RoutingRulesEditor } from "@/components/admin/routing-rules";
 import { NotifyChannelsEditor } from "@/components/admin/notify-channels";
 import { PendingButton } from "@/components/pending-button";
@@ -310,6 +311,8 @@ export default async function OrgPage({
 
               {selected.level === "customer" && (
                 <>
+                  <CustomerLoginEditor customer={selected.customer} back={back} />
+
                   <section className="border border-stone-200 bg-white">
                     <div className="flex items-center justify-between border-b border-stone-200 px-5 py-3">
                       <h2 className={overline}>이 고객사의 팀</h2>

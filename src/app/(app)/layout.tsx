@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { NavTab } from "@/components/nav-tab";
 import { PipelineHealth } from "@/components/pipeline-health";
 import { UserMenu } from "@/components/auth/user-menu";
-import { getCurrentUser } from "@/server/auth";
+import { authMode, getCurrentUser } from "@/server/auth";
 
 /**
  * 앱 셸 — 로그인된(또는 SSO 미연결로 열린) 상태에서만 그려진다. 승인 대기
@@ -12,6 +12,8 @@ import { getCurrentUser } from "@/server/auth";
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const me = await getCurrentUser();
+  // SSO 모드에서 쿠키는 있는데 사람이 없으면(비활성·거절·고객사 로그인 도메인 해제) 로그인 화면으로.
+  if (authMode() === "sso" && !me) redirect("/login?error=inactive");
   if (me?.status === "PENDING") redirect("/pending");
   if (me && me.status === "ACTIVE" && !me.onboardedAt) redirect("/welcome");
 
@@ -32,14 +34,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 activeClassName="font-semibold text-stone-900 shadow-[inset_0_-2px_0_#1b1a17]"
                 inactiveClassName="text-stone-500 hover:text-stone-900"
               />
-              <NavTab
-                href="/admin"
-                label="등록 관리"
-                pattern="^/admin"
-                className="flex h-[52px] items-center"
-                activeClassName="font-semibold text-stone-900 shadow-[inset_0_-2px_0_#1b1a17]"
-                inactiveClassName="text-stone-500 hover:text-stone-900"
-              />
+              {me?.customerId ? null : (
+                <NavTab
+                  href="/admin"
+                  label="등록 관리"
+                  pattern="^/admin"
+                  className="flex h-[52px] items-center"
+                  activeClassName="font-semibold text-stone-900 shadow-[inset_0_-2px_0_#1b1a17]"
+                  inactiveClassName="text-stone-500 hover:text-stone-900"
+                />
+              )}
             </nav>
           </div>
           <span className="flex items-center gap-5">

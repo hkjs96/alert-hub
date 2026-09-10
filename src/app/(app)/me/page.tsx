@@ -50,6 +50,7 @@ export default async function MePage({ searchParams }: { searchParams: { saved?:
       <div className="border border-stone-200 bg-white px-[34px] py-6">
         <div className={overline}>내 담당 범위</div>
         <p className="mt-2 text-[13px] text-stone-700">
+          {me.customerName ? `${me.customerName} 담당자 계정 · 이 고객사의 알람만 조회 · ` : ""}
           담당 고객사 {scope.customerNames.length}곳 · 스코프 배정 {scope.assignmentCount}곳
           {scope.teams.length ? ` · 팀 ${scope.teams.map((t) => t.name).join(", ")}` : ""}
         </p>

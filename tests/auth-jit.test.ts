@@ -41,7 +41,7 @@ describe("SSO 첫 로그인 → 내부 인원 JIT", () => {
     mocks.findFirst.mockResolvedValue(null);
     mocks.create.mockResolvedValue({ id: "new1", status: "PENDING", onboardedAt: null });
     const r = await provisionInternalContact({ email: "kim@msp.co.kr", name: "김도윤", now: NOW });
-    expect(r).toEqual({ ok: true, contactId: "new1", created: true, status: "PENDING", onboarded: false });
+    expect(r).toEqual({ ok: true, contactId: "new1", created: true, status: "PENDING", onboarded: false, customerId: null });
     expect(mocks.create).toHaveBeenCalledWith({
       data: { name: "김도윤", email: "kim@msp.co.kr", customerId: null, lastLoginAt: NOW, role: "OPERATOR", status: "PENDING" },
     });
@@ -94,7 +94,7 @@ describe("SSO 첫 로그인 → 내부 인원 JIT", () => {
     mocks.findFirst.mockResolvedValue({ id: "c1", customerId: null, active: true, name: "관리자가 적은 이름", status: "ACTIVE", role: "OPERATOR", onboardedAt: NOW });
     mocks.update.mockResolvedValue({ id: "c1", status: "ACTIVE", onboardedAt: NOW });
     const r = await provisionInternalContact({ email: "Kim@MSP.co.kr", name: "구글이름", now: NOW });
-    expect(r).toEqual({ ok: true, contactId: "c1", created: false, status: "ACTIVE", onboarded: true });
+    expect(r).toEqual({ ok: true, contactId: "c1", created: false, status: "ACTIVE", onboarded: true, customerId: null });
     expect(mocks.create).not.toHaveBeenCalled();
     expect(mocks.update).toHaveBeenCalledWith({ where: { id: "c1" }, data: { lastLoginAt: NOW } });
     // 조회는 대소문자 무시
@@ -115,7 +115,7 @@ describe("SSO 첫 로그인 → 내부 인원 JIT", () => {
     expect(mocks.update.mock.calls[0][0].data).toEqual({ lastLoginAt: NOW, name: "김도윤" });
   });
 
-  it("고객사 담당자 이메일은 거부 — 고객사 사람은 로그인 대상이 아니다", async () => {
+  it("고객사 담당자 이메일은 (고객사 도메인 매치 없이 오면) 거부", async () => {
     mocks.findFirst.mockResolvedValue({ id: "cust1", customerId: "cu1", active: true, name: "최민서" });
     const r = await provisionInternalContact({ email: "mschoi@neowiz.example", name: "최민서" });
     expect(r).toEqual({ ok: false, reason: "customer" });
@@ -128,6 +128,35 @@ describe("SSO 첫 로그인 → 내부 인원 JIT", () => {
     const r = await provisionInternalContact({ email: "gone@msp.co.kr", name: "퇴사자" });
     expect(r).toEqual({ ok: false, reason: "inactive" });
     expect(mocks.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("고객사 담당자 JIT (허용 도메인 매치)", () => {
+  const homenic = { id: "cu-h", name: "홈닉" };
+  it("처음 보는 고객사 도메인 이메일은 그 고객사의 VIEWER · 승인 대기로 만든다", async () => {
+    mocks.findFirst.mockResolvedValue(null);
+    mocks.create.mockResolvedValue({ id: "h1", status: "PENDING", onboardedAt: null });
+    const r = await provisionInternalContact({ email: "kim@homenic.co.kr", name: "김홈닉", now: NOW, customer: homenic });
+    expect(r).toMatchObject({ ok: true, created: true, status: "PENDING", customerId: "cu-h" });
+    expect(mocks.create.mock.calls[0][0].data).toMatchObject({ customerId: "cu-h", role: "VIEWER", status: "PENDING" });
+  });
+  it("관리자가 미리 등록한 그 고객사 담당자(이메일 일치)면 그 행에 붙고 VIEWER 로 고정", async () => {
+    mocks.findFirst.mockResolvedValue({ id: "h0", customerId: "cu-h", active: true, name: "홈닉담당", status: "ACTIVE", role: "OPERATOR", onboardedAt: NOW });
+    mocks.update.mockResolvedValue({ id: "h0", status: "ACTIVE", onboardedAt: NOW });
+    const r = await provisionInternalContact({ email: "lee@homenic.co.kr", name: "이", now: NOW, customer: homenic });
+    expect(r).toMatchObject({ ok: true, created: false, status: "ACTIVE", customerId: "cu-h" });
+    expect(mocks.update.mock.calls[0][0].data).toMatchObject({ role: "VIEWER", lastLoginAt: NOW });
+  });
+  it("같은 이메일이 다른 고객사에 등록돼 있으면 거부", async () => {
+    mocks.findFirst.mockResolvedValue({ id: "x", customerId: "cu-other", active: true, name: "n", status: "ACTIVE", role: "VIEWER" });
+    expect(await provisionInternalContact({ email: "a@homenic.co.kr", name: "a", customer: homenic })).toEqual({ ok: false, reason: "customer" });
+  });
+  it("AUTH_AUTO_APPROVE=true 면 고객사 담당자도 바로 활성", async () => {
+    process.env.AUTH_AUTO_APPROVE = "true";
+    mocks.findFirst.mockResolvedValue(null);
+    mocks.create.mockResolvedValue({ id: "h2", status: "ACTIVE", onboardedAt: null });
+    await provisionInternalContact({ email: "p@homenic.co.kr", name: "p", now: NOW, customer: homenic });
+    expect(mocks.create.mock.calls[0][0].data).toMatchObject({ status: "ACTIVE", approvedBy: "auto", role: "VIEWER" });
   });
 });
 

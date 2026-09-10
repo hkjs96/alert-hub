@@ -37,9 +37,11 @@ export async function approveAccount(formData: FormData) {
   const id = str(formData, "id");
   const role = str(formData, "role");
   if (!id || !isRole(role)) throw new Error("잘못된 요청");
+  const target = await prisma.contact.findUnique({ where: { id }, select: { customerId: true } });
   await prisma.contact.update({
     where: { id },
-    data: { status: "ACTIVE", role, approvedAt: new Date(), approvedBy: admin?.name ?? "open" },
+    // 고객사 담당자는 역할과 무관하게 조회 전용.
+    data: { status: "ACTIVE", role: target?.customerId ? "VIEWER" : role, approvedAt: new Date(), approvedBy: admin?.name ?? "open" },
   });
   revalidatePath("/admin/teams");
   revalidatePath("/admin/auth");

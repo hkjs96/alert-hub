@@ -113,6 +113,8 @@ handled. Locally, point both URLs at the same Postgres.
 
 ### 실제 고객사 투입 전 체크리스트
 
+> 사람이 할 일의 체크박스 목록은 [docs/launch-checklist.md](docs/launch-checklist.md) 에서 관리한다.
+
 1. **데모 데이터 정리** — 운영 DB에서 `npm run demo:reset`(먼저 인자 없이 돌려 목록 확인, `--yes`로 삭제).
    Vercel에서는 `DATABASE_URL`을 로컬 셸에 넣고 실행하면 된다. 시드 데모 고객사·알람·내부 데모 인원만 지운다.
 2. **`SEED_DEMO=false`** 를 Vercel 환경변수에 추가 — 빈 DB에 배포하면 데모 시드가 다시 들어가는 것을 막는다.
@@ -167,6 +169,17 @@ SSO 모드에서 내부 인원이 보는 범위:
 - 알람에 `customerId` 를 비정규화해 두고(스냅샷 체인의 고객사) 그 열로 거른다. 배포 시 시드 스크립트가 빈 값을 스냅샷에서 멱등 백필한다.
 - "전체 보기"는 팀 · 내부 인원 목록에서 관리자가 켠다(관제·리드용). open 모드(SSO 꺼짐)는 지금처럼 전부 보인다.
 - 고객사 담당자 로그인(자기 고객사만 보는 외부 계정)은 아직 없다 — 지금은 내부 인원만 로그인한다.
+
+### 고객사 담당자 로그인 (외부 계정)
+
+고객사 패널의 **담당자 로그인**에 허용 도메인(예 `homenic.co.kr`)을 넣으면, 그 도메인의 Google 계정이 SSO 로 들어와
+그 고객사 소속 **조회 전용** 계정이 된다.
+
+- 보는 것: 자기 고객사 알람만(대시보드·상세·이전 처리·런북). Ack/Resolve/뮤트 버튼은 비활성, 등록 관리 탭은 없음, Slack 버튼도 거부.
+- 가입: 내부 인원과 같은 승인 정책. 처음 로그인하면 가입 승인 대기에 "고객사 · 홈닉" 표시로 올라오고(자동 승인이면 바로 활성), 역할은 항상 조회.
+  관리자가 미리 등록해 둔 담당자(이메일 일치)는 그 행에 붙는다 = 초대.
+- 같은 이메일이 다른 고객사에 등록돼 있으면 거부한다. 도메인을 비우면 이미 발급된 세션도 다음 요청부터 막힌다.
+- 내부 허용 목록(`AUTH_ALLOWED_DOMAINS` · `AUTH_ALLOWED_EMAILS`)이 먼저다 — 거기 있으면 내부 인원, 없으면 고객사 도메인을 본다.
 
 ### 런북 · CloudWatch 딥링크
 
@@ -546,7 +559,7 @@ to let the payload be auto-detected.
 
 - **Ingest:** per-source signature verification (SNS message signatures,
   PagerDuty `X-PagerDuty-Signature`); more providers behind the same interface.
-- **Product:** 고객사 담당자 로그인(외부 계정, 자기 고객사만) → AI 메모(해결 기록 + 런북 근거, [docs/aiops-market.md](docs/aiops-market.md) 5·7절)
+- **Product:** AI 메모(해결 기록 + 런북 근거, [docs/aiops-market.md](docs/aiops-market.md) 5·7절)
   (온콜이 담당 고객사만) → 온콜 호출 사다리(문자·전화, 솔라피 — 조사 완료·보류,
   [docs/oncall-paging.md](docs/oncall-paging.md)).
 

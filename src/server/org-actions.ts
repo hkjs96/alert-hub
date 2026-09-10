@@ -63,6 +63,23 @@ export async function createCustomer(formData: FormData) {
   redirectWithId(formData, customer.id);
 }
 
+/** 고객사 담당자 로그인 허용 도메인 (쉼표 구분). 비우면 이 고객사 로그인 차단. */
+export async function updateCustomerLogin(formData: FormData) {
+  await requireRole("ADMIN");
+  const id = requireString(formData, "customerId");
+  const raw = optionalString(formData, "loginDomains");
+  const domains = (raw ?? "")
+    .split(",")
+    .map((d) => d.trim().toLowerCase().replace(/^@/, ""))
+    .filter(Boolean);
+  for (const d of domains) {
+    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(d)) throw new Error(`도메인 형식이 아닙니다: ${d}`);
+  }
+  await prisma.customer.update({ where: { id }, data: { loginDomains: domains.length ? domains.join(",") : null } });
+  revalidatePath("/admin/org");
+  revalidateBack(formData, "/admin/org");
+}
+
 export async function deleteCustomer(formData: FormData) {
   await requireRole("ADMIN");
   await prisma.customer.delete({ where: { id: requireString(formData, "id") } });

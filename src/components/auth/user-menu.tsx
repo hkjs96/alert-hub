@@ -75,7 +75,9 @@ export async function UserMenu() {
             <span className="border border-[#e0dcd3] px-[7px] py-[3px] font-mono text-[10px] font-bold tracking-[0.08em] text-[#4a5568]">
               {ROLE_LABELS[me.role]}
             </span>
-            <span className="text-[11px] text-stone-400">담당 고객사 {scope.customerNames.length}곳</span>
+            <span className="text-[11px] text-stone-400">
+              {me.customerName ? `고객사 · ${me.customerName}` : `담당 고객사 ${scope.customerNames.length}곳`}
+            </span>
           </div>
         </div>
         <div className="flex flex-col gap-2 border-b border-[#eeebe4] px-[18px] py-3.5">
