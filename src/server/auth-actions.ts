@@ -43,7 +43,7 @@ export async function approveAccount(formData: FormData) {
     // 고객사 담당자는 역할과 무관하게 조회 전용.
     data: { status: "ACTIVE", role: target?.customerId ? "VIEWER" : role, approvedAt: new Date(), approvedBy: admin?.name ?? "open" },
   });
-  revalidatePath("/admin/teams");
+  revalidatePath("/admin/access");
   revalidatePath("/admin/auth");
 }
 
@@ -55,7 +55,7 @@ export async function setSignupPolicy(formData: FormData) {
   const { setSetting, SIGNUP_AUTO_APPROVE } = await import("@/server/settings");
   await setSetting(SIGNUP_AUTO_APPROVE, mode, admin?.name ?? "open");
   revalidatePath("/admin/auth");
-  revalidatePath("/admin/teams");
+  revalidatePath("/admin/access");
 }
 
 export async function rejectAccount(formData: FormData) {
@@ -66,7 +66,7 @@ export async function rejectAccount(formData: FormData) {
     where: { id },
     data: { status: "REJECTED", approvedAt: new Date(), approvedBy: admin?.name ?? "open" },
   });
-  revalidatePath("/admin/teams");
+  revalidatePath("/admin/access");
   revalidatePath("/admin/auth");
 }
 
@@ -98,7 +98,7 @@ export async function requestApprovalPing() {
   }
   const appUrl = process.env.APP_URL?.replace(/\/+$/, "") ?? "";
   const r = await pingAdmins(
-    `:bust_in_silhouette: 가입 승인 대기 — ${me.name} <${me.email}> · 요청 권한 ${ROLE_LABELS[me.role]}${appUrl ? ` · ${appUrl}/admin/teams` : ""}`,
+    `:bust_in_silhouette: 가입 승인 대기 — ${me.name} <${me.email}> · 요청 권한 ${ROLE_LABELS[me.role]}${appUrl ? ` · ${appUrl}/admin/access` : ""}`,
   );
   if (r === "sent") await prisma.contact.update({ where: { id: me.id }, data: { approvalPingAt: new Date() } });
   redirect(`/pending?pinged=${r}`);
@@ -116,7 +116,7 @@ export async function requestRoleUpgrade(formData: FormData) {
   }
   const appUrl = process.env.APP_URL?.replace(/\/+$/, "") ?? "";
   const r = await pingAdmins(
-    `:key: 권한 요청 — ${me.name} <${me.email}> · 현재 ${ROLE_LABELS[me.role]} → 요청 ${isRole(role) ? ROLE_LABELS[role] : role} (${screen})${appUrl ? ` · ${appUrl}/admin/teams` : ""}`,
+    `:key: 권한 요청 — ${me.name} <${me.email}> · 현재 ${ROLE_LABELS[me.role]} → 요청 ${isRole(role) ? ROLE_LABELS[role] : role} (${screen})${appUrl ? ` · ${appUrl}/admin/access` : ""}`,
   );
   if (r === "sent") await prisma.contact.update({ where: { id: me.id }, data: { approvalPingAt: new Date() } });
   redirect(withParam(back, "rq", r));

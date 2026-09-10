@@ -328,7 +328,7 @@ export default async function OrgPage({
                     {selected.customer.teams.length === 0 ? (
                       <p className="px-5 py-3 text-xs text-stone-400">
                         고객사 전용 팀이 없습니다. 도메인·기능 단위로 온콜을 돌면 팀을 만들어 서비스마다 붙이세요 —
-                        내부 공용 팀은 팀 · 내부 인원에서 만듭니다.
+                        내부 공용 팀은 팀 · 온콜에서 만듭니다.
                       </p>
                     ) : (
                       <ul className="divide-y divide-stone-100">

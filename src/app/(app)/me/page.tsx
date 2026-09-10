@@ -21,14 +21,14 @@ export default async function MePage({ searchParams }: { searchParams: { saved?:
         <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-stone-900">내 프로필 · 통지 채널</h1>
         <p className="text-sm text-stone-500">
           {open
-            ? "인증 공급자가 연결되면 각자 자기 통지 채널을 여기서 관리합니다. 지금은 관리자가 팀 · 내부 인원에서 대신 입력합니다."
+            ? "인증 공급자가 연결되면 각자 자기 통지 채널을 여기서 관리합니다. 지금은 관리자가 계정 · 접근에서 대신 입력합니다."
             : "로그인하면 자기 Slack ID·전화번호를 직접 관리할 수 있습니다."}
         </p>
         <Link
-          href={open ? "/admin/teams" : "/login?next=/me"}
+          href={open ? "/admin/access" : "/login?next=/me"}
           className="inline-flex h-9 items-center border border-stone-900 bg-stone-900 px-3.5 text-[13px] font-semibold text-white"
         >
-          {open ? "팀 · 내부 인원으로" : "로그인"}
+          {open ? "계정 · 접근으로" : "로그인"}
         </Link>
       </div>
     );
