@@ -255,11 +255,15 @@ model Silence {
 // it lives in Assignment so it can attach to any level (see docs/org-model.md).
 
 model Customer {
-  id         String  @id @default(cuid())
-  name       String  @unique
+  id           String  @id @default(cuid())
+  name         String  @unique
   // Marks the pseudo-customer used for internal (non-client) systems, so
   // customerId never has to be nullable on Project.
-  isInternal Boolean @default(false)
+  isInternal   Boolean @default(false)
+  // 고객사 담당자 로그인 허용 도메인(쉼표 구분, 예 "homenic.co.kr"). 비면 이 고객사
+  // 사람은 로그인할 수 없다. 이 도메인으로 SSO 하면 이 고객사 소속 조회 계정이 된다
+  // (자기 고객사 알람만, 처리 불가).
+  loginDomains String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

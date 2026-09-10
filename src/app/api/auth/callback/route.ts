@@ -3,7 +3,7 @@ import { isEmailAllowed, readAuthConfig } from "@/lib/auth/config";
 import { decodeIdToken, exchangeCode, validateClaims } from "@/lib/auth/google";
 import { SESSION_COOKIE, SESSION_TTL_SECONDS, signSession } from "@/lib/auth/session";
 import { safeNext } from "@/lib/auth/paths";
-import { autoLinkSlack, autoVerifyEmail, provisionInternalContact } from "@/server/auth";
+import { autoLinkSlack, autoVerifyEmail, matchCustomerByEmail, provisionInternalContact } from "@/server/auth";
 import { newRef } from "@/lib/auth/ref";
 import { STATE_COOKIE, baseUrl, cookieOpts } from "../_shared";
 
@@ -54,11 +54,15 @@ export async function GET(req: NextRequest) {
     nonce: saved.nonce,
   });
   if (!claims.ok) return fail("claims", claims.reason);
-  if (!isEmailAllowed(claims.email, cfg.allowedDomains, cfg.allowedEmails)) {
+  // 내부 허용 목록에 없으면 고객사 로그인 도메인을 본다 — 매치되면 그 고객사의
+  // 조회 계정으로 들어온다(자기 고객사 알람만). 둘 다 아니면 거부.
+  const internal = isEmailAllowed(claims.email, cfg.allowedDomains, cfg.allowedEmails);
+  const customer = internal ? null : await matchCustomerByEmail(claims.email);
+  if (!internal && !customer) {
     return fail("domain", claims.email);
   }
 
-  const jit = await provisionInternalContact({ email: claims.email, name: claims.name });
+  const jit = await provisionInternalContact({ email: claims.email, name: claims.name, customer });
   if (!jit.ok) return fail(jit.reason, claims.email);
 
   await autoLinkSlack(jit.contactId, claims.email);

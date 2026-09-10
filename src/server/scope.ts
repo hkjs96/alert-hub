@@ -10,7 +10,14 @@ const chainSelect = {
 } as const;
 
 /** 인원 id 기준 스코프 (Slack 버튼처럼 세션이 없는 경로용). */
-export async function scopeForContact(contact: { id: string; role: string; seeAll?: boolean }): Promise<VisibleScope> {
+export async function scopeForContact(contact: {
+  id: string;
+  role: string;
+  seeAll?: boolean;
+  customerId?: string | null;
+}): Promise<VisibleScope> {
+  // 고객사 담당자는 자기 고객사만 — 배정·역할과 무관.
+  if (contact.customerId) return { all: false, customerIds: [contact.customerId] };
   if (contact.role === "ADMIN" || contact.seeAll) return ALL;
   const [direct, memberships] = await Promise.all([
     prisma.assignment.findMany({ where: { contactId: contact.id }, select: chainSelect }),
@@ -30,7 +37,7 @@ export async function getVisibleScope(user?: CurrentUser | null): Promise<Visibl
   if (authMode() === "open") return ALL;
   const u = user === undefined ? await getCurrentUser() : user;
   if (!u || u.status !== "ACTIVE") return { all: false, customerIds: [] };
-  return scopeForContact({ id: u.id, role: u.role, seeAll: u.seeAll });
+  return scopeForContact({ id: u.id, role: u.role, seeAll: u.seeAll, customerId: u.customerId });
 }
 
 /** 액션 가드: 알람이 내 스코프 밖이면 forbidden. open 모드는 통과. */

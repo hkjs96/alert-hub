@@ -23,6 +23,9 @@ export interface CurrentUser {
   status: AccountStatus;
   /** 배정과 무관하게 모든 고객사를 본다 (관제·리드). */
   seeAll: boolean;
+  /** 고객사 담당자 계정이면 그 고객사. 내부 인원은 null. 역할은 항상 VIEWER 로 취급된다. */
+  customerId: string | null;
+  customerName: string | null;
   onboardedAt: Date | null;
   timezone: string | null;
   createdAt: Date;
@@ -54,8 +57,14 @@ export async function getSession(): Promise<SessionPayload | null> {
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const s = await getSession();
   if (!s) return null;
-  const c = await prisma.contact.findUnique({ where: { id: s.sub } });
-  if (!c || !c.active || c.customerId !== null || c.status === "REJECTED") return null;
+  const c = await prisma.contact.findUnique({
+    where: { id: s.sub },
+    include: { customer: { select: { name: true, loginDomains: true } } },
+  });
+  if (!c || !c.active || c.status === "REJECTED") return null;
+  // 고객사 담당자: 그 고객사에 로그인 도메인이 켜져 있을 때만 세션을 인정한다 — 관리자가
+  // 도메인을 비우면 발급된 세션도 즉시 무효.
+  if (c.customerId !== null && !(c.customer?.loginDomains ?? "").trim()) return null;
   return {
     id: c.id,
     name: c.name,
@@ -63,9 +72,11 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     department: c.department,
     slackId: c.slackId,
     phone: c.phone,
-    role: c.role,
+    role: c.customerId === null ? c.role : "VIEWER",
     status: c.status,
-    seeAll: c.seeAll,
+    seeAll: c.customerId === null && c.seeAll,
+    customerId: c.customerId,
+    customerName: c.customer?.name ?? null,
     onboardedAt: c.onboardedAt,
     timezone: c.timezone,
     createdAt: c.createdAt,
@@ -130,8 +141,37 @@ export async function requireSessionUser(): Promise<CurrentUser | null> {
 }
 
 export type JitResult =
-  | { ok: true; contactId: string; created: boolean; status: AccountStatus; onboarded: boolean }
+  | { ok: true; contactId: string; created: boolean; status: AccountStatus; onboarded: boolean; customerId: string | null }
   | { ok: false; reason: "inactive" | "customer" | "rejected" };
+
+function domainOf(email: string): string {
+  return email.toLowerCase().split("@")[1] ?? "";
+}
+
+function parseDomainList(raw: string | null | undefined): string[] {
+  return (raw ?? "")
+    .split(",")
+    .map((d) => d.trim().toLowerCase().replace(/^@/, ""))
+    .filter(Boolean);
+}
+
+/**
+ * 이메일 도메인으로 로그인이 허용된 고객사를 찾는다. 도메인 목록을 켠 고객사가
+ * 없거나 매치가 없으면 null. 여러 고객사가 같은 도메인을 켰다면 먼저 만든 쪽.
+ */
+export async function matchCustomerByEmail(email: string): Promise<{ id: string; name: string } | null> {
+  const domain = domainOf(email);
+  if (!domain) return null;
+  const rows = await prisma.customer.findMany({
+    where: { NOT: { loginDomains: null } },
+    select: { id: true, name: true, loginDomains: true },
+    orderBy: { createdAt: "asc" },
+  });
+  for (const c of rows) {
+    if (parseDomainList(c.loginDomains).includes(domain)) return { id: c.id, name: c.name };
+  }
+  return null;
+}
 
 /**
  * JIT 프로비저닝: 이메일로 내부 인원을 찾고, 없으면 만든다.
@@ -146,9 +186,12 @@ export async function provisionInternalContact(p: {
   email: string;
   name: string;
   now?: Date;
+  /** 허용 도메인 매치로 찾은 고객사 — 있으면 이 사람은 그 고객사의 조회 계정이 된다. */
+  customer?: { id: string; name: string } | null;
 }): Promise<JitResult> {
   const now = p.now ?? new Date();
   const cfg = readAuthConfig();
+  if (p.customer) return provisionCustomerContact({ ...p, customer: p.customer, now, autoApprove: cfg.autoApprove });
   // 관리자가 한 명도 없으면 첫 로그인이 관리자 — 허용 목록이 이미 문을 지키므로
   // 잠긴 채 시작하는 것보다 낫다. 진단 화면이 이 상태를 경고한다.
   const noAdmin = (await countActiveAdmins()) === 0;
@@ -182,6 +225,7 @@ export async function provisionInternalContact(p: {
       created: false,
       status: updated.status,
       onboarded: Boolean(updated.onboardedAt),
+      customerId: null,
     };
   }
   const created = await prisma.contact.create({
@@ -197,7 +241,59 @@ export async function provisionInternalContact(p: {
           : { role: "OPERATOR", status: "PENDING" }),
     },
   });
-  return { ok: true, contactId: created.id, created: true, status: created.status, onboarded: false };
+  return { ok: true, contactId: created.id, created: true, status: created.status, onboarded: false, customerId: null };
+}
+
+/**
+ * 고객사 담당자 JIT: 그 고객사의 기존 담당자(이메일 일치)면 그 행에 붙고, 없으면
+ * 고객사 소속 VIEWER 로 만든다. 승인 정책은 내부 인원과 같다(PENDING / 자동 승인).
+ * 다른 고객사에 같은 이메일이 등록돼 있으면 거부("customer") — 소속이 애매한 계정은 열지 않는다.
+ */
+async function provisionCustomerContact(p: {
+  email: string;
+  name: string;
+  now: Date;
+  customer: { id: string; name: string };
+  autoApprove: boolean;
+}): Promise<JitResult> {
+  const existing = await prisma.contact.findFirst({
+    where: { email: { equals: p.email, mode: "insensitive" } },
+    orderBy: [{ customerId: "asc" }, { createdAt: "asc" }],
+  });
+  if (existing) {
+    if (existing.customerId !== p.customer.id) return { ok: false, reason: "customer" };
+    if (!existing.active) return { ok: false, reason: "inactive" };
+    if (existing.status === "REJECTED") return { ok: false, reason: "rejected" };
+    const autoActivate = p.autoApprove && existing.status === "PENDING";
+    const updated = await prisma.contact.update({
+      where: { id: existing.id },
+      data: {
+        lastLoginAt: p.now,
+        role: "VIEWER",
+        ...(existing.name.trim() ? {} : { name: p.name }),
+        ...(autoActivate ? { status: "ACTIVE", approvedAt: p.now, approvedBy: "auto" } : {}),
+      },
+    });
+    return {
+      ok: true,
+      contactId: updated.id,
+      created: false,
+      status: updated.status,
+      onboarded: Boolean(updated.onboardedAt),
+      customerId: p.customer.id,
+    };
+  }
+  const created = await prisma.contact.create({
+    data: {
+      name: p.name,
+      email: p.email,
+      customerId: p.customer.id,
+      role: "VIEWER",
+      lastLoginAt: p.now,
+      ...(p.autoApprove ? { status: "ACTIVE", approvedAt: p.now, approvedBy: "auto" } : { status: "PENDING" }),
+    },
+  });
+  return { ok: true, contactId: created.id, created: true, status: created.status, onboarded: false, customerId: p.customer.id };
 }
 
 /**

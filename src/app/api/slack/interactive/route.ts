@@ -59,7 +59,7 @@ export async function POST(req: Request) {
   // 누가 눌렀나
   const contact = await prisma.contact.findFirst({
     where: { slackId: payload.user.id, active: true, status: "ACTIVE" },
-    select: { id: true, name: true, role: true, seeAll: true },
+    select: { id: true, name: true, role: true, seeAll: true, customerId: true },
   });
   if (!contact) {
     await reply(
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
     );
     return new NextResponse(null, { status: 200 });
   }
-  if (!atLeast(contact.role, "OPERATOR")) {
+  if (contact.customerId || !atLeast(contact.role, "OPERATOR")) {
     await reply(ephemeral(`${contact.name} 님은 조회 권한이라 알람을 처리할 수 없습니다.`));
     return new NextResponse(null, { status: 200 });
   }

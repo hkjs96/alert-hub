@@ -26,8 +26,8 @@ export const AUTH_ERRORS: Record<string, AuthErrorSpec> = {
   customer: {
     tone: "err",
     tag: "접근 불가",
-    title: "내부 인원 계정이 아닙니다",
-    body: "이 이메일은 고객사 담당자로 등록돼 있습니다. 내부 인원만 로그인할 수 있으니 관리자에게 소속 변경을 요청해 주세요.",
+    title: "이 계정으로는 로그인할 수 없습니다",
+    body: "이 이메일은 로그인이 허용되지 않은 고객사 담당자이거나, 다른 고객사에 등록돼 있습니다. 관리자에게 고객사 로그인 도메인 등록 또는 소속 확인을 요청해 주세요.",
     primary: { label: "다른 계정으로 로그인", href: "/api/auth/login" },
     secondary: { label: "지원 요청", href: "/login?help=1" },
   },

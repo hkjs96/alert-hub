@@ -170,6 +170,17 @@ SSO 모드에서 내부 인원이 보는 범위:
 - "전체 보기"는 팀 · 내부 인원 목록에서 관리자가 켠다(관제·리드용). open 모드(SSO 꺼짐)는 지금처럼 전부 보인다.
 - 고객사 담당자 로그인(자기 고객사만 보는 외부 계정)은 아직 없다 — 지금은 내부 인원만 로그인한다.
 
+### 고객사 담당자 로그인 (외부 계정)
+
+고객사 패널의 **담당자 로그인**에 허용 도메인(예 `homenic.co.kr`)을 넣으면, 그 도메인의 Google 계정이 SSO 로 들어와
+그 고객사 소속 **조회 전용** 계정이 된다.
+
+- 보는 것: 자기 고객사 알람만(대시보드·상세·이전 처리·런북). Ack/Resolve/뮤트 버튼은 비활성, 등록 관리 탭은 없음, Slack 버튼도 거부.
+- 가입: 내부 인원과 같은 승인 정책. 처음 로그인하면 가입 승인 대기에 "고객사 · 홈닉" 표시로 올라오고(자동 승인이면 바로 활성), 역할은 항상 조회.
+  관리자가 미리 등록해 둔 담당자(이메일 일치)는 그 행에 붙는다 = 초대.
+- 같은 이메일이 다른 고객사에 등록돼 있으면 거부한다. 도메인을 비우면 이미 발급된 세션도 다음 요청부터 막힌다.
+- 내부 허용 목록(`AUTH_ALLOWED_DOMAINS` · `AUTH_ALLOWED_EMAILS`)이 먼저다 — 거기 있으면 내부 인원, 없으면 고객사 도메인을 본다.
+
 ### 런북 · CloudWatch 딥링크
 
 서비스와 라우팅 규칙에 **런북**(링크 + markdown 본문)을 둔다. 규칙 런북이 있으면 그 규칙에 걸린 알람은 규칙 런북이 우선(더 구체적).
@@ -548,7 +559,7 @@ to let the payload be auto-detected.
 
 - **Ingest:** per-source signature verification (SNS message signatures,
   PagerDuty `X-PagerDuty-Signature`); more providers behind the same interface.
-- **Product:** 고객사 담당자 로그인(외부 계정, 자기 고객사만) → AI 메모(해결 기록 + 런북 근거, [docs/aiops-market.md](docs/aiops-market.md) 5·7절)
+- **Product:** AI 메모(해결 기록 + 런북 근거, [docs/aiops-market.md](docs/aiops-market.md) 5·7절)
   (온콜이 담당 고객사만) → 온콜 호출 사다리(문자·전화, 솔라피 — 조사 완료·보류,
   [docs/oncall-paging.md](docs/oncall-paging.md)).
 
