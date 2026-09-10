@@ -96,7 +96,7 @@ export async function UserMenu() {
           </Link>
           {me.role === "ADMIN" ? (
             <Link href="/admin/auth" className="flex items-center px-[18px] py-2.5 text-[13px] font-medium text-stone-900 hover:bg-stone-50">
-              인증 설정 진단
+              시스템 진단
             </Link>
           ) : null}
           <form action="/api/auth/logout" method="post" className="mt-1.5 border-t border-[#f4f1ea]">

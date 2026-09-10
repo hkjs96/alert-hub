@@ -33,7 +33,7 @@ export default async function ContactsPage({
         <p className="mt-1 text-sm text-stone-500">
           고객사 담당자와 내부 인원을 한 번에 검색합니다. 고객사 담당자는{" "}
           <Link href="/admin/org" className="text-indigo-600 underline">조직 트리</Link>의 고객사 패널에서,
-          내부 인원과 팀은 <Link href="/admin/teams" className="text-indigo-600 underline">팀 · 내부 인원</Link>에서 관리합니다.
+          내부 인원은 <Link href="/admin/access" className="text-indigo-600 underline">계정 · 접근</Link>, 팀은 <Link href="/admin/teams" className="text-indigo-600 underline">팀 · 온콜</Link>에서 관리합니다.
         </p>
       </div>
 

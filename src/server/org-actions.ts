@@ -436,6 +436,7 @@ export async function moveAssignment(formData: FormData) {
 
 function revalidateTeams(formData: FormData) {
   revalidatePath("/admin/teams");
+  revalidatePath("/admin/access");
   revalidatePath("/admin/org");
   revalidateBack(formData, "/admin/teams");
 }

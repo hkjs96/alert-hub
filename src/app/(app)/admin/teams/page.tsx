@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { createTeam } from "@/server/org-actions";
-import { ContactRoster } from "@/components/admin/contact-roster";
 import { TeamEditor } from "@/components/admin/team-editor";
 import { PendingButton } from "@/components/pending-button";
-import { PendingApprovals } from "@/components/admin/pending-approvals";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +10,10 @@ const control =
   "h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400";
 
 /**
- * 팀 · 내부 인원 — MSP 쪽 사람과 묶음을 다루는 곳. 고객사 담당자는 조직
- * 트리의 고객사 패널로 옮겨갔고, 여기엔 (1) 어느 고객사에나 배정할 수 있는
- * 내부 공용 팀, (2) 고객사 전용 팀의 요약, (3) 내부 인원 명단이 남는다.
+ * 팀 · 온콜 — 사람 묶음과 순번, 시간대 온콜(시프트). (1) 어느 고객사에나 배정할 수
+ * 있는 내부 공용 팀, (2) 고객사 전용 팀의 요약. 인원·역할·승인은 계정 · 접근에.
  */
-export default async function TeamsPage({ searchParams }: { searchParams: { vreq?: string } }) {
+export default async function TeamsPage() {
   const teams = await prisma.team.findMany({
     orderBy: [{ customerId: "asc" }, { name: "asc" }],
     include: { customer: true, _count: { select: { members: true, assignments: true } } },
@@ -28,17 +25,16 @@ export default async function TeamsPage({ searchParams }: { searchParams: { vreq
   return (
     <div className="space-y-[26px]">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-stone-900">팀 · 내부 인원</h1>
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-stone-900">팀 · 온콜</h1>
         <p className="mt-1 text-sm text-stone-500">
           팀은 알람 처리 순서에 한 칸으로 들어가고, 해석할 때 팀 순서대로 멤버가 펼쳐집니다.
           인프라팀 · DB팀처럼 기능 단위로 나누는 고객사는 팀을, 프로젝트 단위로 나누는 고객사는
           개인 배정을 쓰면 됩니다. 주간 · 야간 · 주말로 당번이 다르면 팀 안의 <b>시간대 온콜</b>(시프트 · 대체 근무)로
-          나눕니다. 고객사 담당자는{" "}
+          나눕니다. 팀에 넣을 내부 인원은{" "}
+          <Link href="/admin/access" className="text-indigo-600 underline">계정 · 접근</Link>에서, 고객사 담당자는{" "}
           <Link href="/admin/org" className="text-indigo-600 underline">조직 트리</Link>에서 관리합니다.
         </p>
       </div>
-
-      <PendingApprovals />
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-baseline gap-3">
@@ -108,13 +104,6 @@ export default async function TeamsPage({ searchParams }: { searchParams: { vreq
         )}
       </section>
 
-      <section className="space-y-2">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h2 className="text-sm font-semibold text-stone-900">내부 인원</h2>
-          <span className="text-xs text-stone-400">고객사에 속하지 않은 MSP 담당자</span>
-        </div>
-        <ContactRoster scope="internal" back={back} vreq={searchParams.vreq} />
-      </section>
     </div>
   );
 }

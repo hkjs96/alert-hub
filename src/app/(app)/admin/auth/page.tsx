@@ -7,9 +7,6 @@ import { authTest, defaultBotChannel, isBotConfigured } from "@/lib/notify/slack
 import { emailNotifier } from "@/lib/notify/email";
 import { isSmsConfigured } from "@/lib/notify/twilio";
 import { getSignupPolicy } from "@/server/settings";
-import { setSignupPolicy } from "@/server/auth-actions";
-import { PendingApprovals } from "@/components/admin/pending-approvals";
-import { PendingButton } from "@/components/pending-button";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +18,16 @@ function fmt(d: Date | null): string {
  * SSO 설정 진단 (A6). 로그인 페이지에서 뺀 운영 정보의 제자리 — 환경변수 상태,
  * 허용 목록, 미설정 경고, 승인 대기 수. 관리자 전용(등록 관리 레이아웃이 가른다).
  */
+const GROUPS: { title: string; hint: string; items: string[] }[] = [
+  {
+    title: "인증 공급자",
+    hint: "Google SSO · 허용 목록 · 세션",
+    items: ["공급자", "허용 도메인", "허용 이메일", "리디렉션 URI", "세션 수명", "관리자", "가입 방식", "승인 대기", "최근 로그인"],
+  },
+  { title: "통지 채널", hint: "Slack · 이메일 · 문자", items: ["Slack 봇", "Slack 버튼", "Slack 웹훅", "이메일 서버", "SMS 공급자"] },
+  { title: "수집 · 웹훅", hint: "알람이 들어오는 입구", items: ["웹훅 인증"] },
+];
+
 export default async function AuthDiagPage() {
   const cfg = readAuthConfig();
   const policy = await getSignupPolicy();
@@ -34,7 +41,8 @@ export default async function AuthDiagPage() {
   const redirectUri = appUrl ? `${appUrl}/api/auth/callback` : null;
   const openAllow = cfg.allowedDomains.length === 0 && cfg.allowedEmails.length === 0;
 
-  const rows: { item: string; tone: AuthTone; state: string; value: string; action?: { label: string; href: string } }[] = [
+  type Row = { item: string; tone: AuthTone; state: string; value: string; action?: { label: string; href: string } };
+  const rows: Row[] = [
     {
       item: "공급자",
       tone: cfg.enabled ? "ok" : "warn",
@@ -63,9 +71,9 @@ export default async function AuthDiagPage() {
       value: admins
         ? cfg.bootstrapAdmins.length
           ? `부트스트랩: ${cfg.bootstrapAdmins.join(", ")}`
-          : "팀 · 내부 인원에서 역할로 관리"
+          : "계정 · 접근에서 역할로 관리"
         : "관리자가 없으므로 다음 첫 로그인 계정이 관리자가 됩니다 — 본인이 먼저 로그인하세요",
-      action: { label: "인원 보기", href: "/admin/teams" },
+      action: { label: "인원 보기", href: "/admin/access" },
     },
     {
       item: "가입 방식",
@@ -74,9 +82,9 @@ export default async function AuthDiagPage() {
       value:
         (policy.autoApprove
           ? "허용 목록·고객사 도메인 계정은 로그인 즉시 활성(내부는 온콜 엔지니어, 고객사는 조회)"
-          : "처음 로그인한 계정은 승인 대기 → 관리자가 아래에서 승인") +
+          : "처음 로그인한 계정은 승인 대기 → 관리자가 승인") +
         (policy.source === "setting" ? " · 화면에서 설정함" : policy.source === "env" ? " · AUTH_AUTO_APPROVE 환경변수" : " · 기본값"),
-      action: { label: "바꾸기", href: "#signup" },
+      action: { label: "바꾸기", href: "/admin/access#signup" },
     },
     {
       item: "리디렉션 URI",
@@ -94,8 +102,8 @@ export default async function AuthDiagPage() {
       item: "승인 대기",
       tone: pending ? "warn" : "ok",
       state: pending ? `${pending}명` : "없음",
-      value: pending ? "팀 · 내부 인원에서 승인·거절" : "대기 중인 가입 요청 없음",
-      action: pending ? { label: "승인하기", href: "/admin/teams#pending" } : undefined,
+      value: pending ? "계정 · 접근에서 승인·거절" : "대기 중인 가입 요청 없음",
+      action: pending ? { label: "승인하기", href: "/admin/access#pending" } : undefined,
     },
     {
       item: "Slack 봇",
@@ -161,43 +169,53 @@ export default async function AuthDiagPage() {
     <div className="space-y-5">
       <div>
         <div className="flex items-center gap-2.5">
-          <h2 className="text-[15px] font-semibold tracking-[-0.015em] text-stone-900">인증 공급자</h2>
+          <h2 className="text-[15px] font-semibold tracking-[-0.015em] text-stone-900">시스템 진단</h2>
           <span className="border border-[#e0dcd3] px-[7px] py-[3px] font-mono text-[10px] font-bold tracking-[0.08em] text-[#b54708]">
             관리자 전용
           </span>
         </div>
         <p className="mt-2 text-xs text-stone-500">
-          환경변수 상태, 도메인 허용 목록, 미설정 경고는 이 화면에만 나타납니다. 값은 Vercel 환경변수에서 바꾸고 재배포합니다
-          (README · <code className="font-mono">npm run env:push</code>).
+          환경변수로 정해지는 연결 상태와 미설정 경고. 값은 Vercel 환경변수에서 바꾸고 재배포합니다
+          (README · <code className="font-mono">npm run env:push</code>). 가입 방식·승인·인원은{" "}
+          <Link href="/admin/access" className="text-indigo-600 underline">계정 · 접근</Link>에서 다룹니다.
         </p>
       </div>
 
-      <div className="border border-stone-200 bg-white">
-        <div className="grid h-8 grid-cols-[196px_128px_1fr_168px] items-center gap-3.5 border-b border-[#eeebe4] px-5 font-mono text-[10px] font-bold tracking-[0.11em] text-stone-400">
-          <span>항목</span>
-          <span>상태</span>
-          <span>값 · 비고</span>
-          <span className="text-right">동작</span>
-        </div>
-        {rows.map((r) => (
-          <div key={r.item} className="grid grid-cols-[196px_128px_1fr_168px] items-center gap-3.5 border-b border-[#f4f1ea] px-5 py-3.5">
-            <span className="text-[13px] font-medium text-stone-900">{r.item}</span>
-            <ToneLabel tone={r.tone}>{r.state}</ToneLabel>
-            <span className="truncate font-mono text-xs text-stone-500" title={r.value}>
-              {r.value}
-            </span>
-            <div className="flex justify-end">
-              {r.action ? (
-                <Link
-                  href={r.action.href}
-                  className="inline-flex h-7 items-center border border-stone-200 bg-white px-3 text-xs font-medium text-stone-900 hover:border-stone-400"
-                >
-                  {r.action.label}
-                </Link>
-              ) : null}
-            </div>
+      {GROUPS.map((g) => (
+        <div key={g.title} className="border border-stone-200 bg-white">
+          <div className="flex items-baseline gap-2 border-b border-stone-200 px-5 py-3">
+            <h3 className="text-[13px] font-semibold text-stone-900">{g.title}</h3>
+            <span className="text-xs text-stone-400">{g.hint}</span>
           </div>
-        ))}
+          <div className="grid h-8 grid-cols-[196px_128px_1fr_168px] items-center gap-3.5 border-b border-[#eeebe4] px-5 font-mono text-[10px] font-bold tracking-[0.11em] text-stone-400">
+            <span>항목</span>
+            <span>상태</span>
+            <span>값 · 비고</span>
+            <span className="text-right">동작</span>
+          </div>
+          {rows
+            .filter((r) => g.items.includes(r.item))
+            .map((r) => (
+              <div key={r.item} className="grid grid-cols-[196px_128px_1fr_168px] items-center gap-3.5 border-b border-[#f4f1ea] px-5 py-3.5">
+                <span className="text-[13px] font-medium text-stone-900">{r.item}</span>
+                <ToneLabel tone={r.tone}>{r.state}</ToneLabel>
+                <span className="truncate font-mono text-xs text-stone-500" title={r.value}>
+                  {r.value}
+                </span>
+                <div className="flex justify-end">
+                  {r.action ? (
+                    <Link
+                      href={r.action.href}
+                      className="inline-flex h-7 items-center border border-stone-200 bg-white px-3 text-xs font-medium text-stone-900 hover:border-stone-400"
+                    >
+                      {r.action.label}
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          {g.title === "인증 공급자" ? (
+            <>
         {!cfg.enabled ? (
           <div className="flex items-center gap-2.5 px-5 py-3.5">
             <ToneLabel tone="warn">주의</ToneLabel>
@@ -215,39 +233,10 @@ export default async function AuthDiagPage() {
             </span>
           </div>
         ) : null}
-      </div>
-
-      <section id="signup" className="border border-stone-200 bg-white">
-        <div className="flex flex-wrap items-baseline gap-2 border-b border-stone-200 px-5 py-3">
-          <h2 className="text-[13px] font-semibold text-stone-900">가입 방식</h2>
-          <span className="text-xs text-stone-400">
-            처음 SSO 로그인한 계정(내부 허용 목록 · 고객사 로그인 도메인)을 어떻게 받을지. 여기서 바꾸면 환경변수보다 우선합니다.
-          </span>
+            </>
+          ) : null}
         </div>
-        <form action={setSignupPolicy} className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-4 text-sm">
-          <label className="inline-flex cursor-pointer items-center gap-2 text-stone-800">
-            <input type="radio" name="mode" value="off" defaultChecked={!policy.autoApprove} className="accent-stone-900" />
-            승인제 <span className="text-xs text-stone-400">— 승인 대기에 올라오고 관리자가 승인해야 활성</span>
-          </label>
-          <label className="inline-flex cursor-pointer items-center gap-2 text-stone-800">
-            <input type="radio" name="mode" value="on" defaultChecked={policy.autoApprove} className="accent-stone-900" />
-            자동 승인 <span className="text-xs text-stone-400">— 허용된 계정은 로그인 즉시 활성</span>
-          </label>
-          <PendingButton
-            pendingLabel="저장 중…"
-            className="inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700"
-          >
-            저장
-          </PendingButton>
-          <span className="basis-full text-xs text-stone-400">
-            현재: {policy.autoApprove ? "자동 승인" : "승인제"} ·{" "}
-            {policy.source === "setting" ? "화면에서 설정한 값" : policy.source === "env" ? "AUTH_AUTO_APPROVE 환경변수 값" : "기본값(승인제)"}
-            . 부트스트랩 관리자(AUTH_BOOTSTRAP_ADMINS)와 관리자가 미리 등록한 인원은 어느 쪽이든 바로 활성입니다.
-          </span>
-        </form>
-      </section>
-
-      <PendingApprovals always />
+      ))}
     </div>
   );
 }

@@ -105,7 +105,7 @@ export async function RoutingRulesEditor({ customerId, back }: { customerId: str
 
       {teams.length === 0 ? (
         <p className="border-t border-stone-100 px-5 py-3 text-xs text-stone-400">
-          규칙을 만들려면 먼저 팀이 필요합니다 (위 “이 고객사의 팀” 또는 팀 · 내부 인원).
+          규칙을 만들려면 먼저 팀이 필요합니다 (위 “이 고객사의 팀” 또는 팀 · 온콜).
         </p>
       ) : (
         <form action={createRoutingRule} className="flex flex-wrap items-end gap-2 border-t border-stone-100 px-5 py-3 text-sm">

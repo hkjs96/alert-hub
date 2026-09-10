@@ -32,7 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <NavTab
             href="/admin/org"
             label="조직 · 담당자 관리"
-            pattern="^/admin(?!/(escalation|contacts|silences|teams|auth))"
+            pattern="^/admin(?!/(escalation|contacts|silences|teams|auth|access))"
             className={TAB_BASE}
             activeClassName={TAB_ACTIVE}
             inactiveClassName={TAB_IDLE}
@@ -55,15 +55,23 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           />
           <NavTab
             href="/admin/teams"
-            label="팀 · 내부 인원"
-            pattern="^/admin/(teams|contacts)"
+            label="팀 · 온콜"
+            pattern="^/admin/teams"
+            className={TAB_BASE}
+            activeClassName={TAB_ACTIVE}
+            inactiveClassName={TAB_IDLE}
+          />
+          <NavTab
+            href="/admin/access"
+            label="계정 · 접근"
+            pattern="^/admin/(access|contacts)"
             className={TAB_BASE}
             activeClassName={TAB_ACTIVE}
             inactiveClassName={TAB_IDLE}
           />
           <NavTab
             href="/admin/auth"
-            label="인증"
+            label="시스템 진단"
             pattern="^/admin/auth"
             className={TAB_BASE}
             activeClassName={TAB_ACTIVE}
