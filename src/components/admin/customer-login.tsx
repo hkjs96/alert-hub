@@ -14,23 +14,17 @@ const overline = "font-mono text-[11px] uppercase tracking-[0.06em] text-stone-4
 export function CustomerLoginEditor({
   customer,
   back,
+  variant = "section",
 }: {
   customer: { id: string; name: string; loginDomains: string | null; portalGrants: string | null };
   back: string;
+  /** "inline" 은 목록 행 안에 펼쳐 쓰는 형태 — 바깥 카드·제목 없이 폼만. */
+  variant?: "section" | "inline";
 }) {
   const on = Boolean(customer.loginDomains);
   const granted = parseGrants(customer.portalGrants);
-  return (
-    <section className="border border-stone-200 bg-white">
-      <div className="flex flex-wrap items-baseline gap-2 border-b border-stone-200 px-5 py-3">
-        <h2 className={overline}>담당자 로그인 · 권한</h2>
-        <span className="text-xs text-stone-400">
-          {on
-            ? `${customer.loginDomains} 계정이 로그인하면 ${customer.name} 알람만 조회 · ${describeGrants(customer.portalGrants)}`
-            : "꺼짐 — 이 고객사 사람은 로그인할 수 없습니다"}
-        </span>
-      </div>
-      <form action={updateCustomerLogin} className="space-y-4 p-5 text-sm">
+  const form = (
+      <form action={updateCustomerLogin} className={`space-y-4 text-sm ${variant === "section" ? "p-5" : "pt-3"}`}>
         <input type="hidden" name="customerId" value={customer.id} />
         <input type="hidden" name="back" value={back} />
 
@@ -78,6 +72,19 @@ export function CustomerLoginEditor({
           </span>
         </div>
       </form>
+  );
+  if (variant === "inline") return form;
+  return (
+    <section className="border border-stone-200 bg-white">
+      <div className="flex flex-wrap items-baseline gap-2 border-b border-stone-200 px-5 py-3">
+        <h2 className={overline}>담당자 로그인 · 권한</h2>
+        <span className="text-xs text-stone-400">
+          {on
+            ? `${customer.loginDomains} 계정이 로그인하면 ${customer.name} 알람만 조회 · ${describeGrants(customer.portalGrants)}`
+            : "꺼짐 — 이 고객사 사람은 로그인할 수 없습니다"}
+        </span>
+      </div>
+      {form}
     </section>
   );
 }
