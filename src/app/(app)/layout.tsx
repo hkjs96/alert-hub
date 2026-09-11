@@ -4,6 +4,7 @@ import { NavTab } from "@/components/nav-tab";
 import { PipelineHealth } from "@/components/pipeline-health";
 import { UserMenu } from "@/components/auth/user-menu";
 import { authMode, getCurrentUser } from "@/server/auth";
+import { parseGrants } from "@/lib/portal";
 
 /**
  * 앱 셸 — 로그인된(또는 SSO 미연결로 열린) 상태에서만 그려진다. 승인 대기
@@ -37,7 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               {me?.customerId ? (
                 <NavTab
                   href="/portal"
-                  label="우리 회사"
+                  label={`${me.customerName ?? "고객사"} ${parseGrants(me.portalGrants).length ? "설정" : "정보"}`}
                   pattern="^/portal"
                   className="flex h-[52px] items-center"
                   activeClassName="font-semibold text-stone-900 shadow-[inset_0_-2px_0_#1b1a17]"
