@@ -6,6 +6,7 @@ import { PendingApprovals } from "@/components/admin/pending-approvals";
 import { ContactRoster } from "@/components/admin/contact-roster";
 import { PendingButton } from "@/components/pending-button";
 import { describeGrants } from "@/lib/portal";
+import { CustomerLoginEditor } from "@/components/admin/customer-login";
 
 export const dynamic = "force-dynamic";
 
@@ -80,27 +81,35 @@ export default async function AccessPage({ searchParams }: { searchParams: { vre
 
       <section className="space-y-2">
         <div className="flex flex-wrap items-baseline gap-3">
-          <h2 className="text-sm font-semibold text-stone-900">고객사 담당자 로그인</h2>
+          <h2 className="text-sm font-semibold text-stone-900">고객사 담당자 로그인 · 권한</h2>
           <span className="text-xs text-stone-400">
-            도메인을 켠 고객사 {withLogin.length}곳 / {customers.length}곳 · 도메인과 쓰기 권한은 각 고객사 패널의 “담당자 로그인 · 권한”에서 편집
+            도메인을 켠 고객사 {withLogin.length}곳 / {customers.length}곳 · 행을 펼쳐 허용 도메인과 쓰기 권한을 여기서 바로 켭니다
           </span>
         </div>
         <ul className="divide-y divide-stone-200 border border-stone-200 bg-white text-sm">
           {customers.map((c) => (
-            <li key={c.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
-              <span className="font-medium text-stone-900">{c.name}</span>
-              {c.loginDomains ? (
-                <>
-                  <span className="font-mono text-xs text-stone-700">@{c.loginDomains.split(",").join(" · @")}</span>
-                  <span className="border border-stone-200 px-1 font-mono text-[11px] text-stone-500">{describeGrants(c.portalGrants)}</span>
-                </>
-              ) : (
-                <span className="text-xs text-stone-400">로그인 꺼짐</span>
-              )}
-              <span className="text-xs text-stone-400">담당자 {c._count.contacts}명</span>
-              <Link href={`/admin/org?level=customer&id=${c.id}`} className="ml-auto text-xs text-indigo-600 underline">
-                고객사 패널 →
-              </Link>
+            <li key={c.id} className="px-4 py-2.5">
+              <details>
+                <summary className="flex cursor-pointer flex-wrap items-center gap-3">
+                  <span className="font-medium text-stone-900">{c.name}</span>
+                  {c.loginDomains ? (
+                    <>
+                      <span className="font-mono text-xs text-stone-700">@{c.loginDomains.split(",").join(" · @")}</span>
+                      <span className="border border-stone-200 px-1 font-mono text-[11px] text-stone-500">
+                        {describeGrants(c.portalGrants)}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-xs text-stone-400">로그인 꺼짐</span>
+                  )}
+                  <span className="text-xs text-stone-400">담당자 {c._count.contacts}명</span>
+                  <span className="ml-auto text-xs text-indigo-600">도메인 · 권한 편집 ▾</span>
+                </summary>
+                <CustomerLoginEditor customer={c} back={back} variant="inline" />
+                <Link href={`/admin/org?level=customer&id=${c.id}`} className="text-xs text-indigo-600 underline">
+                  고객사 패널에서 보기 →
+                </Link>
+              </details>
             </li>
           ))}
           {customers.length === 0 ? <li className="px-4 py-3 text-xs text-stone-400">고객사가 없습니다.</li> : null}
