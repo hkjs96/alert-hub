@@ -7,6 +7,7 @@ import { requireRole } from "@/server/auth";
 import { isRole } from "@/lib/auth/roles";
 import { normalizePhone } from "@/lib/phone";
 import { assertNotLastAdmin } from "@/server/auth-actions";
+import { formatGrants, isPortalGrant } from "@/lib/portal";
 import type { ScopeLevel } from "@/lib/org/resolve";
 
 // Mutations behind the admin UI. Plain server actions driven by <form> posts —
@@ -63,7 +64,10 @@ export async function createCustomer(formData: FormData) {
   redirectWithId(formData, customer.id);
 }
 
-/** 고객사 담당자 로그인 허용 도메인 (쉼표 구분). 비우면 이 고객사 로그인 차단. */
+/**
+ * 고객사 담당자 로그인: 허용 도메인(쉼표 구분)과 포털 쓰기 권한. 도메인을 비우면
+ * 이 고객사 로그인 차단, 권한을 비우면 읽기 전용(기본).
+ */
 export async function updateCustomerLogin(formData: FormData) {
   await requireRole("ADMIN");
   const id = requireString(formData, "customerId");
@@ -75,8 +79,13 @@ export async function updateCustomerLogin(formData: FormData) {
   for (const d of domains) {
     if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(d)) throw new Error(`도메인 형식이 아닙니다: ${d}`);
   }
-  await prisma.customer.update({ where: { id }, data: { loginDomains: domains.length ? domains.join(",") : null } });
+  const grants = formatGrants(formData.getAll("grant").map(String).filter(isPortalGrant));
+  await prisma.customer.update({
+    where: { id },
+    data: { loginDomains: domains.length ? domains.join(",") : null, portalGrants: grants },
+  });
   revalidatePath("/admin/org");
+  revalidatePath("/portal");
   revalidateBack(formData, "/admin/org");
 }
 

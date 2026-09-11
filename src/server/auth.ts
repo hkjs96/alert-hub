@@ -27,6 +27,8 @@ export interface CurrentUser {
   /** 고객사 담당자 계정이면 그 고객사. 내부 인원은 null. 역할은 항상 VIEWER 로 취급된다. */
   customerId: string | null;
   customerName: string | null;
+  /** 그 고객사에 허용된 포털 쓰기 권한(쉼표 구분). 비면 읽기 전용. */
+  portalGrants: string | null;
   onboardedAt: Date | null;
   timezone: string | null;
   createdAt: Date;
@@ -60,7 +62,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   if (!s) return null;
   const c = await prisma.contact.findUnique({
     where: { id: s.sub },
-    include: { customer: { select: { name: true, loginDomains: true } } },
+    include: { customer: { select: { name: true, loginDomains: true, portalGrants: true } } },
   });
   if (!c || !c.active || c.status === "REJECTED") return null;
   // 고객사 담당자: 그 고객사에 로그인 도메인이 켜져 있을 때만 세션을 인정한다 — 관리자가
@@ -78,6 +80,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     seeAll: c.customerId === null && c.seeAll,
     customerId: c.customerId,
     customerName: c.customer?.name ?? null,
+    portalGrants: c.customerId ? (c.customer?.portalGrants ?? null) : null,
     onboardedAt: c.onboardedAt,
     timezone: c.timezone,
     createdAt: c.createdAt,
