@@ -7,6 +7,9 @@ import { authTest, defaultBotChannel, isBotConfigured } from "@/lib/notify/slack
 import { emailNotifier } from "@/lib/notify/email";
 import { isSmsConfigured } from "@/lib/notify/twilio";
 import { getSignupPolicy } from "@/server/settings";
+import { insightPolicy, insightStats } from "@/server/insight";
+import { setInsightPolicyAction } from "@/server/insight-actions";
+import { PendingButton } from "@/components/pending-button";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +29,7 @@ const GROUPS: { title: string; hint: string; items: string[] }[] = [
   },
   { title: "통지 채널", hint: "Slack · 이메일 · 문자", items: ["Slack 봇", "Slack 버튼", "Slack 웹훅", "이메일 서버", "SMS 공급자"] },
   { title: "수집 · 웹훅", hint: "알람이 들어오는 입구", items: ["웹훅 인증"] },
+  { title: "AI 메모", hint: "발화 때 근거로만 쓴 한 단락 · 채점표", items: ["AI 메모"] },
 ];
 
 export default async function AuthDiagPage() {
@@ -37,6 +41,7 @@ export default async function AuthDiagPage() {
     prisma.contact.findFirst({ where: { lastLoginAt: { not: null } }, orderBy: { lastLoginAt: "desc" }, select: { lastLoginAt: true, name: true } }),
   ]);
   const slackAuth = isBotConfigured() ? await authTest() : null;
+  const [ai, aiStats] = await Promise.all([insightPolicy(), insightStats()]);
   const appUrl = process.env.APP_URL?.replace(/\/+$/, "");
   const redirectUri = appUrl ? `${appUrl}/api/auth/callback` : null;
   const openAllow = cfg.allowedDomains.length === 0 && cfg.allowedEmails.length === 0;
@@ -158,6 +163,16 @@ export default async function AuthDiagPage() {
       ].join(" · "),
     },
     {
+      item: "AI 메모",
+      tone: ai.enabled ? "ok" : ai.switchedOn && !ai.hasKey ? "warn" : "off",
+      state: ai.enabled ? "켜짐" : ai.switchedOn && !ai.hasKey ? "키 없음" : "꺼짐",
+      value: [
+        ai.hasKey ? `ANTHROPIC_API_KEY 설정됨 · ${aiStats.model}` : "ANTHROPIC_API_KEY 없음 — 스위치를 켜도 만들지 않습니다",
+        ai.source === "setting" ? "화면에서 정함" : ai.source === "env" ? "환경변수 AI_INSIGHTS" : "기본값(꺼짐)",
+        aiStats.line,
+      ].join(" · "),
+    },
+    {
       item: "최근 로그인",
       tone: lastLogin ? "ok" : "off",
       state: lastLogin ? "기록 있음" : "없음",
@@ -234,6 +249,21 @@ export default async function AuthDiagPage() {
           </div>
         ) : null}
             </>
+          ) : null}
+          {g.title === "AI 메모" ? (
+            <form action={setInsightPolicyAction} className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3.5 text-sm">
+              <input type="hidden" name="insights" value={ai.switchedOn ? "off" : "on"} />
+              <span className="text-xs text-[#4a4842]">
+                켜면 통지가 나간 알람마다 같은 고객사의 해결 기록·런북·이력을 Anthropic API 로 보내 메모를 만듭니다. 고객사별 거부는
+                고객사 화면에서. 채점은 제안 분류가 실제 분류와 맞았는지로 잽니다.
+              </span>
+              <PendingButton
+                pendingLabel="저장 중…"
+                className="inline-flex h-7 items-center border border-stone-200 bg-white px-3 text-xs font-medium text-stone-900 hover:border-stone-400"
+              >
+                {ai.switchedOn ? "끄기" : "켜기"}
+              </PendingButton>
+            </form>
           ) : null}
         </div>
       ))}

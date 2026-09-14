@@ -147,10 +147,22 @@ export async function setResolutionKind(input: {
   note?: string | null;
 }): Promise<boolean> {
   try {
-    await prisma.resolution.update({
+    const r = await prisma.resolution.update({
       where: { id: input.id },
       data: { kind: input.kind, kindBy: input.by, ...(input.note !== undefined ? { note: input.note } : {}) },
+      select: { alertId: true },
     });
+    // AI 메모 채점: 제안 분류가 있던 최신 메모에 "맞았나"를 적는다. 실패해도 분류는 됐다.
+    try {
+      const ins = await prisma.alertInsight.findFirst({
+        where: { alertId: r.alertId, status: "done", suggestedKind: { not: null } },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, suggestedKind: true },
+      });
+      if (ins) await prisma.alertInsight.update({ where: { id: ins.id }, data: { followed: ins.suggestedKind === input.kind } });
+    } catch (err) {
+      console.error("[history] insight scoring failed", err);
+    }
     return true;
   } catch (err) {
     console.error("[history] setResolutionKind failed", err);

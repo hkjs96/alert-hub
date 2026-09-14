@@ -17,6 +17,7 @@
     "vercel-build": "prisma db push --skip-generate --accept-data-loss && node prisma/seed.mjs && next build"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.125.0",
     "@prisma/client": "5.22.0",
     "next": "14.2.35",
     "nodemailer": "9.0.5",

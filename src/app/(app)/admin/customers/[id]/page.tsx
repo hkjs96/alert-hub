@@ -7,6 +7,7 @@ import { CoverageBadge } from "@/components/admin/coverage-badge";
 import { PendingButton } from "@/components/pending-button";
 import { AssignmentEditor } from "@/components/admin/assignment-editor";
 import { Roster } from "@/components/admin/roster";
+import { setCustomerAiInsights } from "@/server/insight-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -103,6 +104,28 @@ export default async function CustomerDetailPage({
             <li className="py-3 text-stone-400">프로젝트가 없습니다.</li>
           )}
         </ul>
+      </section>
+
+      <section className="rounded-lg border border-stone-200 bg-white p-4">
+        <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">
+          AI 메모 <span className="font-normal text-stone-400">(알람 내용을 Anthropic API 로 보내는 것에 대한 고객사 동의)</span>
+        </h2>
+        <form action={setCustomerAiInsights} className="flex flex-wrap items-center gap-4 text-sm">
+          <input type="hidden" name="customerId" value={customer.id} />
+          <label className="inline-flex cursor-pointer items-center gap-2 text-stone-800">
+            <input type="checkbox" name="aiInsights" value="on" defaultChecked={customer.aiInsights} className="accent-stone-900" />
+            이 고객사 알람에 AI 메모 사용
+          </label>
+          <PendingButton
+            pendingLabel="저장 중…"
+            className="inline-flex h-8 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-medium text-stone-900 hover:border-stone-500"
+          >
+            저장
+          </PendingButton>
+          <span className="text-xs text-stone-400">
+            {customer.aiInsights ? "사용 중 — 전역 스위치(시스템 진단)가 켜져 있을 때만 만듭니다." : "꺼짐 — 이 고객사 알람은 모델로 나가지 않습니다."}
+          </span>
+        </form>
       </section>
 
       <section className="rounded-lg border border-stone-200 bg-white p-4">
