@@ -27,6 +27,7 @@ import {
 import { PendingButton } from "@/components/pending-button";
 import { PriorResolutionsPanel } from "@/components/alerts/prior-resolutions";
 import { AlertLinksPanel } from "@/components/alerts/alert-links";
+import { AiInsightPanel } from "@/components/alerts/ai-insight";
 
 export const dynamic = "force-dynamic";
 
@@ -671,6 +672,8 @@ export default async function AlertDetailPage({
         ruleId={snapshot?.rule?.id ?? ownership?.rule?.id ?? null}
         serviceId={serviceId}
       />
+
+      <AiInsightPanel alertId={alert.id} readOnly={readOnly} />
 
       <PriorResolutionsPanel
         alert={{ id: alert.id, status: alert.status, metric: alert.metric, resource: alert.resource }}

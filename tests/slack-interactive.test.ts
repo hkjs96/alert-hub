@@ -30,6 +30,7 @@ vi.mock("@/lib/prisma", () => ({
     silence: { create: mocks.silenceCreate, count: mocks.silenceCount },
     slackMessage: { findMany: mocks.slackFindMany, create: mocks.slackCreate },
     resolution: { update: mocks.resolutionUpdate, create: mocks.resolutionCreate },
+    alertInsight: { findFirst: vi.fn().mockResolvedValue(null), update: vi.fn() },
   },
 }));
 vi.mock("@/lib/notify/slack-api", () => ({
@@ -182,7 +183,7 @@ describe("Resolve · 뮤트", () => {
 
   it("분류 버튼을 누르면 기록만 갱신하고 메시지를 '기록됨' 으로 바꾼다", async () => {
     await POST(request(click("ah_kind:restart", { actions: [{ action_id: "ah_kind:restart", value: "r1:restart" }] })));
-    expect(mocks.resolutionUpdate.mock.calls[0][0]).toEqual({ where: { id: "r1" }, data: { kind: "restart", kindBy: "김도윤" } });
+    expect(mocks.resolutionUpdate.mock.calls[0][0]).toEqual({ where: { id: "r1" }, data: { kind: "restart", kindBy: "김도윤" }, select: { alertId: true } });
     expect(mocks.alertUpdateMany).not.toHaveBeenCalled();
     expect(mocks.respond.mock.calls[0][1]).toEqual({ replace_original: true, text: "✓ 재시작 으로 기록 · 김도윤" });
   });

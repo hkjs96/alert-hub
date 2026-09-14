@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { drainDueJobs } from "@/server/notify-queue";
 import { summarizeEndedSilences } from "@/server/silence-summary";
+import { drainDueInsights } from "@/server/insight";
 
 export const dynamic = "force-dynamic";
 
@@ -38,5 +39,7 @@ export async function GET(req: Request) {
   // (또는 묶음 창 뒤 다음 틱이) 집어가게.
   const summaries = await summarizeEndedSilences(now);
   const result = await drainDueJobs(new Date(), 50);
-  return NextResponse.json({ ...result, summaries });
+  // AI 메모는 통지 뒤에 — 봇 메시지가 먼저 있어야 스레드에 붙는다.
+  const insights = await drainDueInsights(new Date(), 3);
+  return NextResponse.json({ ...result, summaries, insights });
 }

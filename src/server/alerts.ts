@@ -10,6 +10,7 @@ import { findActiveSilence } from "@/server/silences";
 import { syncSlackMessages } from "@/server/slack-sync";
 import { findPriorResolutions, markRecurrence, recordResolution } from "@/server/history";
 import { linksForAlert } from "@/server/runbook";
+import { enqueueInsight } from "@/server/insight";
 import type { SilenceScope } from "@/lib/silence";
 import {
   refireThrottleMinutesFromEnv,
@@ -213,6 +214,8 @@ async function notifyUnlessSilenced(
     groupKey: own.scope?.serviceId ? `service:${own.scope.serviceId}` : undefined,
     digestDelaySeconds: digestWindowSeconds(),
   });
+  // AI 메모는 통지가 나간 알람에만, 다음 틱에서(모델 응답이 수 초라 인라인 X).
+  await enqueueInsight(alertId, own.scope?.customerId ?? null);
 }
 
 export interface IngestResult {

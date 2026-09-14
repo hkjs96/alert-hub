@@ -83,6 +83,7 @@ model Alert {
   notifyJobs    NotificationJob[]
   slackMessages SlackMessage[]
   resolutions   Resolution[]
+  insights      AlertInsight[]
 
   @@index([status])
   @@index([severity])
@@ -267,6 +268,9 @@ model Customer {
   // 이 고객사 계정에 허용한 쓰기 권한(쉼표 구분: contacts,silences,channels).
   // 비면(기본) 전부 읽기 전용. MSP 관리자가 고객사마다 따로 켠다.
   portalGrants String?
+  // AI 메모 허용. 끄면 이 고객사 알람 내용은 모델(Anthropic API)로 나가지 않는다 —
+  // 고객사가 데이터 외부 전송을 거부할 수 있다(계약 확인 항목). 전역 스위치가 우선.
+  aiInsights   Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -680,4 +684,52 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@index([customerId, createdAt])
+}
+
+// AI 메모 — 발화 시점에 "이 알람에 대해 아는 것"을 근거와 함께 한 번 요약한 것.
+// 재료는 같은 고객사의 해결 기록 + 런북 + 이 알람의 이력뿐이고, 근거 없는 제안은
+// 버린다. 팬아웃 직후 pending 으로 놓이고 통지 틱이 만든다(3~10초라 인라인 X).
+// 채점은 버튼(👍/👎)보다 결과로: 제안한 분류가 실제 분류와 같았나(followed).
+model AlertInsight {
+  id      String @id @default(cuid())
+  alertId String
+  alert   Alert  @relation(fields: [alertId], references: [id], onDelete: Cascade)
+
+  customerId String?
+
+  // pending → done | skipped(근거 부족·고객사 끔) | failed(포기)
+  status        String   @default("pending")
+  attempts      Int      @default(0)
+  nextAttemptAt DateTime @default(now())
+  error         String?
+
+  summary       String?
+  likelyCause   String?
+  // [{ id: "E1"|"R"|"A", label, alertId? }] — 모델에 준 근거 목록(표시·링크용)
+  evidence      Json?
+  // [{ text, evidence: ["E1", ...] }] — 근거 없는 단계는 저장 전에 버린다
+  nextSteps     Json?
+  // 제안 분류(restart|config|auto|other). 근거 기록이 2건 미만이면 비운다.
+  suggestedKind String?
+  // "지난 N건 중 M건" — 제안 분류와 같은 기록 수 / 참고한 기록 수
+  basedOn       Int      @default(0)
+  priorCount    Int      @default(0)
+  confidence    String?
+
+  model           String?
+  inputTokens     Int?
+  outputTokens    Int?
+  cacheReadTokens Int?
+  threadPosted    Boolean @default(false)
+
+  feedback   String? // up | down
+  feedbackBy String?
+  // 분류가 기록될 때 채움: 실제 분류 == 제안 분류
+  followed   Boolean?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([alertId, createdAt])
+  @@index([status, nextAttemptAt])
 }

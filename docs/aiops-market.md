@@ -82,7 +82,13 @@
 우리 재료는 로그가 아니라 **사람의 해결 기록**이다. MSP 는 같은 고객사·서비스에서 같은 알람을 반복해 받으므로 빨리 쌓인다.
 기록은 **고객사별 격리**: A 사에서 배운 해법을 B 사 알람의 근거로 쓰지 않는다(유형이 같아도 참고 표시만).
 
-## 6. 2단계 설계 초안 (다음 대화에서 확정)
+## 6. 2단계 설계 초안 → 구현 (2026-09-14)
+
+구현된 것과 초안의 차이: `AlertInsight` 는 초안 그대로에 `status·attempts` 아웃박스 열과 `basedOn·priorCount·followed` 채점 열이 붙었다.
+`Alert.resolutionNote` 대신 `Resolution.note`(이미 있음)를 쓴다. `RunbookProposal`(승격)은 아직 없다 — 같은 해법 반복이 보일 때.
+근거 게이트(런북 없고 기록 2건 미만이면 부르지 않음)와 "근거 없는 next_step 버림"은 7절 원칙대로. 사용법은 README "AI 메모".
+
+초안:
 
 - 데이터: `Service.runbook`(markdown), `RoutingRule.runbook`(선택, 규칙별 절), `Alert.resolutionNote`(해결 한 줄 · 누가), `AlertInsight { alertId, summary, similar: alertId[], runbookRef, suggestion, model, tokens, feedback?, followed? }`, `RunbookProposal { serviceId, draft, basedOn: alertId[], approvedBy? }`
 - 트리거: FIRING 팬아웃 직후 비동기 잡(아웃박스에 `insight` 채널 추가). 실패해도 통지는 이미 나감.
