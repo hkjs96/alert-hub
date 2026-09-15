@@ -4,13 +4,9 @@ import { readAuthConfig } from "@/lib/auth/config";
 import { safeNext } from "@/lib/auth/paths";
 import { GoogleMark } from "@/components/auth/google-mark";
 import { AuthErrorCard } from "@/components/auth/error-card";
-import { overline } from "@/components/auth/primitives";
 import { getCurrentUser, listAdmins } from "@/server/auth";
 
 export const dynamic = "force-dynamic";
-
-const control =
-  "h-[38px] w-full border border-stone-200 bg-white px-3 text-[13px] text-stone-900 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none";
 
 /**
  * 로그인 (A1). 앱 셸 없음, 단일 SSO 진입점. 환경변수 상태·허용 목록 같은
@@ -50,27 +46,6 @@ export default async function LoginPage({
               <GoogleMark />
               Google로 로그인
             </a>
-
-            <div className="mt-[26px] flex items-center gap-3">
-              <span className="h-px flex-1 bg-[#eeebe4]" />
-              <span className="font-mono text-[10px] font-bold tracking-[0.11em] text-stone-300">OR</span>
-              <span className="h-px flex-1 bg-[#eeebe4]" />
-            </div>
-
-            <form action="/api/auth/login" method="get" className="mt-6 flex flex-col gap-[11px]">
-              <input type="hidden" name="next" value={next} />
-              <label className="block">
-                <span className={`mb-2 block ${overline}`}>회사 이메일</span>
-                <input name="login_hint" type="email" placeholder="name@company.com" className={control} />
-              </label>
-              <button
-                type="submit"
-                className="h-[38px] w-full border border-stone-200 bg-white text-[13px] font-medium text-stone-500 transition-colors hover:border-stone-400 hover:text-stone-900"
-              >
-                SSO로 계속
-              </button>
-              <p className="text-xs leading-relaxed text-stone-400">도메인에 연결된 인증 공급자로 이동합니다.</p>
-            </form>
           </>
         ) : (
           <>
