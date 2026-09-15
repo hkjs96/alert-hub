@@ -25,8 +25,15 @@ export default async function LoginPage({
 
   return (
     <div className="w-[400px] max-w-full">
+      <div className="mb-8 text-center">
+        <div className="text-[26px] font-bold tracking-[-0.03em] text-stone-900">
+          alert<span className="text-indigo-600">·</span>hub
+        </div>
+        <p className="mt-1.5 text-[13px] text-stone-500">메가존 알람 허브</p>
+      </div>
+
       {searchParams.out ? (
-        <p className="mb-4 border border-stone-200 bg-white px-4 py-2.5 text-[13px] text-stone-600">로그아웃했습니다.</p>
+        <p className="mb-4 border border-stone-200 bg-white px-4 py-2.5 text-center text-[13px] text-stone-600">로그아웃했습니다.</p>
       ) : null}
       {searchParams.error ? (
         <div className="mb-5">
@@ -34,18 +41,23 @@ export default async function LoginPage({
         </div>
       ) : null}
 
-      <div className="border border-stone-200 bg-white px-9 pb-[30px] pt-9">
+      <div className="border border-stone-200 bg-white p-9">
         <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.025em] text-stone-900">로그인</h1>
         {cfg.enabled ? (
           <>
             <p className="mt-2 text-[13px] leading-relaxed text-stone-500">회사 Google 계정으로 계속하세요.</p>
             <a
               href={`/api/auth/login?next=${encodeURIComponent(next)}`}
-              className="mt-[26px] flex h-11 w-full items-center justify-center gap-[11px] border border-[#b8b2a4] bg-white text-sm font-semibold text-stone-900 transition-colors hover:border-stone-900 hover:bg-stone-50"
+              className="mt-7 flex h-12 w-full items-center justify-center gap-[11px] border border-[#b8b2a4] bg-white text-sm font-semibold text-stone-900 transition-colors hover:border-stone-900 hover:bg-stone-50"
             >
               <GoogleMark />
               Google로 로그인
             </a>
+            {cfg.allowedDomains.length ? (
+              <p className="mt-4 text-center font-mono text-[11px] text-stone-400">
+                {cfg.allowedDomains.map((d) => "@" + d).join(" · ")} 계정만
+              </p>
+            ) : null}
           </>
         ) : (
           <>
@@ -62,14 +74,12 @@ export default async function LoginPage({
         )}
       </div>
 
-      <div className="mt-[18px] flex items-center justify-between text-xs text-stone-500">
-        <span>
-          로그인이 안 되나요?{" "}
-          <Link href="/login?help=1" className="text-indigo-600 hover:underline">
-            지원 요청
-          </Link>
-        </span>
-      </div>
+      <p className="mt-5 text-center text-xs text-stone-500">
+        로그인이 안 되나요?{" "}
+        <Link href="/login?help=1" className="text-indigo-600 hover:underline">
+          지원 요청
+        </Link>
+      </p>
       {searchParams.help || searchParams.error ? (
         <div className="mt-3 border border-dashed border-stone-200 bg-white/60 px-4 py-3 text-xs leading-relaxed text-stone-500">
           {admins.length ? (
