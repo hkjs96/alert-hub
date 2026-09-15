@@ -11,15 +11,12 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   const me = await getCurrentUser();
   return (
     <div className="flex min-h-screen flex-col bg-[#efece5] text-stone-900">
-      <div
-        className={`flex h-[60px] items-center justify-between px-7 ${
-          me ? "border-b border-stone-200 bg-[#fbfaf7]" : ""
-        }`}
-      >
-        <Link href="/" className="text-[15px] font-bold tracking-[-0.02em] text-stone-900">
-          alert<span className="text-indigo-600">·</span>hub
-        </Link>
-        {me ? (
+      {/* 상단 바는 세션이 있을 때만(승인 대기·첫 로그인) — 로그인 전엔 화면 가운데의 워드마크가 그 자리. */}
+      {me ? (
+        <div className="flex h-[60px] items-center justify-between border-b border-stone-200 bg-[#fbfaf7] px-7">
+          <Link href="/" className="text-[15px] font-bold tracking-[-0.02em] text-stone-900">
+            alert<span className="text-indigo-600">·</span>hub
+          </Link>
           <div className="flex items-center gap-3.5 text-xs">
             <span className="text-stone-500">{me.email}</span>
             <span className="h-4 w-px bg-stone-200" />
@@ -30,9 +27,12 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
               </button>
             </form>
           </div>
-        ) : null}
+        </div>
+      ) : null}
+      {/* 세로 가운데보다 살짝 위(시각적 중심). 내용이 길면 자연히 위에서부터 흐른다. */}
+      <div className="flex flex-1 items-center justify-center px-6 py-10">
+        <div className={`flex w-full flex-col items-center ${me ? "" : "mb-[6vh]"}`}>{children}</div>
       </div>
-      <div className="flex flex-1 items-start justify-center px-6 py-12">{children}</div>
       <div className="flex h-14 items-center justify-between border-t border-stone-200 px-7 text-xs text-stone-400">
         <span>사내 운영 도구 · 접근 기록이 남습니다</span>
         <span className="font-mono text-[11px] text-stone-300">v{APP_VERSION}</span>
