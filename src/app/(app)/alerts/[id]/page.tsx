@@ -30,6 +30,8 @@ import { AlertLinksPanel } from "@/components/alerts/alert-links";
 import { AiInsightPanel } from "@/components/alerts/ai-insight";
 
 export const dynamic = "force-dynamic";
+// "지금 생성"(AI 메모) 서버 액션이 모델 응답을 기다린다.
+export const maxDuration = 60;
 
 function formatTime(date: Date) {
   return new Date(date).toISOString().replace("T", " ").slice(0, 19) + "Z";

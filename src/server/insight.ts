@@ -64,6 +64,8 @@ export async function enqueueInsight(alertId: string, customerId: string | null)
       const c = await prisma.customer.findUnique({ where: { id: customerId }, select: { aiInsights: true } });
       if (c && !c.aiInsights) return;
     }
+    // 같은 알람의 대기 행이 이미 있으면 하나로 충분하다(플래핑이 모델 호출을 쌓지 않게).
+    if (await prisma.alertInsight.findFirst({ where: { alertId, status: "pending" }, select: { id: true } })) return;
     await prisma.alertInsight.create({ data: { alertId, customerId } });
   } catch (err) {
     console.error("[insight] enqueue failed", err);
@@ -108,6 +110,14 @@ async function gatherInput(alertId: string): Promise<{ input: InsightInput; evid
 /** 한 행을 끝까지 만든다: 재료 → 게이트 → 모델 → 정리 → 저장 → Slack 스레드. */
 async function produce(row: InsightRow): Promise<"done" | "skipped"> {
   const { input, evidence, customerId } = await gatherInput(row.alertId);
+  // 고객사 거부는 모델을 부르기 직전에 다시 본다 — "지금 생성" 버튼, 거부 전에 쌓인 pending 행도 막는다.
+  if (customerId) {
+    const c = await prisma.customer.findUnique({ where: { id: customerId }, select: { aiInsights: true } });
+    if (c && !c.aiInsights) {
+      await prisma.alertInsight.update({ where: { id: row.id }, data: { status: "skipped", error: "고객사가 AI 메모를 껐습니다", customerId } });
+      return "skipped";
+    }
+  }
   const gate = gateInsight({ runbook: input.runbook !== null, priorCount: input.prior.length });
   if (!gate.ok) {
     await prisma.alertInsight.update({
@@ -266,8 +276,10 @@ export async function latestInsightFor(alertId: string): Promise<InsightView | n
   }
 }
 
-export async function rateInsight(id: string, feedback: "up" | "down", by: string | null): Promise<void> {
-  await prisma.alertInsight.update({ where: { id }, data: { feedback, feedbackBy: by } });
+/** alertId 는 호출자가 스코프 검사한 알람 — 메모가 그 알람 것일 때만 바꾼다(남의 메모 id 위조 방지). */
+export async function rateInsight(id: string, alertId: string, feedback: "up" | "down", by: string | null): Promise<boolean> {
+  const r = await prisma.alertInsight.updateMany({ where: { id, alertId }, data: { feedback, feedbackBy: by } });
+  return r.count > 0;
 }
 
 /** 진단 화면: 채점표. 정밀도는 "제안 분류 == 실제 분류"로 잰다. */

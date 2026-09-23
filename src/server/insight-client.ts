@@ -29,7 +29,8 @@ export interface InsightCallResult {
 export async function callInsightModel(input: { runbook: string | null; user: string }): Promise<InsightCallResult> {
   const apiKey = insightApiKey();
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY 미설정");
-  const client = new Anthropic({ apiKey, maxRetries: 1, timeout: 60_000 });
+  // 25초 × (1+재시도 1) < 라우트 maxDuration 60초. 넘으면 행은 백오프로 다음 틱에.
+  const client = new Anthropic({ apiKey, maxRetries: 1, timeout: 25_000 });
 
   const system: Anthropic.Beta.BetaTextBlockParam[] = [
     { type: "text", text: INSIGHT_SYSTEM, cache_control: { type: "ephemeral" } },
