@@ -5,6 +5,8 @@ import { summarizeEndedSilences } from "@/server/silence-summary";
 import { drainDueInsights } from "@/server/insight";
 
 export const dynamic = "force-dynamic";
+// AI 메모의 모델 호출(수 초~수십 초)이 틱 안에서 돈다 — 기본 제한(10초)에 잘리지 않게.
+export const maxDuration = 60;
 
 // 아웃박스 드레인 틱 (신뢰성 트랙 ①). 인라인 1회 시도에 실패한 통지 잡을
 // 지수 백오프 일정대로 재시도한다. escalate 틱과 마찬가지로 시간은 외부

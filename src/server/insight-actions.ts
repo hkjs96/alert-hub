@@ -22,9 +22,9 @@ export async function rateInsightAction(formData: FormData) {
   const id = String(formData.get("id") ?? "").trim();
   const alertId = String(formData.get("alertId") ?? "").trim();
   const feedback = String(formData.get("feedback") ?? "");
-  if (!id || (feedback !== "up" && feedback !== "down")) throw new Error("잘못된 요청");
+  if (!id || !alertId || (feedback !== "up" && feedback !== "down")) throw new Error("잘못된 요청");
   await assertAlertInScope(alertId);
-  await rateInsight(id, feedback, await currentActorName());
+  if (!(await rateInsight(id, alertId, feedback, await currentActorName()))) throw new Error("이 알람의 메모가 아닙니다");
   revalidatePath(`/alerts/${alertId}`);
 }
 

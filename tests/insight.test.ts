@@ -144,6 +144,7 @@ const m = vi.hoisted(() => ({
   setting: new Map<string, string>(),
   customerFindUnique: vi.fn(),
   insightCreate: vi.fn(),
+  insightFindFirst: vi.fn(),
   insightFindMany: vi.fn(),
   insightUpdateMany: vi.fn(),
   insightUpdate: vi.fn(),
@@ -161,7 +162,7 @@ const m = vi.hoisted(() => ({
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     customer: { findUnique: m.customerFindUnique },
-    alertInsight: { create: m.insightCreate, findMany: m.insightFindMany, updateMany: m.insightUpdateMany, update: m.insightUpdate },
+    alertInsight: { create: m.insightCreate, findFirst: m.insightFindFirst, findMany: m.insightFindMany, updateMany: m.insightUpdateMany, update: m.insightUpdate },
     alert: { findUniqueOrThrow: m.alertFindUniqueOrThrow },
     alertEvent: { findMany: m.eventFindMany },
     resolution: { count: m.resolutionCount },
@@ -181,7 +182,7 @@ vi.mock("@/server/insight-client", () => ({
 }));
 vi.mock("@/lib/notify/slack-api", () => ({ isBotConfigured: m.botConfigured, postThread: m.postThread }));
 
-import { drainDueInsights, enqueueInsight, insightPolicy } from "@/server/insight";
+import { drainDueInsights, enqueueInsight, insightPolicy, rateInsight } from "@/server/insight";
 
 const alertRow = {
   id: "a1", title: "CPU high", description: null, severity: "CRITICAL", namespace: "AWS/EC2", metric: "CPUUtilization", resource: "i-1",
@@ -201,6 +202,7 @@ beforeEach(() => {
   delete process.env.AI_INSIGHTS;
   m.customerFindUnique.mockResolvedValue({ aiInsights: true });
   m.insightCreate.mockResolvedValue({ id: "i1" });
+  m.insightFindFirst.mockResolvedValue(null);
   m.insightUpdateMany.mockResolvedValue({ count: 1 });
   m.insightUpdate.mockResolvedValue({});
   m.alertFindUniqueOrThrow.mockResolvedValue(alertRow);
@@ -233,6 +235,20 @@ describe("스위치", () => {
     m.customerFindUnique.mockResolvedValue({ aiInsights: true });
     await enqueueInsight("a1", "c1");
     expect(m.insightCreate).toHaveBeenCalledWith({ data: { alertId: "a1", customerId: "c1" } });
+  });
+});
+
+describe("중복·위조", () => {
+  it("같은 알람의 대기 행이 있으면 하나 더 만들지 않는다 (플래핑)", async () => {
+    m.setting.set("ai.insights", "on");
+    m.insightFindFirst.mockResolvedValue({ id: "i0" });
+    await enqueueInsight("a1", "c1");
+    expect(m.insightCreate).not.toHaveBeenCalled();
+  });
+  it("평가는 스코프 검사한 알람의 메모일 때만", async () => {
+    m.insightUpdateMany.mockResolvedValue({ count: 0 });
+    expect(await rateInsight("i-other", "a1", "up", "관리자")).toBe(false);
+    expect(m.insightUpdateMany).toHaveBeenCalledWith({ where: { id: "i-other", alertId: "a1" }, data: { feedback: "up", feedbackBy: "관리자" } });
   });
 });
 
@@ -295,6 +311,16 @@ describe("드레인", () => {
       where: { id: "i1" },
       data: { status: "failed", error: expect.stringContaining("5회 실패, 포기") },
     });
+  });
+
+  it("고객사가 거부했으면 대기 행이 있어도 모델을 부르지 않는다 (지금 생성 버튼 포함)", async () => {
+    m.setting.set("ai.insights", "on");
+    m.insightFindMany.mockResolvedValue([pendingRow]);
+    m.resolveRunbook.mockResolvedValue({ url: null, text: "재시작", source: "서비스 이체API" });
+    m.customerFindUnique.mockResolvedValue({ aiInsights: false });
+    expect(await drainDueInsights(new Date(), 3)).toMatchObject({ skipped: 1, done: 0 });
+    expect(m.call).not.toHaveBeenCalled();
+    expect(m.insightUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "skipped", error: "고객사가 AI 메모를 껐습니다" }) }));
   });
 
   it("선점에 지면 손대지 않는다 (겹치는 틱)", async () => {
