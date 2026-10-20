@@ -19,12 +19,12 @@ describe("buildAlertBlocks", () => {
   it("ACKNOWLEDGED: 확인 버튼이 빠지고 상태 줄이 붙는다", () => {
     const b = buildAlertBlocks("t", { alertId: "a1", status: "ACKNOWLEDGED", note: "김도윤 · Slack · 16:20" });
     expect(ids(b)).toEqual(["ah_resolve", "ah_mute"]);
-    expect(ctx(b)).toBe("✓ 확인됨 · 김도윤 · Slack · 16:20");
+    expect(ctx(b)).toBe("👀 *확인됨* · 김도윤 · Slack · 16:20");
   });
   it("RESOLVED: 버튼 없음 (열기 링크만)", () => {
     const b = buildAlertBlocks("t", { alertId: "a1", status: "RESOLVED", note: "cloudwatch", appUrl: "https://h" });
     expect(ids(b)).toEqual(["ah_open"]);
-    expect(ctx(b)).toBe("● 해결됨 · cloudwatch");
+    expect(ctx(b)).toBe("✅ *해결됨* · cloudwatch");
   });
   it("뮤트 중이면 뮤트 버튼이 빠지고 안내가 붙는다", () => {
     const b = buildAlertBlocks("t", { alertId: "a1", status: "FIRING", muted: "1시간 뮤트 · 김도윤" });

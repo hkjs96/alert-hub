@@ -183,6 +183,8 @@ model SlackMessage {
   ts      String
   // 원문 — 상태 줄만 갈아끼우고 본문은 유지하기 위해 저장.
   text    String
+  // 본문 블록(제목·필드·맥락). 있으면 갱신 때 이걸 그대로 쓰고, 없으면(옛 메시지) text 한 덩어리.
+  blocks  Json?
 
   createdAt DateTime @default(now())
 

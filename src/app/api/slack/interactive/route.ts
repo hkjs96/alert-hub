@@ -5,7 +5,7 @@ import { parseInteractionBody, verifySlackSignature } from "@/lib/slack/verify";
 import { ACTION_KIND, buildAlertBlocks, isActionId } from "@/lib/notify/slack-blocks";
 import { respondToInteraction, userDisplayName } from "@/lib/notify/slack-api";
 import { transitionAlert } from "@/server/alert-transitions";
-import { postThreadNote, syncSlackMessages, type ThreadNote } from "@/server/slack-sync";
+import { postThreadNote, storedBody, storedMessage, syncSlackMessages, type ThreadNote } from "@/server/slack-sync";
 import { isResolutionKind, KIND_LABELS } from "@/lib/history";
 import { setResolutionKind } from "@/server/history";
 import { scopeForContact } from "@/server/scope";
@@ -103,7 +103,10 @@ export async function POST(req: Request) {
     payload.container?.channel_id && payload.container?.message_ts
       ? { channel: payload.container.channel_id, ts: payload.container.message_ts }
       : undefined;
-  const originalText = payload.message?.text ?? "";
+  // 원문은 저장본에서 — Slack 이 돌려주는 message.text 는 줄바꿈이 사라져 한 덩어리가 된다.
+  const stored = await storedMessage(here);
+  const originalText = stored?.text ?? payload.message?.text ?? "";
+  const msgBody = storedBody(stored?.blocks);
   const appUrl = process.env.APP_URL ?? null;
   const stamp = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
 
@@ -129,7 +132,7 @@ export async function POST(req: Request) {
     await reply({
       replace_original: true,
       text: originalText,
-      blocks: buildAlertBlocks(originalText, { alertId, status: alert.status as "FIRING" | "ACKNOWLEDGED", muted, appUrl }),
+      blocks: buildAlertBlocks(originalText, { alertId, status: alert.status as "FIRING" | "ACKNOWLEDGED", muted, appUrl }, msgBody),
     });
     await syncSlackMessages(alertId, { status: alert.status as "FIRING" | "ACKNOWLEDGED", muted }, { status: "MUTED", actor, via: "Slack" }, here);
     if (here) await threadHere(here, { status: "MUTED", actor, via: "Slack" });
@@ -159,7 +162,7 @@ export async function POST(req: Request) {
       status: to,
       note: `${actor ?? payload.user.id} · Slack · ${stamp}`,
       appUrl,
-    }),
+    }, msgBody),
   });
   const result = await transitionAlert({
     id: alertId,

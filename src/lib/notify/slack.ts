@@ -4,64 +4,16 @@ import type { NotifyTarget } from "@/lib/notify/targets";
 import { defaultBotChannel, isBotConfigured, postDm, postMessage } from "@/lib/notify/slack-api";
 import { buildAlertBlocks } from "@/lib/notify/slack-blocks";
 import { recordSlackRef } from "@/lib/notify/slack-refs";
-import { linksLine } from "@/lib/links";
+import { buildAlertBody, SEVERITY_EMOJI } from "@/lib/notify/slack-format";
 
-const SEVERITY_EMOJI: Record<string, string> = {
-  "SEV-0": "🚨",
-  "SEV-1": "🚨",
-  "SEV-2": "🔴",
-  "SEV-3": "🟠",
-  "SEV-4": "🟡",
-  "SEV-5": "⚪",
-  UNKNOWN: "⚠️",
-};
+type Block = Record<string, unknown>;
 
-function buildText(alert: NormalizedAlert, ctx: NotifyContext): string {
-  const emoji = SEVERITY_EMOJI[alert.severity] ?? "⚠️";
-  const lines: string[] = [
-    `${emoji} *${alert.title}* is *${alert.status}*`,
-  ];
-
-  const meta: string[] = [`severity: ${alert.severity}`, `source: ${alert.source}`];
-  if (alert.resource) meta.push(`resource: ${alert.resource}`);
-  if (alert.metric) meta.push(`metric: ${alert.metric}`);
-  if (alert.accountId) meta.push(`account: ${alert.accountId}`);
-  if (alert.region) meta.push(`region: ${alert.region}`);
-  lines.push(meta.join(" · "));
-
-  if (ctx.assignees && ctx.assignees.length > 0) {
-    const [first, ...rest] = ctx.assignees;
-    const who = first.slackId ? `<@${first.slackId}> (${first.name})` : first.name;
-    if (ctx.escalationStep) {
-      lines.push(
-        `⏫ 자동 에스컬레이션 → ${ctx.escalationStep}순위 ${who} — 앞 순위가 아직 ack하지 않았습니다`,
-      );
-    } else {
-      let line = `담당 1순위: ${who}`;
-      if (rest.length) line += ` · 다음 순서: ${rest.map((a) => a.name).join(" → ")}`;
-      lines.push(line);
-    }
-  }
-
-  if (alert.stateReason) lines.push(`> ${alert.stateReason}`);
-  if (ctx.history && !ctx.escalationStep) lines.push(ctx.history);
-  const links = ctx.links ? linksLine(ctx.links) : null;
-  if (links) lines.push(links);
-
-  // Deep link to the alert detail page when the app knows its public URL.
-  const appUrl = process.env.APP_URL?.replace(/\/+$/, "");
-  if (appUrl && ctx.alertId) {
-    lines.push(`<${appUrl}/alerts/${ctx.alertId}|Open in alert-hub>`);
-  }
-
-  return lines.join("\n");
-}
-
-async function postWebhook(url: string, text: string): Promise<void> {
+async function postWebhook(url: string, text: string, blocks?: Block[]): Promise<void> {
   const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ text }),
+    // 웹훅도 블록을 그린다 — 버튼만 없다(클릭이 우리 앱으로 오지 않으므로).
+    body: JSON.stringify(blocks && blocks.length ? { text, blocks } : { text }),
   });
   if (!res.ok) {
     throw new Error(`Slack webhook returned ${res.status} ${res.statusText}`);
@@ -83,15 +35,17 @@ export function defaultTargets(): NotifyTarget[] {
  * 있으면 봇 메시지에 Ack/Resolve/뮤트 버튼을 붙이고 좌표를 기록한다 — 웹훅은
  * 인터랙션이 우리 앱으로 오지 않으므로 텍스트만.
  */
-export async function sendToTarget(t: NotifyTarget, text: string, alertId?: string): Promise<"sent" | "skipped"> {
+export async function sendToTarget(t: NotifyTarget, text: string, alertId?: string, body?: Block[]): Promise<"sent" | "skipped"> {
   if (t.kind === "SLACK_WEBHOOK") {
-    await postWebhook(t.target, text);
+    await postWebhook(t.target, text, body);
     return "sent";
   }
   if (!isBotConfigured()) return "skipped";
-  const blocks = alertId ? buildAlertBlocks(text, { alertId, status: "FIRING", appUrl: process.env.APP_URL }) : undefined;
+  const blocks = alertId
+    ? buildAlertBlocks(text, { alertId, status: "FIRING", appUrl: process.env.APP_URL }, body)
+    : body;
   const ref = await postMessage(t.target, text, undefined, blocks);
-  if (alertId) await recordSlackRef(alertId, ref, text);
+  if (alertId) await recordSlackRef(alertId, ref, text, body);
   return "sent";
 }
 
@@ -104,6 +58,7 @@ export async function sendSlackText(
   text: string,
   targets?: NotifyTarget[],
   alertId?: string,
+  body?: Block[],
 ): Promise<"sent" | "skipped"> {
   const list = targets && targets.length ? targets : defaultTargets();
   if (!list.length) return "skipped";
@@ -111,7 +66,7 @@ export async function sendSlackText(
   let lastErr: unknown = null;
   for (const t of list) {
     try {
-      if ((await sendToTarget(t, text, alertId)) === "sent") sent++;
+      if ((await sendToTarget(t, text, alertId, body)) === "sent") sent++;
     } catch (err) {
       lastErr = err;
       console.error(`[notify:slack] target ${t.label ?? t.target} failed`, err);
@@ -122,11 +77,11 @@ export async function sendSlackText(
 }
 
 /** 개인 DM (봇 필요). 토큰이 없으면 "skipped". alertId 가 있으면 버튼도. */
-export async function sendSlackDm(userId: string, text: string, alertId?: string): Promise<"sent" | "skipped"> {
+export async function sendSlackDm(userId: string, text: string, alertId?: string, body?: Block[]): Promise<"sent" | "skipped"> {
   if (!isBotConfigured()) return "skipped";
-  const blocks = alertId ? buildAlertBlocks(text, { alertId, status: "FIRING", appUrl: process.env.APP_URL }) : undefined;
+  const blocks = alertId ? buildAlertBlocks(text, { alertId, status: "FIRING", appUrl: process.env.APP_URL }, body) : body;
   const ref = await postDm(userId, text, undefined, blocks);
-  if (alertId) await recordSlackRef(alertId, ref, text);
+  if (alertId) await recordSlackRef(alertId, ref, text, body);
   return "sent";
 }
 
@@ -197,16 +152,16 @@ export const slackNotifier: Notifier = {
   },
 
   async notify(alert, ctx = {}) {
-    const text = buildText(alert, ctx);
+    const { text, blocks: body } = buildAlertBody(alert, ctx);
     // 버튼은 아직 열려 있는 알람에만 — RESOLVED 통지에 Ack 버튼이 붙으면 이상하다.
     const actionable = alert.status === "FIRING" ? ctx.alertId : undefined;
-    const result = await sendSlackText(text, ctx.targets, actionable);
+    const result = await sendSlackText(text, ctx.targets, actionable, body);
     // 에스컬레이션은 채널 글에 더해 당사자에게 DM — 밤에 채널을 안 보고 있어도
     // 닿게. 봇이 없으면 조용히 건너뛴다.
     const target = ctx.escalationStep ? ctx.assignees?.[0] : undefined;
     if (target?.slackId) {
       try {
-        await sendSlackDm(target.slackId, text, actionable);
+        await sendSlackDm(target.slackId, text, actionable, body);
       } catch (err) {
         console.error("[notify:slack] escalation DM failed", err);
       }
