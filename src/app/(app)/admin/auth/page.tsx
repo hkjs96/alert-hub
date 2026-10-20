@@ -11,6 +11,7 @@ import { insightPolicy, insightStats } from "@/server/insight";
 import { setInsightPolicyAction } from "@/server/insight-actions";
 import { PendingButton } from "@/components/pending-button";
 import { isPlanEmpty, planDemoCleanup } from "@/server/demo";
+import { hubRoleArn } from "@/server/aws";
 import { cleanupDemoData } from "@/server/demo-actions";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +33,7 @@ const GROUPS: { title: string; hint: string; items: string[] }[] = [
   { title: "통지 채널", hint: "Slack · 이메일 · 문자", items: ["Slack 봇", "Slack 버튼", "Slack 웹훅", "이메일 서버", "SMS 공급자"] },
   { title: "수집 · 웹훅", hint: "알람이 들어오는 입구", items: ["웹훅 인증"] },
   { title: "AI 메모", hint: "발화 때 근거로만 쓴 한 단락 · 채점표", items: ["AI 메모"] },
+  { title: "AWS 그래프", hint: "Vercel OIDC → 안내 데스크 역할 → 고객사 읽기 역할", items: ["AWS 그래프"] },
 ];
 
 export default async function AuthDiagPage({
@@ -49,6 +51,12 @@ export default async function AuthDiagPage({
   ]);
   const slackAuth = isBotConfigured() ? await authTest() : null;
   const [ai, aiStats] = await Promise.all([insightPolicy(), insightStats()]);
+  const hub = hubRoleArn();
+  const [readerTotal, readerOk, readerBad] = await Promise.all([
+    prisma.awsAccountMap.count({ where: { readerRoleArn: { not: null } } }),
+    prisma.awsAccountMap.count({ where: { readerRoleArn: { not: null }, readerError: null, readerCheckedAt: { not: null } } }),
+    prisma.awsAccountMap.count({ where: { readerRoleArn: { not: null }, readerError: { not: null } } }),
+  ]);
   const appUrl = process.env.APP_URL?.replace(/\/+$/, "");
   const redirectUri = appUrl ? `${appUrl}/api/auth/callback` : null;
   const openAllow = cfg.allowedDomains.length === 0 && cfg.allowedEmails.length === 0;
@@ -178,6 +186,18 @@ export default async function AuthDiagPage({
         ai.source === "setting" ? "화면에서 정함" : ai.source === "env" ? "환경변수 AI_INSIGHTS" : "기본값(꺼짐)",
         aiStats.line,
       ].join(" · "),
+    },
+    {
+      item: "AWS 그래프",
+      tone: !hub ? "off" : readerBad ? "warn" : readerOk ? "ok" : "warn",
+      state: !hub ? "미설정" : readerOk ? `계정 ${readerOk}개 연결` : readerTotal ? "확인 전" : "역할 없음",
+      value: [
+        hub ? `안내 데스크 ${hub}` : "AWS_ROLE_ARN 없음 — 그래프를 받지 않습니다",
+        process.env.VERCEL ? "Vercel OIDC" : "로컬 자격 증명",
+        `읽기 역할 ${readerTotal}개 · 연결 ${readerOk} · 실패 ${readerBad}`,
+        "Slack 첨부에 files:write 필요",
+      ].join(" · "),
+      action: { label: "계정 매핑", href: "/admin/org" },
     },
     {
       item: "최근 로그인",

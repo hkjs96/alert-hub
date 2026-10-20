@@ -39,7 +39,7 @@
 - 기존 라우팅 규칙(→ 팀)은 그대로. 순서: 분류 규칙으로 서비스 결정 → 라우팅 규칙으로 팀 결정.
 - 선택지: CloudWatch 알람 **태그**(예 `service=api`)로 분류 — 정확하지만 태그 조회에 AWS 권한(3-3) 필요. 1차는 이름/리소스 패턴, 태그는 3-3 이후.
 
-### 3-3. AWS 읽기 권한 (D) — 그래프부터
+### 3-3. AWS 읽기 권한 (D) — 그래프부터 ✅ 구현 (2026-10-20)
 - alert-hub 신원: **Vercel OIDC → 메가존 중앙 계정의 역할 1개** (장기 키 없음).
 - 고객사 계정: 그 역할만 빌릴 수 있는 읽기 역할 `alert-hub-reader` (`cloudwatch:GetMetricWidgetImage`, 이후 `DescribeAlarms`·`ListTagsForResource` 정도). 신뢰 조건에 **고객사별 ExternalId**.
 - 화면: AWS 계정 매핑에 "읽기 역할 ARN" 칸 + "연결 확인" 버튼(실제로 그래프 1장 받아 보여 줌).

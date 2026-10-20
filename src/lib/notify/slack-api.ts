@@ -160,3 +160,57 @@ export async function authTest(fetchImpl?: typeof fetch): Promise<{ team: string
     return null;
   }
 }
+
+/** form-urlencoded 호출 — files.* 업로드 API 는 JSON 본문을 받지 않는다. */
+async function callForm<T extends { ok: boolean; error?: string }>(
+  method: string,
+  params: Record<string, string>,
+  fetchImpl: typeof fetch = fetch,
+): Promise<T> {
+  const token = botToken();
+  if (!token) throw new Error("SLACK_BOT_TOKEN 미설정");
+  const res = await fetchImpl(`${API}/${method}`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded", authorization: `Bearer ${token}` },
+    body: new URLSearchParams(params).toString(),
+  });
+  const json = (await res.json()) as T;
+  if (!json.ok) {
+    const hint = json.error === "missing_scope" ? " — Slack 앱에 files:write 권한을 추가하고 재설치하세요" : "";
+    throw new Error(`slack ${method}: ${json.error ?? res.status}${hint}`);
+  }
+  return json;
+}
+
+/**
+ * 이미지 한 장을 메시지 스레드에 올린다 (files.getUploadURLExternal → 업로드 → completeUploadExternal).
+ * 봇에 files:write 권한이 필요하다.
+ */
+export async function uploadImageToThread(
+  ref: MessageRef,
+  png: Uint8Array,
+  opts: { filename: string; title: string; comment?: string },
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const { upload_url, file_id } = await callForm<{ ok: boolean; error?: string; upload_url: string; file_id: string }>(
+    "files.getUploadURLExternal",
+    { filename: opts.filename, length: String(png.byteLength) },
+    fetchImpl,
+  );
+  const up = await fetchImpl(upload_url, {
+    method: "POST",
+    headers: { "content-type": "application/octet-stream" },
+    body: png as unknown as BodyInit,
+  });
+  if (!up.ok) throw new Error(`slack upload ${up.status}`);
+  await callForm(
+    "files.completeUploadExternal",
+    {
+      files: JSON.stringify([{ id: file_id, title: opts.title }]),
+      channel_id: ref.channel,
+      thread_ts: ref.ts,
+      ...(opts.comment ? { initial_comment: opts.comment } : {}),
+    },
+    fetchImpl,
+  );
+}

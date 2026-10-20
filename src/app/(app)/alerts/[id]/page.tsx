@@ -29,6 +29,7 @@ import { PendingButton } from "@/components/pending-button";
 import { PriorResolutionsPanel } from "@/components/alerts/prior-resolutions";
 import { AlertLinksPanel } from "@/components/alerts/alert-links";
 import { AiInsightPanel } from "@/components/alerts/ai-insight";
+import { AlertGraphPanel } from "@/components/alerts/alert-graph";
 
 export const dynamic = "force-dynamic";
 // "지금 생성"(AI 메모) 서버 액션이 모델 응답을 기다린다.
@@ -675,6 +676,8 @@ export default async function AlertDetailPage({
         ruleId={snapshot?.rule?.id ?? ownership?.rule?.id ?? null}
         serviceId={serviceId}
       />
+
+      <AlertGraphPanel alertId={alert.id} accountId={alert.accountId} />
 
       <AiInsightPanel alertId={alert.id} readOnly={readOnly} />
 

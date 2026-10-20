@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AwsReaderPanel } from "@/components/admin/aws-reader";
 import { prisma } from "@/lib/prisma";
 import {
   createAccountMap,
@@ -40,7 +41,7 @@ function isLevel(v: string | undefined): v is Level {
 export default async function OrgPage({
   searchParams,
 }: {
-  searchParams: { level?: string; id?: string; vreq?: string };
+  searchParams: { level?: string; id?: string; vreq?: string; probe?: string; awsErr?: string };
 }) {
   const [customers, assignments] = await Promise.all([
     prisma.customer.findMany({
@@ -398,18 +399,26 @@ export default async function OrgPage({
                     ) : (
                       <ul className="divide-y divide-stone-100">
                         {selected.service.accounts.map((a) => (
-                          <li key={a.id} className="flex items-center gap-3 py-2">
-                            <span className="font-mono text-sm text-stone-900">
-                              {a.accountId}
-                            </span>
-                            {a.alias ? (
-                              <span className="text-sm text-stone-500">{a.alias}</span>
-                            ) : null}
-                            {a.environment ? (
-                              <span className="font-mono text-xs uppercase tracking-[0.04em] text-stone-500">
-                                {a.environment}
+                          <li key={a.id} className="py-2">
+                            <div className="flex items-center gap-3">
+                              <span className="font-mono text-sm text-stone-900">
+                                {a.accountId}
                               </span>
-                            ) : null}
+                              {a.alias ? (
+                                <span className="text-sm text-stone-500">{a.alias}</span>
+                              ) : null}
+                              {a.environment ? (
+                                <span className="font-mono text-xs uppercase tracking-[0.04em] text-stone-500">
+                                  {a.environment}
+                                </span>
+                              ) : null}
+                            </div>
+                            <AwsReaderPanel
+                              accountMapId={a.id}
+                              back={back}
+                              probe={searchParams.probe === a.id}
+                              error={searchParams.awsErr && searchParams.probe !== a.id ? searchParams.awsErr : null}
+                            />
                           </li>
                         ))}
                       </ul>

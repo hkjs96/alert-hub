@@ -52,6 +52,14 @@
 - [ ] 시스템 진단 › AI 메모 › **켜기**. 해결 기록이 2건 이상 쌓인 서비스(또는 런북이 있는 서비스)의 다음 알람부터 스레드에 `🤖 AI 메모` 가 붙는다.
 - [ ] 첫 주는 분류 적중(진단 행의 `분류 적중 x/y`)만 본다. 낮으면 끄고 기록을 더 쌓는다.
 
+## 8. AWS 그래프 (선택)
+
+- [ ] Vercel › Settings › Security › OIDC Federation 켜기(Team 모드).
+- [ ] 메가존 계정: IAM 자격 증명 공급자 `oidc.vercel.com/<팀 slug>` + 역할 `alert-hub-vercel`(신뢰: Vercel alert-hub production, 권한: `sts:AssumeRole` on `arn:aws:iam::*:role/alert-hub-reader`).
+- [ ] Vercel 환경변수 `AWS_ROLE_ARN`(위 역할 ARN), `AWS_REGION=ap-northeast-2` → 재배포.
+- [ ] 조직 트리 › 서비스 › AWS 계정 매핑 › **그래프 연결**: ExternalId 발급 → 고객사 계정에 `alert-hub-reader` 생성(화면의 JSON 그대로) → 역할 ARN 저장 → **연결 확인**에 그래프가 보이면 끝.
+- [ ] Slack 앱 › OAuth & Permissions › Bot Token Scopes 에 `files:write` 추가 → 재설치(스레드에 그래프 첨부).
+
 ## 보류 (코드 쪽)
 
 - [ ] 솔라피 문자·전화 사다리 — 발신번호 등록 뒤.

@@ -11,6 +11,7 @@ import { syncSlackMessages } from "@/server/slack-sync";
 import { findPriorResolutions, markRecurrence, recordResolution } from "@/server/history";
 import { linksForAlert } from "@/server/runbook";
 import { enqueueInsight } from "@/server/insight";
+import { enqueueGraph } from "@/server/graph";
 import type { SilenceScope } from "@/lib/silence";
 import {
   refireThrottleMinutesFromEnv,
@@ -216,6 +217,8 @@ async function notifyUnlessSilenced(
   });
   // AI 메모는 통지가 나간 알람에만, 다음 틱에서(모델 응답이 수 초라 인라인 X).
   await enqueueInsight(alertId, own.scope?.customerId ?? null);
+  // 그래프도 통지가 나간 알람에만 — 읽기 역할이 연결된 계정이면 다음 틱에서 스레드에 첨부.
+  await enqueueGraph(alertId, n.accountId);
 }
 
 export interface IngestResult {

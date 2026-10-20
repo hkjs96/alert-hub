@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AwsReaderPanel } from "@/components/admin/aws-reader";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createAccountMap, deleteAccountMap } from "@/server/org-actions";
@@ -9,8 +10,10 @@ export const dynamic = "force-dynamic";
 
 export default async function ServiceDetailPage({
   params,
+  searchParams = {},
 }: {
   params: { id: string };
+  searchParams?: { probe?: string; awsErr?: string };
 }) {
   const service = await prisma.service.findUnique({
     where: { id: params.id },
@@ -109,6 +112,12 @@ export default async function ServiceDetailPage({
                   <button className="text-xs text-stone-400 hover:text-[#b42318]">삭제</button>
                 </form>
               </div>
+              <AwsReaderPanel
+                accountMapId={a.id}
+                back={back}
+                probe={searchParams.probe === a.id}
+                error={searchParams.awsErr && searchParams.probe !== a.id ? searchParams.awsErr : null}
+              />
               <div className="pl-1">
                 <div className="mb-1 text-xs text-stone-400">
                   계정 레벨 담당 (서비스 담당을 오버라이드)

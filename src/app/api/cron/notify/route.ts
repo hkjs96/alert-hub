@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { drainDueJobs } from "@/server/notify-queue";
 import { summarizeEndedSilences } from "@/server/silence-summary";
 import { drainDueInsights } from "@/server/insight";
+import { drainGraphs } from "@/server/graph";
 
 export const dynamic = "force-dynamic";
 // AI 메모의 모델 호출(수 초~수십 초)이 틱 안에서 돈다 — 기본 제한(10초)에 잘리지 않게.
@@ -43,5 +44,7 @@ export async function GET(req: Request) {
   const result = await drainDueJobs(new Date(), 50);
   // AI 메모는 통지 뒤에 — 봇 메시지가 먼저 있어야 스레드에 붙는다.
   const insights = await drainDueInsights(new Date(), 3);
-  return NextResponse.json({ ...result, summaries, insights });
+  // 그래프도 봇 메시지가 나간 뒤에 스레드로.
+  const graphs = await drainGraphs(5);
+  return NextResponse.json({ ...result, summaries, insights, graphs });
 }
