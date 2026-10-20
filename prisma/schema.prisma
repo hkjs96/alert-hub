@@ -70,6 +70,11 @@ model Alert {
   // for past alerts. Names are denormalized so the record survives renames and
   // deletions. JSON on purpose — an append-style audit shape, never joined.
   ownershipSnapshot Json?
+  // 그래프 첨부: FIRING 팬아웃 때 읽기 역할이 있으면 "pending", 통지 틱이 PNG 를 받아
+  // 봇 메시지 스레드에 올린 뒤 "done" | "failed". 발화마다 다시 pending.
+  graphState        String?
+  graphAttempts     Int       @default(0)
+  graphError        String?
   // 테넌트 스코프용 비정규화: 스냅샷 체인의 고객사 id (FK 없음 — 스냅샷과 같은 이유).
   // 온콜은 자기 담당 고객사의 알람만 보므로 이 열로 거른다. 미매핑 알람은 null.
   customerId        String?
@@ -273,6 +278,9 @@ model Customer {
   // AI 메모 허용. 끄면 이 고객사 알람 내용은 모델(Anthropic API)로 나가지 않는다 —
   // 고객사가 데이터 외부 전송을 거부할 수 있다(계약 확인 항목). 전역 스위치가 우선.
   aiInsights   Boolean @default(true)
+  // 그래프용 교차 계정 역할의 ExternalId — 고객사마다 하나, alert-hub 가 발급. 고객사 계정의
+  // alert-hub-reader 역할 신뢰 조건에 들어간다(혼동된 대리인 방지). 비밀값은 아니다.
+  awsExternalId String? @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -336,6 +344,13 @@ model AwsAccountMap {
   environment String?
   serviceId   String
   service     Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  // 이 계정의 읽기 역할(alert-hub-reader) ARN. 있으면 알람 그래프를 받아 Slack 에 붙인다.
+  // 저장 전에 ARN 의 계정이 위 accountId 와 같은지 확인한다.
+  readerRoleArn   String?
+  readerCheckedAt DateTime?
+  // 마지막 연결 확인 결과(성공이면 null).
+  readerError     String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
