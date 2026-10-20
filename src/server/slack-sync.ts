@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isBotConfigured, postThread, updateMessage } from "@/lib/notify/slack-api";
 import { setSlackRefRecorder } from "@/lib/notify/slack-refs";
@@ -8,9 +9,26 @@ import { buildAlertBlocks, buildKindPromptBlocks, threadLine, type AlertMsgStatu
 // 한 줄. 실패는 삼킨다 — Slack 이 죽었다고 ack 가 실패하면 안 된다.
 
 // lib 쪽 노티파이어가 보낸 좌표를 여기서 받아 저장한다 (모듈 로드 시 등록).
-setSlackRefRecorder(async (alertId, ref, text) => {
-  await prisma.slackMessage.create({ data: { alertId, channel: ref.channel, ts: ref.ts, text } });
+setSlackRefRecorder(async (alertId, ref, text, blocks) => {
+  await prisma.slackMessage.create({
+    data: { alertId, channel: ref.channel, ts: ref.ts, text, ...(blocks && blocks.length ? { blocks: blocks as Prisma.InputJsonValue } : {}) },
+  });
 });
+
+/** 저장된 본문 블록 (옛 메시지는 null). */
+export function storedBody(blocks: unknown): Record<string, unknown>[] | null {
+  return Array.isArray(blocks) && blocks.length ? (blocks as Record<string, unknown>[]) : null;
+}
+
+/** 버튼을 누른 그 메시지의 저장된 원문 — Slack 이 돌려주는 text 는 줄바꿈이 사라져 있다. */
+export async function storedMessage(ref: { channel: string; ts: string } | undefined) {
+  if (!ref) return null;
+  try {
+    return await prisma.slackMessage.findFirst({ where: { channel: ref.channel, ts: ref.ts }, select: { text: true, blocks: true } });
+  } catch {
+    return null;
+  }
+}
 
 /** import 만으로 등록되게 하는 자리표시 — 트리셰이킹·미사용 import 경고 방지. */
 export function ensureSlackSyncRegistered(): void {}
@@ -59,7 +77,7 @@ export async function syncSlackMessages(
   except?: { channel: string; ts: string },
 ): Promise<void> {
   if (!isBotConfigured()) return;
-  let rows: { channel: string; ts: string; text: string }[] = [];
+  let rows: { channel: string; ts: string; text: string; blocks: unknown }[] = [];
   try {
     rows = await prisma.slackMessage.findMany({ where: { alertId }, orderBy: { createdAt: "asc" } });
   } catch (err) {
@@ -75,7 +93,7 @@ export async function syncSlackMessages(
       await updateMessage(
         ref,
         m.text,
-        buildAlertBlocks(m.text, { alertId, status: state.status, note, muted: state.muted, appUrl }),
+        buildAlertBlocks(m.text, { alertId, status: state.status, note, muted: state.muted, appUrl }, storedBody(m.blocks)),
       );
       if (thread) await postThreadNote(ref, thread);
     } catch (err) {

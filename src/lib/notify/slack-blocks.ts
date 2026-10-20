@@ -43,12 +43,18 @@ function button(actionId: ActionId, label: string, value: string, style?: "prima
   };
 }
 
-export function buildAlertBlocks(text: string, state: AlertMsgState): Block[] {
-  const blocks: Block[] = [{ type: "section", text: { type: "mrkdwn", text } }];
+/**
+ * body 가 있으면(새 형식: 제목·필드·맥락 블록) 그것을 본문으로, 없으면 text 한 덩어리.
+ * 상태가 바뀌어도 본문은 그대로 두고 아래 상태 줄·버튼만 갈아끼운다.
+ */
+export function buildAlertBlocks(text: string, state: AlertMsgState, body?: Block[] | null): Block[] {
+  const blocks: Block[] = body && body.length ? [...body] : [{ type: "section", text: { type: "mrkdwn", text } }];
+  if (body && body.length) blocks.push({ type: "divider" });
 
   const ctx: string[] = [];
-  if (state.status === "ACKNOWLEDGED") ctx.push(`✓ 확인됨${state.note ? ` · ${state.note}` : ""}`);
-  if (state.status === "RESOLVED") ctx.push(`● 해결됨${state.note ? ` · ${state.note}` : ""}`);
+  if (state.status === "FIRING" && body && body.length) ctx.push("🔥 *발화 중* — 확인 전");
+  if (state.status === "ACKNOWLEDGED") ctx.push(`👀 *확인됨*${state.note ? ` · ${state.note}` : ""}`);
+  if (state.status === "RESOLVED") ctx.push(`✅ *해결됨*${state.note ? ` · ${state.note}` : ""}`);
   if (state.muted) ctx.push(`🔇 ${state.muted}`);
   if (ctx.length) {
     blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: ctx.join("   ") }] });
