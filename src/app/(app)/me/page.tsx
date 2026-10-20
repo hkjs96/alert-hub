@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdminLink } from "@/components/admin-link";
 import { ProfileCard } from "@/components/auth/profile-card";
 import { overline } from "@/components/auth/primitives";
 import { authMode, getCurrentUser } from "@/server/auth";
@@ -56,9 +57,9 @@ export default async function MePage({ searchParams }: { searchParams: { saved?:
         </p>
         <p className="mt-1 text-xs text-stone-400">
           배정과 순서는{" "}
-          <Link href="/admin/escalation" className="text-indigo-600 underline">
+          <AdminLink href="/admin/escalation" className="text-indigo-600 underline">
             알람 처리 순서
-          </Link>
+          </AdminLink>
           에서 관리합니다.
         </p>
       </div>

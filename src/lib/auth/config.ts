@@ -19,13 +19,24 @@ export interface AuthConfig {
   autoApprove: boolean;
 }
 
+/**
+ * 소유자 계정 — 환경변수와 무관하게 항상 허용 목록 + 관리자. 화면에서 실수로 강등·비활성해도
+ * 다음 로그인(그리고 매 요청)에서 관리자로 돌아온다. 잠금 방지용 예외.
+ */
+export const OWNER_EMAILS = ["jsmini3814@gmail.com"];
+
+export function isOwnerEmail(email: string | null | undefined): boolean {
+  return !!email && OWNER_EMAILS.includes(email.trim().toLowerCase());
+}
+
 export function readAuthConfig(env: Record<string, string | undefined> = process.env): AuthConfig {
   const clientId = env.GOOGLE_CLIENT_ID?.trim() ?? "";
   const clientSecret = env.GOOGLE_CLIENT_SECRET?.trim() ?? "";
   const secret = env.AUTH_SECRET?.trim() ?? "";
   const allowedDomains = parseDomains(env.AUTH_ALLOWED_DOMAINS);
+  // 소유자는 허용 목록에 섞지 않는다(목록이 비면 "전부 허용"인 의미가 바뀌므로) — 콜백이 따로 통과시킨다.
   const allowedEmails = parseEmails(env.AUTH_ALLOWED_EMAILS);
-  const bootstrapAdmins = parseEmails(env.AUTH_BOOTSTRAP_ADMINS);
+  const bootstrapAdmins = Array.from(new Set([...parseEmails(env.AUTH_BOOTSTRAP_ADMINS), ...OWNER_EMAILS]));
   const autoApprove = /^(true|1|yes)$/i.test(env.AUTH_AUTO_APPROVE?.trim() ?? "");
 
   const missing = [

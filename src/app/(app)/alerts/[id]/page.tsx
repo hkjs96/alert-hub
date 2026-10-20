@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdminLink } from "@/components/admin-link";
 import { notFound, redirect } from "next/navigation";
 import { getVisibleScope } from "@/server/scope";
 import { canSeeCustomer } from "@/lib/scope";
@@ -264,12 +265,12 @@ function MutedBanner({
           </PendingButton>
         </form>
       ) : (
-        <Link
+        <AdminLink
           href="/admin/silences"
           className="ml-auto text-sm font-semibold text-indigo-600 hover:underline"
         >
           점검 · 뮤트 관리 →
-        </Link>
+        </AdminLink>
       )}
     </div>
   );
@@ -310,26 +311,26 @@ function SnapshotPanel({
       </div>
       <div className="p-6 pt-4">
       <div className="flex flex-wrap items-center gap-1.5 text-sm text-stone-600">
-        <Link
+        <AdminLink
           href={`/admin/customers/${chain.customerId}`}
           className="font-medium text-stone-800 hover:text-indigo-600 hover:underline"
         >
           {chain.customerName}
-        </Link>
+        </AdminLink>
         <span className="font-mono text-xs text-stone-300">›</span>
-        <Link
+        <AdminLink
           href={`/admin/projects/${chain.projectId}`}
           className="hover:text-indigo-600 hover:underline"
         >
           {chain.projectName}
-        </Link>
+        </AdminLink>
         <span className="font-mono text-xs text-stone-300">›</span>
-        <Link
+        <AdminLink
           href={`/admin/services/${chain.serviceId}`}
           className="hover:text-indigo-600 hover:underline"
         >
           {chain.serviceName}
-        </Link>
+        </AdminLink>
         {chain.accountAlias ? (
           <>
             <span className="font-mono text-xs text-stone-300">›</span>
@@ -402,9 +403,9 @@ function SnapshotPanel({
                 <span className="text-stone-700">담당자 미등록</span>
               )}{" "}
               ·{" "}
-              <Link href={escalationHref} className="underline hover:text-indigo-600">
+              <AdminLink href={escalationHref} className="underline hover:text-indigo-600">
                 순서 편집
-              </Link>
+              </AdminLink>
             </>
           ) : (
             <>현재 이 계정은 어느 서비스에도 매핑되어 있지 않습니다.</>
@@ -435,9 +436,9 @@ function OwnershipPanel({
             {accountId}
           </code>
           이(가) 어느 서비스에도 매핑되어 있지 않아 담당을 결정할 수 없습니다.{" "}
-          <Link href="/admin/customers" className="font-medium underline">
+          <AdminLink href="/admin/customers" className="font-medium underline">
             조직 · 담당자 관리
-          </Link>
+          </AdminLink>
           의 서비스 페이지에서 이 계정을 매핑하면 담당이 잡힙니다.
         </p>
       </section>
@@ -456,26 +457,26 @@ function OwnershipPanel({
       </div>
       <div className="p-6 pt-4">
       <div className="flex flex-wrap items-center gap-1.5 text-sm text-stone-600">
-        <Link
+        <AdminLink
           href={`/admin/customers/${chain.customer.id}`}
           className="font-medium text-stone-800 hover:text-indigo-600 hover:underline"
         >
           {chain.customer.name}
-        </Link>
+        </AdminLink>
         <span className="font-mono text-xs text-stone-300">›</span>
-        <Link
+        <AdminLink
           href={`/admin/projects/${chain.project.id}`}
           className="hover:text-indigo-600 hover:underline"
         >
           {chain.project.name}
-        </Link>
+        </AdminLink>
         <span className="font-mono text-xs text-stone-300">›</span>
-        <Link
+        <AdminLink
           href={`/admin/services/${chain.service.id}`}
           className="hover:text-indigo-600 hover:underline"
         >
           {chain.service.name}
-        </Link>
+        </AdminLink>
         <span className="font-mono text-xs text-stone-300">›</span>
         <span className="font-mono text-xs">
           {chain.account.alias ?? chain.account.accountId}
@@ -490,9 +491,9 @@ function OwnershipPanel({
       {contacts.length === 0 ? (
         <p className="mt-4 text-sm text-stone-400">
           체인 어느 단계에도 담당자가 등록되어 있지 않습니다 —{" "}
-          <Link href={escalationHref} className="underline hover:text-indigo-600">
+          <AdminLink href={escalationHref} className="underline hover:text-indigo-600">
             알람 처리 순서
-          </Link>
+          </AdminLink>
           에서 등록하세요.
         </p>
       ) : (
@@ -500,9 +501,9 @@ function OwnershipPanel({
           <p className="mb-2 mt-4 text-xs text-stone-400">
             {levelLabel(responsibility.level)} 단계의 순서가 적용됩니다 (현재 등록
             기준) ·{" "}
-            <Link href={escalationHref} className="underline hover:text-indigo-600">
+            <AdminLink href={escalationHref} className="underline hover:text-indigo-600">
               순서 편집
-            </Link>
+            </AdminLink>
           </p>
           <ol className="space-y-1.5">
             {contacts.map((c, i) => (

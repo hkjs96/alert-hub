@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isEmailAllowed, readAuthConfig } from "@/lib/auth/config";
+import { isEmailAllowed, isOwnerEmail, readAuthConfig } from "@/lib/auth/config";
 import { decodeIdToken, exchangeCode, validateClaims } from "@/lib/auth/google";
 import { SESSION_COOKIE, SESSION_TTL_SECONDS, signSession } from "@/lib/auth/session";
 import { safeNext } from "@/lib/auth/paths";
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
   if (!claims.ok) return fail("claims", claims.reason);
   // 내부 허용 목록에 없으면 고객사 로그인 도메인을 본다 — 매치되면 그 고객사의
   // 조회 계정으로 들어온다(자기 고객사 알람만). 둘 다 아니면 거부.
-  const internal = isEmailAllowed(claims.email, cfg.allowedDomains, cfg.allowedEmails);
+  const internal = isOwnerEmail(claims.email) || isEmailAllowed(claims.email, cfg.allowedDomains, cfg.allowedEmails);
   const customer = internal ? null : await matchCustomerByEmail(claims.email);
   if (!internal && !customer) {
     return fail("domain", claims.email);

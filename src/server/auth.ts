@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { readAuthConfig } from "@/lib/auth/config";
+import { isOwnerEmail, readAuthConfig } from "@/lib/auth/config";
 import { isAutoApprove } from "@/server/settings";
 import { atLeast, type AccountStatus, type Role } from "@/lib/auth/roles";
 import { SESSION_COOKIE, verifySession, type SessionPayload } from "@/lib/auth/session";
@@ -64,7 +64,18 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     where: { id: s.sub },
     include: { customer: { select: { name: true, loginDomains: true, portalGrants: true } } },
   });
-  if (!c || !c.active || c.status === "REJECTED") return null;
+  if (!c) return null;
+  // 소유자 계정은 비활성·거절·강등돼도 관리자로 본다(잠금 방지). DB 도 바로잡아 둔다.
+  const owner = c.customerId === null && isOwnerEmail(c.email ?? s.email);
+  if (owner && (!c.active || c.status !== "ACTIVE" || c.role !== "ADMIN")) {
+    await prisma.contact
+      .update({ where: { id: c.id }, data: { active: true, status: "ACTIVE", role: "ADMIN" } })
+      .catch(() => {});
+    c.active = true;
+    c.status = "ACTIVE";
+    c.role = "ADMIN";
+  }
+  if (!c.active || c.status === "REJECTED") return null;
   // 고객사 담당자: 그 고객사에 로그인 도메인이 켜져 있을 때만 세션을 인정한다 — 관리자가
   // 도메인을 비우면 발급된 세션도 즉시 무효.
   if (c.customerId !== null && !(c.customer?.loginDomains ?? "").trim()) return null;
@@ -209,9 +220,10 @@ export async function provisionInternalContact(p: {
   });
   if (existing) {
     if (existing.customerId !== null) return { ok: false, reason: "customer" };
-    if (!existing.active) return { ok: false, reason: "inactive" };
+    const owner = isOwnerEmail(p.email);
+    if (!existing.active && !owner) return { ok: false, reason: "inactive" };
     if (existing.status === "REJECTED" && !bootstrap) return { ok: false, reason: "rejected" };
-    const promote = bootstrap && (existing.status !== "ACTIVE" || existing.role !== "ADMIN");
+    const promote = bootstrap && (existing.status !== "ACTIVE" || existing.role !== "ADMIN" || !existing.active);
     const autoActivate = !promote && autoApprove && existing.status === "PENDING";
     const updated = await prisma.contact.update({
       where: { id: existing.id },
@@ -219,7 +231,7 @@ export async function provisionInternalContact(p: {
         lastLoginAt: now,
         ...(existing.name.trim() ? {} : { name: p.name }),
         ...(promote
-          ? { role: "ADMIN", status: "ACTIVE", approvedAt: now, approvedBy: noAdmin ? "first-login" : "bootstrap" }
+          ? { role: "ADMIN", status: "ACTIVE", active: true, approvedAt: now, approvedBy: noAdmin ? "first-login" : "bootstrap" }
           : autoActivate
             ? { status: "ACTIVE", approvedAt: now, approvedBy: "auto" }
             : {}),
