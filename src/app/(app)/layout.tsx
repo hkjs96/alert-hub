@@ -44,7 +44,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                   activeClassName="font-semibold text-stone-900 shadow-[inset_0_-2px_0_#1b1a17]"
                   inactiveClassName="text-stone-500 hover:text-stone-900"
                 />
-              ) : (
+              ) : !me || me.role === "ADMIN" ? (
+                // 등록 관리는 관리자만 들어갈 수 있다 — 들어갈 수 없는 탭은 보이지도 않게.
+                // (me 가 없으면 SSO 미설정 open 모드: 전부 열려 있다.)
                 <NavTab
                   href="/admin"
                   label="등록 관리"
@@ -53,7 +55,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                   activeClassName="font-semibold text-stone-900 shadow-[inset_0_-2px_0_#1b1a17]"
                   inactiveClassName="text-stone-500 hover:text-stone-900"
                 />
-              )}
+              ) : null}
             </nav>
           </div>
           <span className="flex items-center gap-5">

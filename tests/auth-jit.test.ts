@@ -195,6 +195,48 @@ describe("getCurrentUser", () => {
   });
 });
 
+describe("소유자 계정 예외 (jsmini3814@gmail.com)", () => {
+  it("환경변수 없이도 첫 로그인부터 관리자·활성", async () => {
+    delete process.env.AUTH_BOOTSTRAP_ADMINS;
+    mocks.findFirst.mockResolvedValue(null);
+    mocks.create.mockResolvedValue({ id: "own", status: "ACTIVE", onboardedAt: null });
+    await provisionInternalContact({ email: "JSmini3814@gmail.com", name: "소유자", now: NOW });
+    expect(mocks.create.mock.calls[0][0].data).toMatchObject({ role: "ADMIN", status: "ACTIVE" });
+  });
+
+  it("화면에서 비활성·강등·거절돼 있어도 로그인하면 관리자로 되살아난다", async () => {
+    mocks.findFirst.mockResolvedValue({ id: "own", customerId: null, active: false, name: "n", status: "REJECTED", role: "VIEWER" });
+    mocks.update.mockResolvedValue({ id: "own", status: "ACTIVE", onboardedAt: NOW });
+    const r = await provisionInternalContact({ email: "jsmini3814@gmail.com", name: "n", now: NOW });
+    expect(r).toMatchObject({ ok: true, status: "ACTIVE" });
+    expect(mocks.update.mock.calls[0][0].data).toMatchObject({ role: "ADMIN", status: "ACTIVE", active: true });
+  });
+
+  it("세션 중에 강등돼도 getCurrentUser 는 관리자로 보고 DB 를 바로잡는다", async () => {
+    process.env.GOOGLE_CLIENT_ID = "x";
+    process.env.GOOGLE_CLIENT_SECRET = "y";
+    process.env.AUTH_SECRET = "0123456789abcdef0123456789abcdef";
+    const { signSession } = await import("@/lib/auth/session");
+    const token = await signSession({ sub: "own", email: "jsmini3814@gmail.com", name: "n" }, process.env.AUTH_SECRET);
+    mocks.cookies.mockReturnValue({ get: () => ({ value: token }) } as never);
+    mocks.findUnique.mockResolvedValue({
+      id: "own", customerId: null, name: "n", email: "jsmini3814@gmail.com", department: null, slackId: null, phone: null,
+      role: "VIEWER", status: "ACTIVE", active: false, onboardedAt: NOW, timezone: null, createdAt: NOW, approvalPingAt: null,
+    });
+    const me = await getCurrentUser();
+    expect(me?.role).toBe("ADMIN");
+    expect(mocks.update).toHaveBeenCalledWith({ where: { id: "own" }, data: { active: true, status: "ACTIVE", role: "ADMIN" } });
+    delete process.env.GOOGLE_CLIENT_ID;
+    delete process.env.GOOGLE_CLIENT_SECRET;
+    delete process.env.AUTH_SECRET;
+  });
+
+  it("다른 사람은 예외 없음", async () => {
+    mocks.findFirst.mockResolvedValue({ id: "c9", customerId: null, active: false, name: "n", status: "ACTIVE", role: "OPERATOR" });
+    expect(await provisionInternalContact({ email: "kim@mz.co.kr", name: "n", now: NOW })).toMatchObject({ ok: false, reason: "inactive" });
+  });
+});
+
 describe("requireRole", () => {
   it("SSO가 열린(open) 모드면 통과, SSO 모드에서 역할 부족이면 throw", async () => {
     delete process.env.GOOGLE_CLIENT_ID;
