@@ -10,6 +10,8 @@ import { getSignupPolicy } from "@/server/settings";
 import { insightPolicy, insightStats } from "@/server/insight";
 import { setInsightPolicyAction } from "@/server/insight-actions";
 import { PendingButton } from "@/components/pending-button";
+import { isPlanEmpty, planDemoCleanup } from "@/server/demo";
+import { cleanupDemoData } from "@/server/demo-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -32,8 +34,13 @@ const GROUPS: { title: string; hint: string; items: string[] }[] = [
   { title: "AI 메모", hint: "발화 때 근거로만 쓴 한 단락 · 채점표", items: ["AI 메모"] },
 ];
 
-export default async function AuthDiagPage() {
+export default async function AuthDiagPage({
+  searchParams = {},
+}: {
+  searchParams?: { demo?: string; c?: string; a?: string; p?: string; t?: string };
+}) {
   const cfg = readAuthConfig();
+  const demo = await planDemoCleanup().catch(() => null);
   const policy = await getSignupPolicy();
   const [pending, admins, lastLogin] = await Promise.all([
     prisma.contact.count({ where: { status: "PENDING" } }),
@@ -267,6 +274,68 @@ export default async function AuthDiagPage() {
           ) : null}
         </div>
       ))}
+
+      {demo ? (
+        <div id="demo" className="border border-stone-200 bg-white">
+          <div className="flex items-baseline gap-2 border-b border-stone-200 px-5 py-3">
+            <h3 className="text-[13px] font-semibold text-stone-900">데모 데이터 정리</h3>
+            <span className="text-xs text-stone-400">실제 고객사를 넣기 전에 한 번</span>
+          </div>
+          <div className="space-y-3 px-5 py-4 text-sm">
+            {searchParams.demo === "done" ? (
+              <p className="border border-emerald-200 bg-emerald-50 px-3 py-2 text-[13px] text-emerald-800">
+                정리 완료 — 고객사 {searchParams.c ?? 0} · 알람 {searchParams.a ?? 0} · 내부 인원 {searchParams.p ?? 0} · 빈 팀{" "}
+                {searchParams.t ?? 0} 삭제.
+              </p>
+            ) : null}
+            {searchParams.demo === "confirm" ? (
+              <p className="border border-[#f3d9b8] bg-[#fdf6ec] px-3 py-2 text-[13px] text-[#b54708]">
+                확인 칸에 <b>정리</b> 를 정확히 입력해야 지웁니다.
+              </p>
+            ) : null}
+            {demo.reseeds ? (
+              <p className="border border-[#f3d9b8] bg-[#fdf6ec] px-3 py-2 text-[13px] text-[#b54708]">
+                Vercel 환경변수 <code className="font-mono">SEED_DEMO=false</code> 가 아직 없습니다. 먼저 넣고 재배포하세요 — 안 그러면
+                다음 배포 때 데모가 다시 채워집니다.
+              </p>
+            ) : null}
+            {isPlanEmpty(demo) ? (
+              <p className="text-stone-500">지울 데모 데이터가 없습니다. 남은 고객사 {demo.keepCustomers}곳은 그대로입니다.</p>
+            ) : (
+              <>
+                <ul className="space-y-1 text-[13px] text-stone-700">
+                  <li>
+                    고객사 {demo.customers.length}곳 <span className="text-stone-400">(하위 프로젝트·서비스·계정 매핑·담당자·팀·규칙 포함)</span>:{" "}
+                    {demo.customers.map((c) => c.name).join(", ") || "-"}
+                  </li>
+                  <li>알람 {demo.alerts}건 <span className="text-stone-400">(데모 계정 ID로 들어온 것)</span></li>
+                  <li>
+                    내부 데모 인원 {demo.internal.length}명: {demo.internal.map((c) => c.name).join(", ") || "-"}
+                  </li>
+                  <li className="text-stone-500">남는 고객사 {demo.keepCustomers}곳 — 손대지 않습니다.</li>
+                </ul>
+                <form action={cleanupDemoData} className="flex flex-wrap items-center gap-3 border-t border-stone-100 pt-3">
+                  <label className="text-xs text-stone-500">
+                    되돌릴 수 없습니다. 확인하려면 <b className="text-stone-800">정리</b> 입력
+                  </label>
+                  <input
+                    name="confirm"
+                    autoComplete="off"
+                    className="h-8 w-24 border border-stone-300 bg-white px-2 text-sm"
+                    placeholder="정리"
+                  />
+                  <PendingButton
+                    pendingLabel="지우는 중…"
+                    className="inline-flex h-8 items-center bg-[#b42318] px-3 text-xs font-semibold text-white hover:bg-[#912018]"
+                  >
+                    데모 데이터 삭제
+                  </PendingButton>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
