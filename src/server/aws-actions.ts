@@ -48,3 +48,13 @@ export async function retryGraph(formData: FormData) {
   await requeueGraph(alertId);
   revalidatePath(`/alerts/${alertId}`);
 }
+
+/** 시스템 진단 › AWS 그래프 › 위치(본문 / 스레드). */
+export async function setGraphPlacementAction(formData: FormData) {
+  await requireRole("ADMIN");
+  const v = String(formData.get("placement") ?? "") === "thread" ? "thread" : "inline";
+  const { setGraphPlacement } = await import("@/server/graph");
+  const { currentActorName } = await import("@/server/auth");
+  await setGraphPlacement(v, await currentActorName());
+  revalidatePath("/admin/auth");
+}

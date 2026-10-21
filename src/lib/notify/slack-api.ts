@@ -214,3 +214,27 @@ export async function uploadImageToThread(
     fetchImpl,
   );
 }
+
+/**
+ * 채널에 공유하지 않고 이미지를 올려 file id 를 받는다 — Block Kit image 블록의 slack_file 로
+ * 메시지 본문 안에 끼워 넣기 위함. 봇에 files:write 권한이 필요하다.
+ */
+export async function uploadImageForBlocks(
+  png: Uint8Array,
+  opts: { filename: string; title: string },
+  fetchImpl: typeof fetch = fetch,
+): Promise<string> {
+  const { upload_url, file_id } = await callForm<{ ok: boolean; error?: string; upload_url: string; file_id: string }>(
+    "files.getUploadURLExternal",
+    { filename: opts.filename, length: String(png.byteLength) },
+    fetchImpl,
+  );
+  const up = await fetchImpl(upload_url, {
+    method: "POST",
+    headers: { "content-type": "application/octet-stream" },
+    body: png as unknown as BodyInit,
+  });
+  if (!up.ok) throw new Error(`slack upload ${up.status}`);
+  await callForm("files.completeUploadExternal", { files: JSON.stringify([{ id: file_id, title: opts.title }]) }, fetchImpl);
+  return file_id;
+}

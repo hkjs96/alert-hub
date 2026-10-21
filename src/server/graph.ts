@@ -1,6 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { MAX_ATTEMPTS } from "@/lib/notify/backoff";
-import { isBotConfigured, uploadImageToThread } from "@/lib/notify/slack-api";
+import type { Prisma } from "@prisma/client";
+import { isBotConfigured, updateMessage, uploadImageForBlocks, uploadImageToThread } from "@/lib/notify/slack-api";
+import { buildAlertBlocks, type AlertMsgState, type AlertMsgStatus } from "@/lib/notify/slack-blocks";
+import { storedBody } from "@/server/slack-sync";
+import { getSetting, setSetting } from "@/server/settings";
 import { buildMetricWidget, probeWidget } from "@/lib/aws/graph";
 import { explainAwsError, isHubConfigured, metricWidgetPng } from "@/server/aws";
 
@@ -59,18 +63,80 @@ export interface GraphDrainResult {
   failed: number;
 }
 
-/** pending 그래프를 민다 — 봇 메시지가 이미 나간 알람만(스레드에 붙여야 하니까). */
-export async function drainGraphs(limit = 5): Promise<GraphDrainResult> {
+export const GRAPH_PLACEMENT = "graph.placement";
+export type GraphPlacement = "inline" | "thread";
+
+/** 그래프 위치 — 기본은 메시지 본문 안(inline). 채널이 길어지면 시스템 진단에서 스레드로. */
+export async function graphPlacement(): Promise<GraphPlacement> {
+  return (await getSetting(GRAPH_PLACEMENT)) === "thread" ? "thread" : "inline";
+}
+
+export async function setGraphPlacement(v: GraphPlacement, by: string | null): Promise<void> {
+  await setSetting(GRAPH_PLACEMENT, v, by);
+}
+
+const IMAGE_BLOCK_ID = "ah_graph";
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/**
+ * 본문 블록 끝에 그래프 이미지 블록을 끼워 원래 메시지를 고친다. 저장된 본문도 갱신해서
+ * 이후 확인·해결로 메시지가 다시 그려져도 그래프가 남게. Slack 이 방금 올린 파일을 처리하는
+ * 동안 invalid_blocks 가 날 수 있어 짧게 몇 번 다시 시도한다.
+ */
+async function attachInline(
+  m: { id: string; channel: string; ts: string; text: string; blocks: unknown },
+  fileId: string,
+  title: string,
+  state: AlertMsgState,
+): Promise<void> {
+  const body = (storedBody(m.blocks) ?? []).filter((b) => b.block_id !== IMAGE_BLOCK_ID);
+  const withImage = [
+    ...body,
+    { type: "image", block_id: IMAGE_BLOCK_ID, slack_file: { id: fileId }, alt_text: title, title: { type: "plain_text", text: title.slice(0, 2000), emoji: true } },
+  ];
+  let lastErr: unknown = null;
+  for (let i = 0; i < 4; i++) {
+    try {
+      await updateMessage({ channel: m.channel, ts: m.ts }, m.text, buildAlertBlocks(m.text, state, withImage));
+      await prisma.slackMessage.update({ where: { id: m.id }, data: { blocks: withImage as unknown as Prisma.InputJsonValue } });
+      return;
+    } catch (err) {
+      lastErr = err;
+      await sleep(1500 * (i + 1));
+    }
+  }
+  throw lastErr;
+}
+
+/**
+ * pending 그래프를 민다 — 봇 메시지가 이미 나간 알람만. 기본은 메시지 본문 안에 끼워 넣고,
+ * 그게 안 되면(옛 형식 메시지·끼워 넣기 실패·설정이 스레드) 스레드에 첨부한다.
+ * ids 가 있으면 그 알람들만(통지 직후 바로 붙일 때).
+ */
+export async function drainGraphs(limit = 5, ids?: string[]): Promise<GraphDrainResult> {
   const result: GraphDrainResult = { due: 0, posted: 0, failed: 0 };
   if (!isHubConfigured() || !isBotConfigured()) return result;
   try {
+    // 묶음 메시지로 나간 알람은 붙일 메시지가 없다 — 15분 넘게 기다리면 건너뜀으로 정리.
+    await prisma.alert.updateMany({
+      where: { graphState: "pending", slackMessages: { none: {} }, lastSeenAt: { lt: new Date(Date.now() - 15 * 60_000) } },
+      data: { graphState: "skipped", graphError: "붙일 Slack 메시지가 없음 (묶음 통지 등)" },
+    });
     const rows = await prisma.alert.findMany({
-      where: { graphState: "pending", slackMessages: { some: {} } },
-      select: { id: true, title: true, graphAttempts: true, slackMessages: { select: { channel: true, ts: true, createdAt: true } } },
+      where: { graphState: "pending", slackMessages: { some: {} }, ...(ids ? { id: { in: ids } } : {}) },
+      select: {
+        id: true, title: true, status: true, ackedBy: true, graphAttempts: true,
+        slackMessages: { select: { id: true, channel: true, ts: true, text: true, blocks: true, createdAt: true } },
+      },
       orderBy: { lastSeenAt: "asc" },
       take: limit,
     });
     result.due = rows.length;
+    const placement = await graphPlacement();
+    const appUrl = process.env.APP_URL ?? null;
     for (const row of rows) {
       // 선점: 겹치는 틱이 같은 알람을 두 번 올리지 않게.
       const claimed = await prisma.alert.updateMany({
@@ -80,16 +146,31 @@ export async function drainGraphs(limit = 5): Promise<GraphDrainResult> {
       if (!claimed.count) continue;
       try {
         const png = await alertGraphPng(row.id);
-        // 이번 발화의 메시지에만 — 같은 알람의 지난 발화 메시지 스레드에 그래프가 붙지 않게.
+        // 이번 발화의 메시지에만 — 같은 알람의 지난 발화 메시지에 그래프가 붙지 않게.
         const fired = await prisma.alertEvent.findFirst({
           where: { alertId: row.id, status: "FIRING" },
           orderBy: { createdAt: "desc" },
           select: { createdAt: true },
         });
         const since = fired?.createdAt.getTime() ?? 0;
-        const targets = row.slackMessages.filter((m) => m.createdAt.getTime() >= since - 5_000);
-        for (const m of targets.length ? targets : row.slackMessages.slice(-1)) {
-          await uploadImageToThread({ channel: m.channel, ts: m.ts }, png, { filename: "alarm-graph.png", title: `📈 ${row.title} — 최근 3시간` });
+        const recent = row.slackMessages.filter((m) => m.createdAt.getTime() >= since - 5_000);
+        const targets = recent.length ? recent : row.slackMessages.slice(-1);
+        const title = `📈 ${row.title} — 최근 3시간`;
+        const status = (row.status === "ACKNOWLEDGED" || row.status === "RESOLVED" ? row.status : "FIRING") as AlertMsgStatus;
+        const state: AlertMsgState = { alertId: row.id, status, note: status === "ACKNOWLEDGED" ? row.ackedBy : null, appUrl };
+        let fileId: string | null = null;
+        for (const m of targets) {
+          const ref = { channel: m.channel, ts: m.ts };
+          if (placement === "inline" && storedBody(m.blocks)) {
+            try {
+              fileId ??= await uploadImageForBlocks(png, { filename: "alarm-graph.png", title });
+              await attachInline(m, fileId, title, state);
+              continue;
+            } catch (err) {
+              console.error(`[graph] inline attach failed for ${row.id} — falling back to thread`, err);
+            }
+          }
+          await uploadImageToThread(ref, png, { filename: "alarm-graph.png", title });
         }
         await prisma.alert.update({ where: { id: row.id }, data: { graphState: "done", graphError: null } });
         result.posted++;
@@ -141,6 +222,7 @@ export type GraphStatus =
   | { kind: "pending"; attempts: number; error: string | null }
   | { kind: "done" }
   | { kind: "failed"; error: string | null }
+  | { kind: "skipped"; reason: string | null }
   | { kind: "idle" };
 
 /** 알람 상세에 "왜 그래프가 없나"를 그대로 보여 주기 위한 진단. */
@@ -162,6 +244,7 @@ export async function graphStatusFor(alertId: string): Promise<GraphStatus> {
   if (a.graphState === "pending") return { kind: "pending", attempts: a.graphAttempts, error: a.graphError };
   if (a.graphState === "done") return { kind: "done" };
   if (a.graphState === "failed") return { kind: "failed", error: a.graphError };
+  if (a.graphState === "skipped") return { kind: "skipped", reason: a.graphError };
   return { kind: "idle" };
 }
 

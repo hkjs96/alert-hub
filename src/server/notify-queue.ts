@@ -8,6 +8,7 @@ import {
 } from "@/lib/notify";
 import { MAX_ATTEMPTS, nextAttemptAt } from "@/lib/notify/backoff";
 import { sendSlackDigest } from "@/lib/notify/slack";
+import { afterSlackSent } from "@/server/graph-hook";
 import type { NormalizedAlert } from "@/lib/types";
 
 // 통지 아웃박스 (신뢰성 트랙 ①).
@@ -238,6 +239,9 @@ export async function drainDueJobs(
   for (const [, groupJobs] of groups) {
     for (const outcome of await attemptDigest(groupJobs, now)) tally(outcome);
   }
+  // Slack 메시지가 막 나간 알람의 그래프를 바로 붙인다(응답을 막지 않고 뒤에서).
+  const slackAlertIds = jobs.filter((j) => j.channel === "slack").map((j) => j.alertId);
+  if (slackAlertIds.length) afterSlackSent(slackAlertIds);
   return result;
 }
 

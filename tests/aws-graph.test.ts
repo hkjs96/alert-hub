@@ -76,12 +76,16 @@ const m = vi.hoisted(() => ({
   mapFindUnique: vi.fn(),
   png: vi.fn(),
   upload: vi.fn(),
+  uploadForBlocks: vi.fn(),
+  updateMessage: vi.fn(),
+  slackMessageUpdate: vi.fn(),
 }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     alert: { findMany: m.alertFindMany, updateMany: m.alertUpdateMany, update: m.alertUpdate, findUniqueOrThrow: m.alertFindUniqueOrThrow },
     alertEvent: { findFirst: m.eventFindFirst },
     awsAccountMap: { findUnique: m.mapFindUnique },
+    slackMessage: { update: m.slackMessageUpdate },
   },
 }));
 vi.mock("@/server/aws", () => ({
@@ -89,7 +93,7 @@ vi.mock("@/server/aws", () => ({
   metricWidgetPng: m.png,
   explainAwsError: (e: unknown) => String(e),
 }));
-vi.mock("@/lib/notify/slack-api", async (orig) => ({ ...(await orig<typeof import("@/lib/notify/slack-api")>()), uploadImageToThread: m.upload }));
+vi.mock("@/lib/notify/slack-api", async (orig) => ({ ...(await orig<typeof import("@/lib/notify/slack-api")>()), uploadImageToThread: m.upload, uploadImageForBlocks: m.uploadForBlocks, updateMessage: m.updateMessage }));
 
 import { drainGraphs, enqueueGraph } from "@/server/graph";
 
@@ -130,6 +134,41 @@ describe("그래프 대기열", () => {
     expect(m.png).toHaveBeenCalledWith(expect.objectContaining({ roleArn: "arn:aws:iam::771283576189:role/alert-hub-reader", externalId: "ah-x", region: "ap-northeast-2" }));
     expect(m.upload).toHaveBeenCalledWith({ channel: "C1", ts: "1.1" }, expect.any(Uint8Array), expect.objectContaining({ filename: "alarm-graph.png" }));
     expect(m.alertUpdate).toHaveBeenLastCalledWith({ where: { id: "a1" }, data: { graphState: "done", graphError: null } });
+  });
+
+  it("새 형식 메시지면 본문 안에 이미지 블록으로 끼워 넣고, 저장된 본문도 갱신", async () => {
+    const body = [{ type: "header", text: { type: "plain_text", text: "⚠️ TEST-ALARM" } }];
+    m.alertFindMany.mockResolvedValue([{
+      id: "a1", title: "TEST-ALARM", status: "FIRING", ackedBy: null, graphAttempts: 0,
+      slackMessages: [{ id: "sm1", channel: "C1", ts: "1.1", text: "t", blocks: body, createdAt: new Date("2026-10-20T05:58:01Z") }],
+    }]);
+    m.png.mockResolvedValue(new Uint8Array([1]));
+    m.uploadForBlocks.mockResolvedValue("F123");
+    m.updateMessage.mockResolvedValue(undefined);
+    expect(await drainGraphs()).toMatchObject({ posted: 1 });
+    expect(m.upload).not.toHaveBeenCalled();
+    const blocks = m.updateMessage.mock.calls[0][2] as { type: string; block_id?: string; slack_file?: { id: string } }[];
+    expect(blocks[0].type).toBe("header");
+    expect(blocks.find((b) => b.type === "image")).toMatchObject({ block_id: "ah_graph", slack_file: { id: "F123" } });
+    expect(blocks.some((b) => b.type === "actions")).toBe(true); // 버튼은 그대로
+    expect(m.slackMessageUpdate.mock.calls[0][0].data.blocks).toHaveLength(2);
+  });
+
+  it("끼워 넣기가 끝내 실패하면 스레드에 첨부로 대신", async () => {
+    vi.useFakeTimers();
+    m.alertFindMany.mockResolvedValue([{
+      id: "a1", title: "t", status: "FIRING", ackedBy: null, graphAttempts: 0,
+      slackMessages: [{ id: "sm1", channel: "C1", ts: "1.1", text: "t", blocks: [{ type: "header" }], createdAt: new Date("2026-10-20T05:58:01Z") }],
+    }]);
+    m.png.mockResolvedValue(new Uint8Array([1]));
+    m.uploadForBlocks.mockResolvedValue("F1");
+    m.updateMessage.mockRejectedValue(new Error("slack chat.update: invalid_blocks"));
+    const p = drainGraphs();
+    await vi.runAllTimersAsync();
+    expect(await p).toMatchObject({ posted: 1 });
+    expect(m.updateMessage).toHaveBeenCalledTimes(4);
+    expect(m.upload).toHaveBeenCalledWith({ channel: "C1", ts: "1.1" }, expect.any(Uint8Array), expect.anything());
+    vi.useRealTimers();
   });
 
   it("실패는 사유를 남기고 재시도, 5회째 포기", async () => {

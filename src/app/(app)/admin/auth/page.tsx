@@ -12,6 +12,8 @@ import { setInsightPolicyAction } from "@/server/insight-actions";
 import { PendingButton } from "@/components/pending-button";
 import { isPlanEmpty, planDemoCleanup } from "@/server/demo";
 import { hubRoleArn } from "@/server/aws";
+import { graphPlacement } from "@/server/graph";
+import { setGraphPlacementAction } from "@/server/aws-actions";
 import { cleanupDemoData } from "@/server/demo-actions";
 
 export const dynamic = "force-dynamic";
@@ -52,6 +54,7 @@ export default async function AuthDiagPage({
   const slackAuth = isBotConfigured() ? await authTest() : null;
   const [ai, aiStats] = await Promise.all([insightPolicy(), insightStats()]);
   const hub = hubRoleArn();
+  const placement = await graphPlacement();
   const [readerTotal, readerOk, readerBad] = await Promise.all([
     prisma.awsAccountMap.count({ where: { readerRoleArn: { not: null } } }),
     prisma.awsAccountMap.count({ where: { readerRoleArn: { not: null }, readerError: null, readerCheckedAt: { not: null } } }),
@@ -195,6 +198,7 @@ export default async function AuthDiagPage({
         hub ? `안내 데스크 ${hub}` : "AWS_ROLE_ARN 없음 — 그래프를 받지 않습니다",
         process.env.VERCEL ? "Vercel OIDC" : "로컬 자격 증명",
         `읽기 역할 ${readerTotal}개 · 연결 ${readerOk} · 실패 ${readerBad}`,
+        `Slack 위치: ${placement === "inline" ? "메시지 본문 안" : "스레드"}`,
         "Slack 첨부에 files:write 필요",
       ].join(" · "),
       action: { label: "계정 매핑", href: "/admin/org" },
@@ -276,6 +280,21 @@ export default async function AuthDiagPage({
           </div>
         ) : null}
             </>
+          ) : null}
+          {g.title === "AWS 그래프" ? (
+            <form action={setGraphPlacementAction} className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3.5 text-sm">
+              <input type="hidden" name="placement" value={placement === "inline" ? "thread" : "inline"} />
+              <span className="text-xs text-[#4a4842]">
+                그래프 위치 — 지금 <b>{placement === "inline" ? "메시지 본문 안" : "스레드(댓글)"}</b>. 본문 안은 채널에서 바로 보이지만 알람마다
+                그래프만큼 길어집니다. 끼워 넣기가 실패하면 자동으로 스레드에 붙입니다.
+              </span>
+              <PendingButton
+                pendingLabel="저장 중…"
+                className="inline-flex h-7 items-center border border-stone-200 bg-white px-3 text-xs font-medium text-stone-900 hover:border-stone-400"
+              >
+                {placement === "inline" ? "스레드로 바꾸기" : "본문 안으로 바꾸기"}
+              </PendingButton>
+            </form>
           ) : null}
           {g.title === "AI 메모" ? (
             <form action={setInsightPolicyAction} className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3.5 text-sm">
