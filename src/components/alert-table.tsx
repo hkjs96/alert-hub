@@ -90,22 +90,23 @@ function formatTime(date: Date) {
 function chainFacts(
   alert: AlertRow,
   ownership: Map<string, OwnershipInfo>,
-): { chain: string | null; environment: string | null } {
+): { chain: string | null; chainTitle: string | null; environment: string | null } {
   const info = alert.accountId ? ownership.get(alert.accountId) : undefined;
-  if (info) {
-    return {
-      chain: `${info.chain.customer.name} › ${info.chain.project.name} › ${info.chain.service.name}`,
-      environment: info.chain.account.environment,
-    };
-  }
-  const snap = parseOwnershipSnapshot(alert.ownershipSnapshot);
-  if (snap) {
-    return {
-      chain: `${snap.chain.customerName} › ${snap.chain.projectName} › ${snap.chain.serviceName}`,
-      environment: snap.chain.environment ?? null,
-    };
-  }
-  return { chain: null, environment: null };
+  const names = info
+    ? [info.chain.customer.name, info.chain.project.name, info.chain.service.name]
+    : null;
+  const snap = names ? null : parseOwnershipSnapshot(alert.ownershipSnapshot);
+  const parts =
+    names ??
+    (snap ? [snap.chain.customerName, snap.chain.projectName, snap.chain.serviceName] : null);
+  if (!parts) return { chain: null, chainTitle: null, environment: null };
+  // 보조라인은 좁아서 이름만 — 같은 이름(프로젝트=서비스)도 툴팁에서 레벨로 구분된다.
+  const [customer, project, service] = parts;
+  return {
+    chain: parts.join(" › "),
+    chainTitle: `고객사 ${customer} › 프로젝트 ${project} › 서비스 ${service}`,
+    environment: info ? info.chain.account.environment : (snap?.chain.environment ?? null),
+  };
 }
 
 export function AlertTable({
@@ -165,7 +166,7 @@ export function AlertTable({
         </thead>
         <tbody className="divide-y divide-stone-100">
           {alerts.map((a) => {
-            const { chain, environment } = chainFacts(a, ownership);
+            const { chain, chainTitle, environment } = chainFacts(a, ownership);
             const silence = muted?.get(a.id) ?? null;
             const live = a.status === "FIRING" && !silence;
             return (
@@ -209,7 +210,9 @@ export function AlertTable({
                   ) : null}
                 </span>
                 {chain ? (
-                  <div className="mt-0.5 text-xs text-stone-400">{chain}</div>
+                  <div className="mt-0.5 text-xs text-stone-400" title={chainTitle ?? undefined}>
+                    {chain}
+                  </div>
                 ) : null}
               </td>
               <td className="px-3 py-3.5">

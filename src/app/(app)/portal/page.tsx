@@ -5,6 +5,7 @@ import { authMode, getCurrentUser } from "@/server/auth";
 import { getVisibleScope } from "@/server/scope";
 import { canSeeCustomer } from "@/lib/scope";
 import { getOwnershipByAccountIds } from "@/server/org";
+import { LevelTag } from "@/components/badges";
 import { describeTarget } from "@/lib/notify/targets";
 import { isBotConfigured } from "@/lib/notify/slack-api";
 import { channelState } from "@/lib/auth/verify";
@@ -144,7 +145,10 @@ export default async function PortalPage({ searchParams }: { searchParams: { cus
           <div className="divide-y divide-stone-100">
             {customer.projects.map((p) => (
               <div key={p.id} className="px-6 py-4">
-                <div className="text-sm font-semibold text-stone-900">{p.name}</div>
+                <div className="flex items-center gap-1.5 text-sm font-semibold text-stone-900">
+                  <LevelTag level="project" />
+                  {p.name}
+                </div>
                 {p.services.length === 0 ? (
                   <p className="mt-1 text-xs text-stone-400">서비스 없음</p>
                 ) : (
@@ -152,6 +156,7 @@ export default async function PortalPage({ searchParams }: { searchParams: { cus
                     {p.services.map((s) => (
                       <li key={s.id} className="border border-stone-100 bg-stone-50 px-4 py-3">
                         <div className="flex flex-wrap items-center gap-2 text-sm">
+                          <LevelTag level="service" />
                           <span className="font-medium text-stone-900">{s.name}</span>
                           {s.runbookUrl ? (
                             <a href={s.runbookUrl} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 underline">
