@@ -93,7 +93,7 @@ vi.mock("@/server/aws", () => ({
   metricWidgetPng: m.png,
   explainAwsError: (e: unknown) => String(e),
 }));
-vi.mock("@/lib/notify/slack-api", async (orig) => ({ ...(await orig<typeof import("@/lib/notify/slack-api")>()), uploadImageToThread: m.upload, uploadImageForBlocks: m.uploadForBlocks, updateMessage: m.updateMessage }));
+vi.mock("@/lib/notify/slack-api", async (orig) => ({ ...(await orig<typeof import("@/lib/notify/slack-api")>()), uploadImageToThread: m.upload, uploadImageForBlocks: m.uploadForBlocks, updateMessage: m.updateMessage, postThread: vi.fn().mockResolvedValue(undefined) }));
 
 import { drainGraphs, enqueueGraph } from "@/server/graph";
 
@@ -143,10 +143,10 @@ describe("그래프 대기열", () => {
       slackMessages: [{ id: "sm1", channel: "C1", ts: "1.1", text: "t", blocks: body, createdAt: new Date("2026-10-20T05:58:01Z") }],
     }]);
     m.png.mockResolvedValue(new Uint8Array([1]));
-    m.uploadForBlocks.mockResolvedValue("F123");
+    m.upload.mockResolvedValue("F123");
     m.updateMessage.mockResolvedValue(undefined);
     expect(await drainGraphs()).toMatchObject({ posted: 1 });
-    expect(m.upload).not.toHaveBeenCalled();
+    expect(m.upload).toHaveBeenCalledTimes(1); // 스레드에 먼저 올려 공유 상태로
     const blocks = m.updateMessage.mock.calls[0][2] as { type: string; block_id?: string; slack_file?: { id: string } }[];
     expect(blocks[0].type).toBe("header");
     expect(blocks.find((b) => b.type === "image")).toMatchObject({ block_id: "ah_graph", slack_file: { id: "F123" } });
@@ -161,7 +161,7 @@ describe("그래프 대기열", () => {
       slackMessages: [{ id: "sm1", channel: "C1", ts: "1.1", text: "t", blocks: [{ type: "header" }], createdAt: new Date("2026-10-20T05:58:01Z") }],
     }]);
     m.png.mockResolvedValue(new Uint8Array([1]));
-    m.uploadForBlocks.mockResolvedValue("F1");
+    m.upload.mockResolvedValue("F1");
     m.updateMessage.mockRejectedValue(new Error("slack chat.update: invalid_blocks"));
     const p = drainGraphs();
     await vi.runAllTimersAsync();

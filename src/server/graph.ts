@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { MAX_ATTEMPTS } from "@/lib/notify/backoff";
 import type { Prisma } from "@prisma/client";
-import { isBotConfigured, updateMessage, uploadImageForBlocks, uploadImageToThread } from "@/lib/notify/slack-api";
+import { isBotConfigured, postThread, updateMessage, uploadImageToThread } from "@/lib/notify/slack-api";
 import { buildAlertBlocks, type AlertMsgState, type AlertMsgStatus } from "@/lib/notify/slack-blocks";
 import { storedBody } from "@/server/slack-sync";
 import { getSetting, setSetting } from "@/server/settings";
@@ -158,19 +158,18 @@ export async function drainGraphs(limit = 5, ids?: string[]): Promise<GraphDrain
         const title = `📈 ${row.title} — 최근 3시간`;
         const status = (row.status === "ACKNOWLEDGED" || row.status === "RESOLVED" ? row.status : "FIRING") as AlertMsgStatus;
         const state: AlertMsgState = { alertId: row.id, status, note: status === "ACKNOWLEDGED" ? row.ackedBy : null, appUrl };
-        let fileId: string | null = null;
         for (const m of targets) {
           const ref = { channel: m.channel, ts: m.ts };
+          // 먼저 그 메시지 스레드에 올린다 — 대화에 공유된 파일이어야 본문 image 블록이 그려진다
+          // (공유 안 된 비공개 파일은 chat.update 가 성공해도 그림이 비어 보였다).
+          const sharedId = await uploadImageToThread(ref, png, { filename: "alarm-graph.png", title });
           if (placement === "inline" && storedBody(m.blocks)) {
             try {
-              fileId ??= await uploadImageForBlocks(png, { filename: "alarm-graph.png", title });
-              await attachInline(m, fileId, title, state);
-              continue;
+              await attachInline(m, sharedId, title, state);
             } catch (err) {
-              console.error(`[graph] inline attach failed for ${row.id} — falling back to thread`, err);
+              console.error(`[graph] inline attach failed for ${row.id} — thread copy stays`, err);
             }
           }
-          await uploadImageToThread(ref, png, { filename: "alarm-graph.png", title });
         }
         await prisma.alert.update({ where: { id: row.id }, data: { graphState: "done", graphError: null } });
         result.posted++;
@@ -182,7 +181,14 @@ export async function drainGraphs(limit = 5, ids?: string[]): Promise<GraphDrain
           where: { id: row.id },
           data: gaveUp ? { graphState: "failed", graphError: message } : { graphError: message },
         });
-        if (gaveUp) result.failed++;
+        if (gaveUp) {
+          result.failed++;
+          // Slack 만 보는 사람도 왜 그래프가 없는지 알게 — 스레드에 한 줄.
+          const last = row.slackMessages[row.slackMessages.length - 1];
+          if (last) {
+            await postThread({ channel: last.channel, ts: last.ts }, `📈 그래프 첨부 실패 · ${message}`).catch(() => {});
+          }
+        }
       }
     }
   } catch (err) {
