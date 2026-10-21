@@ -37,3 +37,14 @@ export async function saveReaderRole(formData: FormData) {
   await prisma.awsAccountMap.update({ where: { id }, data: { readerRoleArn: check.arn, readerError: null, readerCheckedAt: null } });
   revalidatePath(back);
 }
+
+/** 알람 상세의 "Slack 에 다시 올리기" — 다음 통지 틱에서 스레드에 그래프를 다시 첨부. */
+export async function retryGraph(formData: FormData) {
+  await requireRole("OPERATOR");
+  const alertId = String(formData.get("alertId") ?? "");
+  const { assertAlertInScope } = await import("@/server/scope");
+  await assertAlertInScope(alertId);
+  const { requeueGraph } = await import("@/server/graph");
+  await requeueGraph(alertId);
+  revalidatePath(`/alerts/${alertId}`);
+}

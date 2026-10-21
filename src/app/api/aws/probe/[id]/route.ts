@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authMode, getCurrentUser } from "@/server/auth";
 import { probeReader } from "@/server/graph";
+import { errorSvg } from "@/lib/aws/error-svg";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,11 +20,4 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     return new NextResponse(Buffer.from(r.png), { headers: { "content-type": "image/png", "cache-control": "no-store" } });
   }
   return new NextResponse(errorSvg(r.error), { status: 200, headers: { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "no-store" } });
-}
-
-function errorSvg(message: string): string {
-  const esc = message.replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]!);
-  const lines = esc.match(/.{1,60}/g) ?? [esc];
-  const tspans = lines.map((l, i) => `<tspan x="16" dy="${i ? 18 : 0}">${l}</tspan>`).join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="${60 + lines.length * 18}"><rect width="100%" height="100%" fill="#fdf6ec"/><text x="16" y="28" font-family="sans-serif" font-size="13" font-weight="700" fill="#b54708">연결 실패</text><text x="16" y="50" font-family="sans-serif" font-size="12" fill="#4a4842">${tspans}</text></svg>`;
 }

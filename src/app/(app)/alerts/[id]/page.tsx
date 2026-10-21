@@ -677,7 +677,7 @@ export default async function AlertDetailPage({
         serviceId={serviceId}
       />
 
-      <AlertGraphPanel alertId={alert.id} accountId={alert.accountId} />
+      <AlertGraphPanel alertId={alert.id} readOnly={readOnly} />
 
       <AiInsightPanel alertId={alert.id} readOnly={readOnly} />
 

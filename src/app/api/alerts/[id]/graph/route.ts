@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { assertAlertInScope } from "@/server/scope";
 import { alertGraphPng } from "@/server/graph";
+import { errorSvg } from "@/lib/aws/error-svg";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,9 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     const png = await alertGraphPng(params.id);
     return new NextResponse(Buffer.from(png), { headers: { "content-type": "image/png", "cache-control": "private, max-age=60" } });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 404 });
+    const msg = err instanceof Error ? err.message : String(err);
+    return new NextResponse(errorSvg(msg, "그래프를 불러오지 못했습니다"), {
+      headers: { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "no-store" },
+    });
   }
 }
