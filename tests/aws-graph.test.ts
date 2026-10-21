@@ -117,9 +117,16 @@ describe("그래프 대기열", () => {
   });
 
   it("그래프를 받아 봇 메시지마다 스레드에 올리고 done", async () => {
-    m.alertFindMany.mockResolvedValue([{ id: "a1", title: "TEST-ALARM", graphAttempts: 0, slackMessages: [{ channel: "C1", ts: "1.1" }] }]);
+    m.alertFindMany.mockResolvedValue([{
+      id: "a1", title: "TEST-ALARM", graphAttempts: 0,
+      slackMessages: [
+        { channel: "C0", ts: "0.9", createdAt: new Date("2026-10-19T00:00:00Z") }, // 지난 발화 — 붙이면 안 됨
+        { channel: "C1", ts: "1.1", createdAt: new Date("2026-10-20T05:58:01Z") },
+      ],
+    }]);
     m.png.mockResolvedValue(new Uint8Array([137, 80, 78, 71]));
     expect(await drainGraphs()).toEqual({ due: 1, posted: 1, failed: 0 });
+    expect(m.upload).toHaveBeenCalledTimes(1);
     expect(m.png).toHaveBeenCalledWith(expect.objectContaining({ roleArn: "arn:aws:iam::771283576189:role/alert-hub-reader", externalId: "ah-x", region: "ap-northeast-2" }));
     expect(m.upload).toHaveBeenCalledWith({ channel: "C1", ts: "1.1" }, expect.any(Uint8Array), expect.objectContaining({ filename: "alarm-graph.png" }));
     expect(m.alertUpdate).toHaveBeenLastCalledWith({ where: { id: "a1" }, data: { graphState: "done", graphError: null } });
@@ -127,10 +134,10 @@ describe("그래프 대기열", () => {
 
   it("실패는 사유를 남기고 재시도, 5회째 포기", async () => {
     m.png.mockRejectedValue(new Error("고객사 역할로 갈아타지 못했습니다"));
-    m.alertFindMany.mockResolvedValue([{ id: "a1", title: "t", graphAttempts: 1, slackMessages: [{ channel: "C1", ts: "1" }] }]);
+    m.alertFindMany.mockResolvedValue([{ id: "a1", title: "t", graphAttempts: 1, slackMessages: [{ channel: "C1", ts: "1", createdAt: new Date() }] }]);
     expect(await drainGraphs()).toMatchObject({ posted: 0, failed: 0 });
     expect(m.alertUpdate).toHaveBeenLastCalledWith({ where: { id: "a1" }, data: { graphError: "고객사 역할로 갈아타지 못했습니다" } });
-    m.alertFindMany.mockResolvedValue([{ id: "a1", title: "t", graphAttempts: 4, slackMessages: [{ channel: "C1", ts: "1" }] }]);
+    m.alertFindMany.mockResolvedValue([{ id: "a1", title: "t", graphAttempts: 4, slackMessages: [{ channel: "C1", ts: "1", createdAt: new Date() }] }]);
     expect(await drainGraphs()).toMatchObject({ failed: 1 });
     expect(m.alertUpdate).toHaveBeenLastCalledWith({ where: { id: "a1" }, data: { graphState: "failed", graphError: "고객사 역할로 갈아타지 못했습니다" } });
   });

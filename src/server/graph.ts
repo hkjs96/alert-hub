@@ -66,7 +66,7 @@ export async function drainGraphs(limit = 5): Promise<GraphDrainResult> {
   try {
     const rows = await prisma.alert.findMany({
       where: { graphState: "pending", slackMessages: { some: {} } },
-      select: { id: true, title: true, graphAttempts: true, slackMessages: { select: { channel: true, ts: true } } },
+      select: { id: true, title: true, graphAttempts: true, slackMessages: { select: { channel: true, ts: true, createdAt: true } } },
       orderBy: { lastSeenAt: "asc" },
       take: limit,
     });
@@ -80,8 +80,16 @@ export async function drainGraphs(limit = 5): Promise<GraphDrainResult> {
       if (!claimed.count) continue;
       try {
         const png = await alertGraphPng(row.id);
-        for (const m of row.slackMessages) {
-          await uploadImageToThread(m, png, { filename: "alarm-graph.png", title: `📈 ${row.title} — 최근 3시간` });
+        // 이번 발화의 메시지에만 — 같은 알람의 지난 발화 메시지 스레드에 그래프가 붙지 않게.
+        const fired = await prisma.alertEvent.findFirst({
+          where: { alertId: row.id, status: "FIRING" },
+          orderBy: { createdAt: "desc" },
+          select: { createdAt: true },
+        });
+        const since = fired?.createdAt.getTime() ?? 0;
+        const targets = row.slackMessages.filter((m) => m.createdAt.getTime() >= since - 5_000);
+        for (const m of targets.length ? targets : row.slackMessages.slice(-1)) {
+          await uploadImageToThread({ channel: m.channel, ts: m.ts }, png, { filename: "alarm-graph.png", title: `📈 ${row.title} — 최근 3시간` });
         }
         await prisma.alert.update({ where: { id: row.id }, data: { graphState: "done", graphError: null } });
         result.posted++;
@@ -126,4 +134,38 @@ export async function probeReader(accountMapId: string): Promise<{ ok: true; png
     data: { readerCheckedAt: new Date(), readerError: outcome.ok ? null : outcome.error },
   });
   return outcome;
+}
+
+export type GraphStatus =
+  | { kind: "off"; reason: string }
+  | { kind: "pending"; attempts: number; error: string | null }
+  | { kind: "done" }
+  | { kind: "failed"; error: string | null }
+  | { kind: "idle" };
+
+/** 알람 상세에 "왜 그래프가 없나"를 그대로 보여 주기 위한 진단. */
+export async function graphStatusFor(alertId: string): Promise<GraphStatus> {
+  const a = await prisma.alert.findUnique({
+    where: { id: alertId },
+    select: { accountId: true, graphState: true, graphAttempts: true, graphError: true },
+  });
+  if (!a) return { kind: "off", reason: "알람 없음" };
+  if (!isHubConfigured()) return { kind: "off", reason: "Vercel 환경변수 AWS_ROLE_ARN 이 없습니다 (안내 데스크 역할)" };
+  if (!a.accountId) return { kind: "off", reason: "알람에 AWS 계정 ID 가 없습니다" };
+  const map = await prisma.awsAccountMap.findUnique({
+    where: { accountId: a.accountId },
+    select: { readerRoleArn: true, readerError: true, service: { select: { project: { select: { customer: { select: { awsExternalId: true } } } } } } },
+  });
+  if (!map) return { kind: "off", reason: `계정 ${a.accountId} 이 매핑되지 않았습니다` };
+  if (!map.service.project.customer.awsExternalId) return { kind: "off", reason: "고객사 ExternalId 가 발급되지 않았습니다 (계정 매핑 › 그래프 연결)" };
+  if (!map.readerRoleArn) return { kind: "off", reason: "계정 매핑에 읽기 역할 ARN 이 저장되지 않았습니다 (그래프 연결)" };
+  if (a.graphState === "pending") return { kind: "pending", attempts: a.graphAttempts, error: a.graphError };
+  if (a.graphState === "done") return { kind: "done" };
+  if (a.graphState === "failed") return { kind: "failed", error: a.graphError };
+  return { kind: "idle" };
+}
+
+/** 상세 화면의 "Slack 에 다시 올리기". */
+export async function requeueGraph(alertId: string): Promise<void> {
+  await prisma.alert.update({ where: { id: alertId }, data: { graphState: "pending", graphAttempts: 0, graphError: null } });
 }
