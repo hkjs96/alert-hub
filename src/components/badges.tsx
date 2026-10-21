@@ -1,6 +1,8 @@
 // v2(웜 페이퍼 콘솔): 배지는 칩이 아니라 "도형 마크 + 모노 레터스페이스
 // 라벨"이다. 상태마다 색과 도형이 다 달라서(●/▲/○/✓/–) 색약 환경에서도
 // 도형만으로 구분된다 — alert-hub v2.dc.html의 ST/SEV 규약 그대로.
+import { levelLabel, type ScopeLevel } from "@/lib/org/resolve";
+
 type MarkShape = "dot" | "tri" | "ring" | "check" | "dash";
 
 interface Tone {
@@ -117,4 +119,17 @@ export function StatusBadge({ status }: { status: string }) {
 
 export function SeverityBadge({ severity }: { severity: string }) {
   return <ToneLabel tone={severityTone(severity)} label={severity} />;
+}
+
+/**
+ * 조직 레벨 표기(고객사/프로젝트/서비스/계정). 프로젝트와 서비스가 같은
+ * 이름인 경우가 흔해서(서비스 하나짜리 프로젝트) 들여쓰기나 경로 위치만으로는
+ * 레벨을 읽을 수 없다 — 이름 앞에 회색으로 붙여 이름이 주인공으로 남게 한다.
+ */
+export function LevelTag({ level }: { level: ScopeLevel }) {
+  return (
+    <span className="shrink-0 font-mono text-[11px] tracking-[0.04em] text-stone-400">
+      {levelLabel(level)}
+    </span>
+  );
 }

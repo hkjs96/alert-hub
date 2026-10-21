@@ -260,6 +260,55 @@ export async function getInheritedOrder(
   return inheritedOrderFor(level, await toLite(rows));
 }
 
+/**
+ * 이 스코프에 직접 등록이 없을 때 실제로 적용되는 순서 — 위쪽 레벨들만 놓고
+ * 알람과 같은 규칙(팀 펼치기 포함)으로 해석한다. level이 null이면 위에도
+ * 아무도 없다는 뜻: 이 스코프의 알람은 담당자 없이 수신된다. 계정까지 지원해서
+ * 담당 편집기가 어느 화면에서 쓰이든 같은 판정을 낸다.
+ */
+export async function getEffectiveInheritance(
+  level: ScopeLevel,
+  scopeId: string,
+): Promise<Responsibility> {
+  let ancestors: { customerId: string; projectId?: string; serviceId?: string } | null = null;
+  if (level === "project") {
+    const p = await prisma.project.findUnique({ where: { id: scopeId }, select: { customerId: true } });
+    if (p) ancestors = { customerId: p.customerId };
+  } else if (level === "service") {
+    const s = await prisma.service.findUnique({
+      where: { id: scopeId },
+      select: { projectId: true, project: { select: { customerId: true } } },
+    });
+    if (s) ancestors = { customerId: s.project.customerId, projectId: s.projectId };
+  } else if (level === "account") {
+    const a = await prisma.awsAccountMap.findUnique({
+      where: { id: scopeId },
+      select: {
+        serviceId: true,
+        service: { select: { projectId: true, project: { select: { customerId: true } } } },
+      },
+    });
+    if (a)
+      ancestors = {
+        customerId: a.service.project.customerId,
+        projectId: a.service.projectId,
+        serviceId: a.serviceId,
+      };
+  }
+  if (!ancestors) return resolveResponsibility([]);
+
+  const rows = await prisma.assignment.findMany({
+    where: {
+      OR: [
+        { customerId: ancestors.customerId },
+        ...(ancestors.projectId ? [{ projectId: ancestors.projectId }] : []),
+        ...(ancestors.serviceId ? [{ serviceId: ancestors.serviceId }] : []),
+      ],
+    },
+  });
+  return resolveResponsibility(await toLite(rows));
+}
+
 /** Contacts by id, for rendering a resolved order as names. */
 export async function getContactsByIds(ids: string[]) {
   if (!ids.length) return [];

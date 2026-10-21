@@ -2,7 +2,7 @@ import { Mark } from "@/components/badges";
 
 /**
  * 담당 커버리지 배지 (O2): 이 스코프의 알람이 실제로 누구에게 가는가.
- * 직접 등록 / 상위 상속 / 미지정(⚠ — 알람이 아무에게도 배정되지 않음).
+ * 직접 등록 / 상위 상속 / 미지정(▲ — 알람이 아무에게도 배정되지 않음).
  */
 export function CoverageBadge({
   direct,
@@ -34,7 +34,7 @@ export function CoverageBadge({
       className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold tracking-[0.06em] text-[#b42318]"
       title="이 스코프의 알람은 담당자 없이 수신됩니다"
     >
-      <Mark color="#b42318" shape="tri" />⚠ 미지정
+      <Mark color="#b42318" shape="tri" />미지정
     </span>
   );
 }

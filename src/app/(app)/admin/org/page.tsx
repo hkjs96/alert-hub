@@ -16,6 +16,7 @@ import { CustomerLoginEditor } from "@/components/admin/customer-login";
 import { RoutingRulesEditor } from "@/components/admin/routing-rules";
 import { NotifyChannelsEditor } from "@/components/admin/notify-channels";
 import { PendingButton } from "@/components/pending-button";
+import { LevelTag } from "@/components/badges";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ const overline =
   "font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400";
 const primaryBtn =
   "inline-flex h-8 items-center rounded-md bg-stone-900 px-3 text-sm font-medium text-white transition-colors hover:bg-stone-700";
+const childCount = "shrink-0 font-mono text-[11px] text-stone-400";
 
 type Level = "customer" | "project" | "service";
 
@@ -117,6 +119,19 @@ export default async function OrgPage({
   const back =
     selected && selectedScopeId ? href(selected.level, selectedScopeId) : "/admin/org";
 
+  // 우측 패널 경로: 마디마다 레벨을 붙이고 상위 마디는 그 스코프로 가는 링크.
+  const crumbs: { level: Level; id: string; name: string }[] = !selected
+    ? []
+    : [
+        { level: "customer", id: selected.customer.id, name: selected.customer.name },
+        ...(selected.level !== "customer"
+          ? [{ level: "project" as const, id: selected.project.id, name: selected.project.name }]
+          : []),
+        ...(selected.level === "service"
+          ? [{ level: "service" as const, id: selected.service.id, name: selected.service.name }]
+          : []),
+      ];
+
   const nodeClass = (active: boolean) =>
     `flex items-center gap-2 px-2 py-1 text-sm transition-colors ${
       active
@@ -133,7 +148,7 @@ export default async function OrgPage({
           </h1>
           <p className="mt-1 text-sm text-stone-500">
             왼쪽 트리에서 스코프를 고르면 그 자리에서 담당 등록·하위 생성·계정
-            매핑까지 처리합니다. ⚠ 미지정은 알람이 담당자 없이 수신되는 스코프.
+            매핑까지 처리합니다. ▲ 미지정은 알람이 담당자 없이 수신되는 스코프.
           </p>
         </div>
         <Link
@@ -170,27 +185,35 @@ export default async function OrgPage({
                 <div key={c.id}>
                   <Link
                     href={href("customer", c.id)}
+                    title={`고객사 ${c.name}`}
                     className={nodeClass(
                       selected?.level === "customer" && selected.customer.id === c.id,
                     )}
                   >
-                    <span className="min-w-0 flex-1 truncate">
+                    <LevelTag level="customer" />
+                    <span className="min-w-0 flex-1 truncate font-semibold text-stone-900">
                       {c.name}
                       {c.isInternal ? (
-                        <span className="ml-1.5 text-[11px] text-stone-400">내부</span>
+                        <span className="ml-1.5 text-[11px] font-normal text-stone-400">
+                          내부
+                        </span>
                       ) : null}
                     </span>
+                    <span className={childCount}>프로젝트 {c.projects.length}</span>
                     <CoverageBadge direct={direct(c.id)} inheritedFrom={null} />
                   </Link>
                   {c.projects.map((p) => (
                     <div key={p.id} className="ml-3 border-l border-stone-100 pl-2">
                       <Link
                         href={href("project", p.id)}
+                        title={`고객사 ${c.name} › 프로젝트 ${p.name}`}
                         className={nodeClass(
                           selected?.level === "project" && selected.project.id === p.id,
                         )}
                       >
+                        <LevelTag level="project" />
                         <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                        <span className={childCount}>서비스 {p.services.length}</span>
                         <CoverageBadge
                           direct={direct(p.id)}
                           inheritedFrom={direct(c.id) > 0 ? "고객사" : null}
@@ -200,15 +223,15 @@ export default async function OrgPage({
                         <div key={s.id} className="ml-3 border-l border-stone-100 pl-2">
                           <Link
                             href={href("service", s.id)}
+                            title={`고객사 ${c.name} › 프로젝트 ${p.name} › 서비스 ${s.name}`}
                             className={nodeClass(
                               selected?.level === "service" &&
                                 selected.service.id === s.id,
                             )}
                           >
+                            <LevelTag level="service" />
                             <span className="min-w-0 flex-1 truncate">{s.name}</span>
-                            <span className="font-mono text-[11px] text-stone-400">
-                              계정 {s.accounts.length}
-                            </span>
+                            <span className={childCount}>계정 {s.accounts.length}</span>
                             <CoverageBadge
                               direct={direct(s.id)}
                               inheritedFrom={
@@ -234,20 +257,29 @@ export default async function OrgPage({
             <div className="min-w-0 flex-1 space-y-[18px]">
               <section className="border border-stone-200 bg-white">
                 <div className="flex flex-wrap items-center gap-2 border-b border-stone-200 px-5 py-3">
-                  <h2 className={overline}>
-                    {selected.level === "customer"
-                      ? "고객사"
-                      : selected.level === "project"
-                        ? "프로젝트"
-                        : "서비스"}
-                  </h2>
-                  <span className="text-sm font-semibold text-stone-900">
-                    {selected.level === "customer"
-                      ? selected.customer.name
-                      : selected.level === "project"
-                        ? `${selected.customer.name} › ${selected.project.name}`
-                        : `${selected.customer.name} › ${selected.project.name} › ${selected.service.name}`}
-                  </span>
+                  <nav aria-label="선택한 스코프 경로" className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm">
+                    {crumbs.map((c, i) => {
+                      const last = i === crumbs.length - 1;
+                      return (
+                        <span key={c.level} className="inline-flex items-center gap-1.5">
+                          {i > 0 ? <span className="text-stone-300">›</span> : null}
+                          <LevelTag level={c.level} />
+                          {last ? (
+                            <span aria-current="page" className="font-semibold text-stone-900">
+                              {c.name}
+                            </span>
+                          ) : (
+                            <Link
+                              href={href(c.level, c.id)}
+                              className="text-stone-600 hover:text-stone-900 hover:underline"
+                            >
+                              {c.name}
+                            </Link>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </nav>
                   <span className="ml-auto flex gap-3 text-xs">
                     <Link
                       href={

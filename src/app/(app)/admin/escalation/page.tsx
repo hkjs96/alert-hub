@@ -9,6 +9,7 @@ import {
 import { addAssignment, moveAssignment, removeAssignment } from "@/server/org-actions";
 import { NewContactInline } from "@/components/admin/new-contact-inline";
 import { PendingButton } from "@/components/pending-button";
+import { LevelTag } from "@/components/badges";
 
 export const dynamic = "force-dynamic";
 
@@ -128,6 +129,7 @@ export default async function EscalationPage({
 
       <form method="get" className="flex flex-wrap items-center gap-1.5 text-sm">
         <input type="hidden" name="level" value={level} />
+        <LevelTag level="customer" />
         <select
           name="customerId"
           aria-label="고객사"
@@ -141,6 +143,7 @@ export default async function EscalationPage({
           ))}
         </select>
         <span className="font-mono text-xs text-stone-300">›</span>
+        <LevelTag level="project" />
         <select
           name="projectId"
           aria-label="프로젝트"
@@ -156,6 +159,7 @@ export default async function EscalationPage({
           ))}
         </select>
         <span className="font-mono text-xs text-stone-300">›</span>
+        <LevelTag level="service" />
         <select
           name="serviceId"
           aria-label="서비스"
