@@ -127,7 +127,7 @@ export function buildMetricWidget(input: WidgetInput): Record<string, unknown> |
     end: "P0D",
     timezone: "+0900",
     width: 800,
-    height: 320,
+    height: 240,
   };
 }
 

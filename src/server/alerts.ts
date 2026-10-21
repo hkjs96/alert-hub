@@ -211,14 +211,14 @@ async function notifyUnlessSilenced(
   // 아웃박스 경유: 채널별 잡 생성 + 인라인 1회 시도, 실패분은 틱이 재시도.
   // 서비스가 식별되면 Slack은 묶음 창(기본 60초)만큼 미뤄 다이제스트 후보로.
   // lastNotifiedAt 스탬프는 잡 생성과 함께 큐가 찍는다.
+  // 그래프: 읽기 역할이 연결된 계정이면 대기열에 — Slack 메시지가 나가는 즉시 본문에 끼워 넣는다.
+  await enqueueGraph(alertId, n.accountId);
   await enqueueAndSend(alertId, n, await toNotifyContext(alertId, n, own), {
     groupKey: own.scope?.serviceId ? `service:${own.scope.serviceId}` : undefined,
     digestDelaySeconds: digestWindowSeconds(),
   });
   // AI 메모는 통지가 나간 알람에만, 다음 틱에서(모델 응답이 수 초라 인라인 X).
   await enqueueInsight(alertId, own.scope?.customerId ?? null);
-  // 그래프도 통지가 나간 알람에만 — 읽기 역할이 연결된 계정이면 다음 틱에서 스레드에 첨부.
-  await enqueueGraph(alertId, n.accountId);
 }
 
 export interface IngestResult {

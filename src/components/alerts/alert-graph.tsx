@@ -10,11 +10,13 @@ export async function AlertGraphPanel({ alertId, readOnly }: { alertId: string; 
   const st = await graphStatusFor(alertId);
   const slackLine =
     st.kind === "done"
-      ? { tone: "text-emerald-700", text: "Slack 스레드에 첨부됨" }
+      ? { tone: "text-emerald-700", text: "Slack 메시지에 첨부됨" }
       : st.kind === "pending"
         ? { tone: "text-stone-500", text: `Slack 첨부 대기 중 (통지 틱 1분 주기)${st.attempts ? ` · 시도 ${st.attempts}회` : ""}${st.error ? ` · 마지막 오류: ${st.error}` : ""}` }
         : st.kind === "failed"
           ? { tone: "text-[#b54708]", text: `Slack 첨부 실패 · ${st.error ?? "원인 미상"}` }
+          : st.kind === "skipped"
+            ? { tone: "text-stone-400", text: `Slack 첨부 건너뜀 · ${st.reason ?? ""}` }
           : st.kind === "idle"
             ? { tone: "text-stone-400", text: "이 발화는 그래프 첨부 대상이 아니었습니다 (연결 전에 왔거나 통지가 생략된 발화)" }
             : null;
