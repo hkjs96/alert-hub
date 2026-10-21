@@ -148,7 +148,7 @@ export default async function OrgPage({
           </h1>
           <p className="mt-1 text-sm text-stone-500">
             왼쪽 트리에서 스코프를 고르면 그 자리에서 담당 등록·하위 생성·계정
-            매핑까지 처리합니다. ⚠ 미지정은 알람이 담당자 없이 수신되는 스코프.
+            매핑까지 처리합니다. ▲ 미지정은 알람이 담당자 없이 수신되는 스코프.
           </p>
         </div>
         <Link

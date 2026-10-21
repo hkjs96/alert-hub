@@ -1,12 +1,14 @@
 import { addAssignment, removeAssignment } from "@/server/org-actions";
 import {
   getContactChoices,
+  getContactsByIds,
   getDirectAssignments,
+  getEffectiveInheritance,
   getTeamChoices,
 } from "@/server/org";
 import { NewContactInline } from "@/components/admin/new-contact-inline";
 import { PendingButton } from "@/components/pending-button";
-import type { ScopeLevel } from "@/lib/org/resolve";
+import { levelLabel, type ScopeLevel } from "@/lib/org/resolve";
 
 const control =
   "h-8 rounded-md border border-stone-300 bg-white px-2.5 text-sm shadow-[0_1px_0_rgba(28,25,23,0.02)] transition-colors hover:border-stone-400";
@@ -34,11 +36,17 @@ export async function AssignmentEditor({
   /** Path to revalidate after mutations (current page). */
   back: string;
 }) {
-  const [assignments, choices, teams] = await Promise.all([
+  const [assignments, choices, teams, inherited] = await Promise.all([
     getDirectAssignments(level, scopeId),
     getContactChoices(customerId),
     getTeamChoices(customerId),
+    getEffectiveInheritance(level, scopeId),
   ]);
+  // 비어 있는 스코프에서만 쓴다: 실제로 이어받는 사람이 있는지가 문구를 가른다.
+  const inheritedNames =
+    assignments.length === 0
+      ? (await getContactsByIds(inherited.order)).map((c) => c.name)
+      : [];
 
   const registeredContacts = new Set(
     assignments.map((a) => a.contactId).filter(Boolean) as string[],
@@ -53,9 +61,20 @@ export async function AssignmentEditor({
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-1.5">
         {assignments.length === 0 ? (
-          <span className="text-sm text-stone-400">
-            담당 미지정 (상위에서 상속)
-          </span>
+          inherited.primaryId ? (
+            <span className="text-sm text-stone-400">
+              이 단계엔 직접 등록 없음 — {levelLabel(inherited.level)} 단계 순서가 적용됩니다
+              {inheritedNames.length ? (
+                <span className="text-stone-500"> ({inheritedNames.join(" → ")})</span>
+              ) : null}
+            </span>
+          ) : (
+            <span className="text-sm font-medium text-[#b42318]">
+              {level === "customer"
+                ? "담당 미지정 — 이 고객사의 알람은 하위에 등록이 없으면 담당자 없이 수신됩니다"
+                : "담당 미지정 — 위 단계에도 담당이 없어 이 스코프의 알람은 담당자 없이 수신됩니다"}
+            </span>
+          )
         ) : (
           assignments.map((a) => (
             <form key={a.id} action={removeAssignment} className="inline-flex">
