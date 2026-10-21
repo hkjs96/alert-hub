@@ -191,7 +191,7 @@ export async function uploadImageToThread(
   png: Uint8Array,
   opts: { filename: string; title: string; comment?: string },
   fetchImpl: typeof fetch = fetch,
-): Promise<void> {
+): Promise<string> {
   const { upload_url, file_id } = await callForm<{ ok: boolean; error?: string; upload_url: string; file_id: string }>(
     "files.getUploadURLExternal",
     { filename: opts.filename, length: String(png.byteLength) },
@@ -213,6 +213,7 @@ export async function uploadImageToThread(
     },
     fetchImpl,
   );
+  return file_id;
 }
 
 /**
