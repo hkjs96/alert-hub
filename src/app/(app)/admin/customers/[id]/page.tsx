@@ -8,6 +8,7 @@ import { PendingButton } from "@/components/pending-button";
 import { AssignmentEditor } from "@/components/admin/assignment-editor";
 import { Roster } from "@/components/admin/roster";
 import { setCustomerAiInsights } from "@/server/insight-actions";
+import { IngestUrlPanel } from "@/components/admin/ingest-url";
 
 export const dynamic = "force-dynamic";
 
@@ -105,6 +106,8 @@ export default async function CustomerDetailPage({
           )}
         </ul>
       </section>
+
+      <IngestUrlPanel customerId={customer.id} />
 
       <section className="rounded-lg border border-stone-200 bg-white p-4">
         <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.07em] text-stone-400">

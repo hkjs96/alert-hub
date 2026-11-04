@@ -9,6 +9,9 @@
 - [ ] Neon DB 비밀번호 교체 → `DATABASE_URL`, `DIRECT_URL` 갱신.
 - [ ] `CRON_SECRET` 확인.
 
+- [ ] 고객사 화면 › **알람 수신 주소** › 전용 주소 발급 → 그 고객사 SNS 구독을 전용 주소로 교체(새 구독 추가 → 확인됨 → 옛 구독 삭제).
+- [ ] 시스템 진단 › 수집 · 웹훅 › "최근 거부"가 비어 있는지 주기적으로 확인(위조 의심 기록).
+
 ## 2. Slack 앱
 
 - [ ] `SLACK_BOT_TOKEN`, `SLACK_DEFAULT_CHANNEL`(예 `#alert-hub`), `APP_URL`(`https://alert-hub-rho.vercel.app`).
