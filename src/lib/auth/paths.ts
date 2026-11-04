@@ -8,6 +8,8 @@ const PUBLIC_PREFIXES = [
   "/api/slack/",
   // Slack 본문 그래프 이미지 — Slack 이 로그인 없이 가져간다. 알람 id + 만료 HMAC 서명으로 지킨다.
   "/api/g/",
+  // CloudFormation 연결 템플릿(비밀 없음 — 값은 링크 파라미터로 들어간다). S3 에 올릴 원본 내려받기용.
+  "/cfn/",
   "/login",
   "/verify/",
   "/_next/",

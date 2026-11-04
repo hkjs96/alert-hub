@@ -55,7 +55,15 @@
 - [ ] 시스템 진단 › AI 메모 › **켜기**. 해결 기록이 2건 이상 쌓인 서비스(또는 런북이 있는 서비스)의 다음 알람부터 스레드에 `🤖 AI 메모` 가 붙는다.
 - [ ] 첫 주는 분류 적중(진단 행의 `분류 적중 x/y`)만 본다. 낮으면 끄고 기록을 더 쌓는다.
 
-## 8. AWS 그래프 (선택)
+## 8. AWS 연결 (원클릭)
+
+한 번만 (메가존 쪽):
+- [ ] `https://alert-hub-rho.vercel.app/cfn/alert-hub-connect.yaml` 을 내려받아 메가존 계정 S3 버킷에 올리고 공개 읽기 → 그 객체 주소를 Vercel 환경변수 `CFN_TEMPLATE_URL` 로 → 재배포.
+
+고객사 계정마다:
+- [ ] 조직 트리 › 서비스 › AWS 계정 매핑 › **🔗 AWS 연결** › (지금 쓰는 SNS 주제 ARN 있으면 입력) › **AWS 콘솔에서 연결** → 그 계정으로 로그인된 콘솔에서 IAM 동의 체크 → **스택 생성**. 패널이 "연결됨"으로 바뀌면 끝.
+
+## 8-1. (참고) 예전 수동 절차
 
 - [ ] Vercel › Settings › Security › OIDC Federation 켜기(Team 모드).
 - [ ] 메가존 계정: IAM 자격 증명 공급자 `oidc.vercel.com/<팀 slug>` + 역할 `alert-hub-vercel`(신뢰: Vercel alert-hub production, 권한: `sts:AssumeRole` on `arn:aws:iam::*:role/alert-hub-reader`).
