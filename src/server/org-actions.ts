@@ -1,5 +1,8 @@
 "use server";
 
+import { newIngestToken } from "@/lib/ingest-guard";
+import { newExternalId } from "@/lib/aws/graph";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -58,6 +61,9 @@ export async function createCustomer(formData: FormData) {
     data: {
       name: requireString(formData, "name"),
       isInternal: formData.get("isInternal") === "on",
+      // AWS 연결에 쓰는 값은 처음부터 만들어 둔다 — 발급 버튼을 누를 일이 없게.
+      ingestToken: newIngestToken(),
+      awsExternalId: newExternalId(),
     },
   });
   revalidatePath("/admin/customers");

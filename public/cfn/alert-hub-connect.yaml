@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  alert-hub 연결 — CloudWatch 알람을 alert-hub 로 보내는 SNS 구독과, 알람 그래프용 읽기 역할.
+  스택을 지우면 전부 사라진다(경보 설정은 건드리지 않는다).
+
+Parameters:
+  IngestUrl:
+    Type: String
+    Description: alert-hub 가 발급한 이 고객사 전용 수신 주소 (…/api/webhooks/cloudwatch?token=in_…)
+    AllowedPattern: "^https://.+/api/webhooks/cloudwatch\\?token=in_[0-9a-f]{40}$"
+  ExistingTopicArn:
+    Type: String
+    Default: ""
+    Description: 경보가 이미 보내고 있는 SNS 주제 ARN. 넣으면 그 주제에 구독만 추가(경보 수정 없음). 비우면 새 주제 alert-hub 를 만든다.
+  HubRoleArn:
+    Type: String
+    Description: alert-hub 안내 데스크 역할 ARN (메가존 계정의 alert-hub-vercel)
+    AllowedPattern: "^arn:aws:iam::\\d{12}:role/.+$"
+  ExternalId:
+    Type: String
+    Description: alert-hub 가 이 고객사에 발급한 ExternalId
+    AllowedPattern: "^ah-[0-9a-f]{32}$"
+  CreateReaderRole:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: 그래프용 읽기 역할 alert-hub-reader 를 만들지. IAM 은 리전 공통이라 두 번째 리전 스택에서는 false.
+
+Conditions:
+  UseExistingTopic: !Not [!Equals [!Ref ExistingTopicArn, ""]]
+  MakeTopic: !Equals [!Ref ExistingTopicArn, ""]
+  MakeRole: !Equals [!Ref CreateReaderRole, "true"]
+
+Resources:
+  AlertHubTopic:
+    Type: AWS::SNS::Topic
+    Condition: MakeTopic
+    Properties:
+      TopicName: alert-hub
+      DisplayName: alert-hub
+
+  AlertHubSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: https
+      Endpoint: !Ref IngestUrl
+      TopicArn: !If [UseExistingTopic, !Ref ExistingTopicArn, !Ref AlertHubTopic]
+
+  AlertHubReaderRole:
+    Type: AWS::IAM::Role
+    Condition: MakeRole
+    Properties:
+      RoleName: alert-hub-reader
+      Description: alert-hub read-only role for alarm graphs (GetMetricWidgetImage only)
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { AWS: !Ref HubRoleArn }
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                sts:ExternalId: !Ref ExternalId
+      Policies:
+        - PolicyName: alert-hub-graph
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: cloudwatch:GetMetricWidgetImage
+                Resource: "*"
+
+Outputs:
+  TopicArn:
+    Description: 알람을 alert-hub 로 보내는 SNS 주제 — 새로 만든 경우 경보 알림 작업에 이 주제를 추가하세요
+    Value: !If [UseExistingTopic, !Ref ExistingTopicArn, !Ref AlertHubTopic]
+  ReaderRoleArn:
+    Condition: MakeRole
+    Value: !GetAtt AlertHubReaderRole.Arn
