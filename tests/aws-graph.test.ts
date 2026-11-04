@@ -66,124 +66,62 @@ describe("위젯 정의", () => {
   });
 });
 
-// ---- 드레인 (DB·AWS·Slack 모의) ----
-const m = vi.hoisted(() => ({
-  alertFindMany: vi.fn(),
-  alertUpdateMany: vi.fn(),
-  alertUpdate: vi.fn(),
-  alertFindUniqueOrThrow: vi.fn(),
-  eventFindFirst: vi.fn(),
-  mapFindUnique: vi.fn(),
-  png: vi.fn(),
-  upload: vi.fn(),
-  uploadForBlocks: vi.fn(),
-  updateMessage: vi.fn(),
-  slackMessageUpdate: vi.fn(),
-}));
-vi.mock("@/lib/prisma", () => ({
-  prisma: {
-    alert: { findMany: m.alertFindMany, updateMany: m.alertUpdateMany, update: m.alertUpdate, findUniqueOrThrow: m.alertFindUniqueOrThrow },
-    alertEvent: { findFirst: m.eventFindFirst },
-    awsAccountMap: { findUnique: m.mapFindUnique },
-    slackMessage: { update: m.slackMessageUpdate },
-  },
-}));
+// ---- 서명 주소 ----
+import { signedGraphUrl, verifyGraphSig } from "@/lib/aws/graph-url";
+
+describe("Slack 본문 그래프 서명 주소", () => {
+  const KEY = "0123456789abcdef0123456789abcdef";
+  const now = Date.parse("2026-11-04T00:00:00Z");
+  it("알람 id + 만료로 서명하고, 맞을 때만 연다", () => {
+    const url = signedGraphUrl("https://hub.example/", "a1", now, KEY)!;
+    expect(url).toMatch(/^https:\/\/hub\.example\/api\/g\/a1\.png\?e=\d+&s=[\w-]+$/);
+    const q = new URL(url).searchParams;
+    expect(verifyGraphSig("a1", q.get("e"), q.get("s"), now, KEY)).toEqual({ ok: true });
+    // 다른 알람으로 바꿔 끼우면 거부
+    expect(verifyGraphSig("a2", q.get("e"), q.get("s"), now, KEY)).toEqual({ ok: false, reason: "bad" });
+    // 만료를 늘려 위조하면 거부
+    expect(verifyGraphSig("a1", String(Number(q.get("e")) + 1), q.get("s"), now, KEY)).toEqual({ ok: false, reason: "bad" });
+    // 30일 뒤에는 만료
+    expect(verifyGraphSig("a1", q.get("e"), q.get("s"), now + 31 * 86400_000, KEY)).toEqual({ ok: false, reason: "expired" });
+  });
+  it("키나 APP_URL 이 없으면 주소를 만들지 않는다", () => {
+    expect(signedGraphUrl(null, "a1", now, KEY)).toBeNull();
+    expect(signedGraphUrl("https://hub.example", "a1", now, null)).toBeNull();
+    expect(verifyGraphSig("a1", "1", "x", now, null)).toEqual({ ok: false, reason: "nokey" });
+  });
+  it("발화 기준 고정 창 — 다시 불러와도 같은 그림", () => {
+    const w = buildMetricWidget({ title: "t", region: "r", raw: RAW, firedAt: new Date("2026-11-04T01:00:00Z"), aroundFiring: true })!;
+    expect(w.start).toBe("2026-11-03T22:30:00.000Z");
+    expect(w.end).toBe("2026-11-04T01:30:00.000Z");
+  });
+});
+
+// ---- 그래프 주소는 연결된 계정에만 ----
+const m = vi.hoisted(() => ({ mapFindUnique: vi.fn() }));
+vi.mock("@/lib/prisma", () => ({ prisma: { awsAccountMap: { findUnique: m.mapFindUnique } } }));
 vi.mock("@/server/aws", () => ({
   isHubConfigured: () => Boolean(process.env.AWS_ROLE_ARN),
-  metricWidgetPng: m.png,
+  metricWidgetPng: vi.fn(),
   explainAwsError: (e: unknown) => String(e),
 }));
-vi.mock("@/lib/notify/slack-api", async (orig) => ({ ...(await orig<typeof import("@/lib/notify/slack-api")>()), uploadImageToThread: m.upload, uploadImageForBlocks: m.uploadForBlocks, updateMessage: m.updateMessage, postThread: vi.fn().mockResolvedValue(undefined) }));
 
-import { drainGraphs, enqueueGraph } from "@/server/graph";
+import { graphUrlForAlert } from "@/server/graph";
 
-describe("그래프 대기열", () => {
+describe("통지 본문에 넣을 그래프 주소", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.AWS_ROLE_ARN = "arn:aws:iam::999988887777:role/alert-hub-vercel";
-    process.env.SLACK_BOT_TOKEN = "xoxb-test";
+    process.env.APP_URL = "https://hub.example";
+    process.env.AUTH_SECRET = "0123456789abcdef0123456789abcdef";
     m.mapFindUnique.mockResolvedValue({ readerRoleArn: "arn:aws:iam::771283576189:role/alert-hub-reader", service: { project: { customer: { awsExternalId: "ah-x" } } } });
-    m.alertUpdateMany.mockResolvedValue({ count: 1 });
-    m.alertFindUniqueOrThrow.mockResolvedValue({ title: "TEST-ALARM", accountId: "771283576189", region: "ap-northeast-2", raw: RAW, lastSeenAt: new Date(), firstSeenAt: new Date() });
-    m.eventFindFirst.mockResolvedValue({ createdAt: new Date("2026-10-20T05:58:00Z") });
   });
-
-  it("읽기 역할 + ExternalId 가 있는 계정만 pending", async () => {
-    await enqueueGraph("a1", "771283576189");
-    expect(m.alertUpdate).toHaveBeenCalledWith({ where: { id: "a1" }, data: { graphState: "pending", graphAttempts: 0, graphError: null } });
-    m.alertUpdate.mockClear();
+  it("읽기 역할 + ExternalId 가 있는 계정이면 서명 주소", async () => {
+    expect(await graphUrlForAlert("a1", "771283576189")).toMatch(/^https:\/\/hub\.example\/api\/g\/a1\.png\?e=/);
+  });
+  it("역할이 없거나 안내 데스크가 없으면 null — 그래프 없이 보낸다", async () => {
     m.mapFindUnique.mockResolvedValue({ readerRoleArn: null, service: { project: { customer: { awsExternalId: "ah-x" } } } });
-    await enqueueGraph("a2", "771283576189");
-    expect(m.alertUpdate).not.toHaveBeenCalled();
+    expect(await graphUrlForAlert("a1", "771283576189")).toBeNull();
     delete process.env.AWS_ROLE_ARN;
-    await enqueueGraph("a3", "771283576189");
-    expect(m.alertUpdate).not.toHaveBeenCalled();
-  });
-
-  it("그래프를 받아 봇 메시지마다 스레드에 올리고 done", async () => {
-    m.alertFindMany.mockResolvedValue([{
-      id: "a1", title: "TEST-ALARM", graphAttempts: 0,
-      slackMessages: [
-        { channel: "C0", ts: "0.9", createdAt: new Date("2026-10-19T00:00:00Z") }, // 지난 발화 — 붙이면 안 됨
-        { channel: "C1", ts: "1.1", createdAt: new Date("2026-10-20T05:58:01Z") },
-      ],
-    }]);
-    m.png.mockResolvedValue(new Uint8Array([137, 80, 78, 71]));
-    expect(await drainGraphs()).toEqual({ due: 1, posted: 1, failed: 0 });
-    expect(m.upload).toHaveBeenCalledTimes(1);
-    expect(m.png).toHaveBeenCalledWith(expect.objectContaining({ roleArn: "arn:aws:iam::771283576189:role/alert-hub-reader", externalId: "ah-x", region: "ap-northeast-2" }));
-    expect(m.upload).toHaveBeenCalledWith({ channel: "C1", ts: "1.1" }, expect.any(Uint8Array), expect.objectContaining({ filename: "alarm-graph.png" }));
-    expect(m.alertUpdate).toHaveBeenLastCalledWith({ where: { id: "a1" }, data: { graphState: "done", graphError: null } });
-  });
-
-  it("새 형식 메시지면 본문 안에 이미지 블록으로 끼워 넣고, 저장된 본문도 갱신", async () => {
-    const body = [{ type: "header", text: { type: "plain_text", text: "⚠️ TEST-ALARM" } }];
-    m.alertFindMany.mockResolvedValue([{
-      id: "a1", title: "TEST-ALARM", status: "FIRING", ackedBy: null, graphAttempts: 0,
-      slackMessages: [{ id: "sm1", channel: "C1", ts: "1.1", text: "t", blocks: body, createdAt: new Date("2026-10-20T05:58:01Z") }],
-    }]);
-    m.png.mockResolvedValue(new Uint8Array([1]));
-    m.upload.mockResolvedValue("F123");
-    m.updateMessage.mockResolvedValue(undefined);
-    expect(await drainGraphs()).toMatchObject({ posted: 1 });
-    expect(m.upload).toHaveBeenCalledTimes(1); // 스레드에 먼저 올려 공유 상태로
-    const blocks = m.updateMessage.mock.calls[0][2] as { type: string; block_id?: string; slack_file?: { id: string } }[];
-    expect(blocks[0].type).toBe("header");
-    expect(blocks.find((b) => b.type === "image")).toMatchObject({ block_id: "ah_graph", slack_file: { id: "F123" } });
-    expect(blocks.some((b) => b.type === "actions")).toBe(true); // 버튼은 그대로
-    expect(m.slackMessageUpdate.mock.calls[0][0].data.blocks).toHaveLength(2);
-  });
-
-  it("끼워 넣기가 끝내 실패하면 스레드에 첨부로 대신", async () => {
-    vi.useFakeTimers();
-    m.alertFindMany.mockResolvedValue([{
-      id: "a1", title: "t", status: "FIRING", ackedBy: null, graphAttempts: 0,
-      slackMessages: [{ id: "sm1", channel: "C1", ts: "1.1", text: "t", blocks: [{ type: "header" }], createdAt: new Date("2026-10-20T05:58:01Z") }],
-    }]);
-    m.png.mockResolvedValue(new Uint8Array([1]));
-    m.upload.mockResolvedValue("F1");
-    m.updateMessage.mockRejectedValue(new Error("slack chat.update: invalid_blocks"));
-    const p = drainGraphs();
-    await vi.runAllTimersAsync();
-    expect(await p).toMatchObject({ posted: 1 });
-    expect(m.updateMessage).toHaveBeenCalledTimes(4);
-    expect(m.upload).toHaveBeenCalledWith({ channel: "C1", ts: "1.1" }, expect.any(Uint8Array), expect.anything());
-    vi.useRealTimers();
-  });
-
-  it("실패는 사유를 남기고 재시도, 5회째 포기", async () => {
-    m.png.mockRejectedValue(new Error("고객사 역할로 갈아타지 못했습니다"));
-    m.alertFindMany.mockResolvedValue([{ id: "a1", title: "t", graphAttempts: 1, slackMessages: [{ channel: "C1", ts: "1", createdAt: new Date() }] }]);
-    expect(await drainGraphs()).toMatchObject({ posted: 0, failed: 0 });
-    expect(m.alertUpdate).toHaveBeenLastCalledWith({ where: { id: "a1" }, data: { graphError: "고객사 역할로 갈아타지 못했습니다" } });
-    m.alertFindMany.mockResolvedValue([{ id: "a1", title: "t", graphAttempts: 4, slackMessages: [{ channel: "C1", ts: "1", createdAt: new Date() }] }]);
-    expect(await drainGraphs()).toMatchObject({ failed: 1 });
-    expect(m.alertUpdate).toHaveBeenLastCalledWith({ where: { id: "a1" }, data: { graphState: "failed", graphError: "고객사 역할로 갈아타지 못했습니다" } });
-  });
-
-  it("안내 데스크나 봇이 없으면 아무것도 하지 않는다", async () => {
-    delete process.env.AWS_ROLE_ARN;
-    expect(await drainGraphs()).toEqual({ due: 0, posted: 0, failed: 0 });
-    expect(m.alertFindMany).not.toHaveBeenCalled();
+    expect(await graphUrlForAlert("a1", "771283576189")).toBeNull();
   });
 });

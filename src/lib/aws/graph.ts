@@ -76,6 +76,11 @@ export interface WidgetInput {
   firedAt: Date;
   /** 그래프 범위(시간). 기본 3시간. */
   hours?: number;
+  /**
+   * 발화 시각 기준 고정 창(발화 2시간 30분 전 ~ 30분 후). Slack 처럼 나중에 다시 불러와도
+   * 같은 그림이어야 할 때. 없으면 "지금부터 최근 N시간".
+   */
+  aroundFiring?: boolean;
 }
 
 /**
@@ -123,8 +128,12 @@ export function buildMetricWidget(input: WidgetInput): Record<string, unknown> |
     stacked: false,
     metrics,
     annotations,
-    start: `-PT${input.hours ?? 3}H`,
-    end: "P0D",
+    ...(input.aroundFiring
+      ? {
+          start: new Date(input.firedAt.getTime() - 150 * 60_000).toISOString(),
+          end: new Date(input.firedAt.getTime() + 30 * 60_000).toISOString(),
+        }
+      : { start: `-PT${input.hours ?? 3}H`, end: "P0D" }),
     timezone: "+0900",
     width: 800,
     height: 240,

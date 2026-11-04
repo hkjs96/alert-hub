@@ -6,6 +6,8 @@ const PUBLIC_PREFIXES = [
   "/api/cron/",
   "/api/auth/",
   "/api/slack/",
+  // Slack 본문 그래프 이미지 — Slack 이 로그인 없이 가져간다. 알람 id + 만료 HMAC 서명으로 지킨다.
+  "/api/g/",
   "/login",
   "/verify/",
   "/_next/",

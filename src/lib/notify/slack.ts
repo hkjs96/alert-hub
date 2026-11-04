@@ -4,9 +4,13 @@ import type { NotifyTarget } from "@/lib/notify/targets";
 import { defaultBotChannel, isBotConfigured, postDm, postMessage } from "@/lib/notify/slack-api";
 import { buildAlertBlocks } from "@/lib/notify/slack-blocks";
 import { recordSlackRef } from "@/lib/notify/slack-refs";
-import { buildAlertBody, SEVERITY_EMOJI } from "@/lib/notify/slack-format";
+import { buildAlertBody, GRAPH_BLOCK_ID, SEVERITY_EMOJI } from "@/lib/notify/slack-format";
 
 type Block = Record<string, unknown>;
+
+function withoutGraph(body: Block[]): Block[] {
+  return body.filter((b) => b.block_id !== GRAPH_BLOCK_ID);
+}
 
 async function postWebhook(url: string, text: string, blocks?: Block[]): Promise<void> {
   const res = await fetch(url, {
@@ -37,15 +41,29 @@ export function defaultTargets(): NotifyTarget[] {
  */
 export async function sendToTarget(t: NotifyTarget, text: string, alertId?: string, body?: Block[]): Promise<"sent" | "skipped"> {
   if (t.kind === "SLACK_WEBHOOK") {
-    await postWebhook(t.target, text, body);
+    try {
+      await postWebhook(t.target, text, body);
+    } catch (err) {
+      if (!body?.some((b) => b.block_id === GRAPH_BLOCK_ID)) throw err;
+      await postWebhook(t.target, text, withoutGraph(body));
+    }
     return "sent";
   }
   if (!isBotConfigured()) return "skipped";
-  const blocks = alertId
-    ? buildAlertBlocks(text, { alertId, status: "FIRING", appUrl: process.env.APP_URL }, body)
-    : body;
-  const ref = await postMessage(t.target, text, undefined, blocks);
-  if (alertId) await recordSlackRef(alertId, ref, text, body);
+  const build = (b?: Block[]) =>
+    alertId ? buildAlertBlocks(text, { alertId, status: "FIRING", appUrl: process.env.APP_URL }, b) : b;
+  let sentBody = body;
+  let ref;
+  try {
+    ref = await postMessage(t.target, text, undefined, build(body));
+  } catch (err) {
+    // Slack 이 그래프 이미지를 못 가져오면 메시지 전체가 거절된다 — 그래프만 빼고 알람은 보낸다.
+    if (!body?.some((b) => b.block_id === GRAPH_BLOCK_ID)) throw err;
+    console.error("[notify:slack] graph image rejected — resending without it", err);
+    sentBody = withoutGraph(body);
+    ref = await postMessage(t.target, text, undefined, build(sentBody));
+  }
+  if (alertId) await recordSlackRef(alertId, ref, text, sentBody);
   return "sent";
 }
 
@@ -79,9 +97,18 @@ export async function sendSlackText(
 /** 개인 DM (봇 필요). 토큰이 없으면 "skipped". alertId 가 있으면 버튼도. */
 export async function sendSlackDm(userId: string, text: string, alertId?: string, body?: Block[]): Promise<"sent" | "skipped"> {
   if (!isBotConfigured()) return "skipped";
-  const blocks = alertId ? buildAlertBlocks(text, { alertId, status: "FIRING", appUrl: process.env.APP_URL }, body) : body;
-  const ref = await postDm(userId, text, undefined, blocks);
-  if (alertId) await recordSlackRef(alertId, ref, text, body);
+  const build = (b?: Block[]) =>
+    alertId ? buildAlertBlocks(text, { alertId, status: "FIRING", appUrl: process.env.APP_URL }, b) : b;
+  let sentBody = body;
+  let ref;
+  try {
+    ref = await postDm(userId, text, undefined, build(body));
+  } catch (err) {
+    if (!body?.some((b) => b.block_id === GRAPH_BLOCK_ID)) throw err;
+    sentBody = withoutGraph(body);
+    ref = await postDm(userId, text, undefined, build(sentBody));
+  }
+  if (alertId) await recordSlackRef(alertId, ref, text, sentBody);
   return "sent";
 }
 
