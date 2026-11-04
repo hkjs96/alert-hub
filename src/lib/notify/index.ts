@@ -42,6 +42,8 @@ export interface NotifyContext {
   history?: string;
   /** 런북·콘솔 링크. 서버가 발화 시점에 계산한다. */
   links?: { label: string; url: string }[];
+  /** 서명된 그래프 이미지 주소. 있으면 Slack 본문 맨 아래에 image 블록으로 들어간다. */
+  graphUrl?: string;
 }
 
 // A Notifier is any channel that can deliver an alert — Slack, email, Twilio.

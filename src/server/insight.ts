@@ -6,6 +6,7 @@ import { findPriorResolutions } from "@/server/history";
 import { resolveRunbook } from "@/server/runbook";
 import { parseOwnershipSnapshot } from "@/server/org";
 import { getSetting, setSetting } from "@/server/settings";
+import { currentFiringMessages } from "@/server/slack-sync";
 import { callInsightModel, INSIGHT_MODEL, insightApiKey } from "@/server/insight-client";
 import {
   buildUserPrompt,
@@ -160,7 +161,8 @@ async function postToSlack(
 ): Promise<void> {
   if (!isBotConfigured()) return;
   try {
-    const refs = await prisma.slackMessage.findMany({ where: { alertId }, orderBy: { createdAt: "asc" } });
+    // 이번 발화 메시지에만 — 지난 발화 스레드에 AI 메모가 달리지 않게.
+    const refs = await currentFiringMessages(alertId);
     if (refs.length === 0) return;
     const appUrl = process.env.APP_URL?.replace(/\/+$/, "");
     const text = slackInsightLine(s, appUrl ? `${appUrl}/alerts/${alertId}#ai` : null);

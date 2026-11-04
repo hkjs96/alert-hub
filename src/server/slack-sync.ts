@@ -70,6 +70,23 @@ function nowLabel(): string {
  * `except` 는 버튼을 누른 그 메시지(response_url 로 이미 교체됐고 스레드도 호출자가
  * 직접 남긴다)를 통째로 건너뛸 때.
  */
+/**
+ * 이번 발화에 보낸 메시지만 — 같은 알람(같은 fingerprint)이 다시 울려도 지난 발화 메시지의
+ * 상태 줄을 바꾸거나 그 스레드에 글을 달지 않는다. 기준은 마지막 FIRING 이벤트 시각.
+ */
+export async function currentFiringMessages(alertId: string) {
+  const fired = await prisma.alertEvent.findFirst({
+    where: { alertId, status: "FIRING" },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true },
+  });
+  const since = fired ? new Date(fired.createdAt.getTime() - 5_000) : undefined;
+  return prisma.slackMessage.findMany({
+    where: { alertId, ...(since ? { createdAt: { gte: since } } : {}) },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
 export async function syncSlackMessages(
   alertId: string,
   state: SlackSyncState,
@@ -79,7 +96,7 @@ export async function syncSlackMessages(
   if (!isBotConfigured()) return;
   let rows: { channel: string; ts: string; text: string; blocks: unknown }[] = [];
   try {
-    rows = await prisma.slackMessage.findMany({ where: { alertId }, orderBy: { createdAt: "asc" } });
+    rows = await currentFiringMessages(alertId);
   } catch (err) {
     console.error("[slack-sync] lookup failed", err);
     return;

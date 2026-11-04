@@ -58,7 +58,7 @@
 - [ ] 메가존 계정: IAM 자격 증명 공급자 `oidc.vercel.com/<팀 slug>` + 역할 `alert-hub-vercel`(신뢰: Vercel alert-hub production, 권한: `sts:AssumeRole` on `arn:aws:iam::*:role/alert-hub-reader`).
 - [ ] Vercel 환경변수 `AWS_ROLE_ARN`(위 역할 ARN), `AWS_REGION=ap-northeast-2` → 재배포.
 - [ ] 조직 트리 › 서비스 › AWS 계정 매핑 › **그래프 연결**: ExternalId 발급 → 고객사 계정에 `alert-hub-reader` 생성(화면의 JSON 그대로) → 역할 ARN 저장 → **연결 확인**에 그래프가 보이면 끝.
-- [ ] Slack 앱 › OAuth & Permissions › Bot Token Scopes 에 `files:write` 추가 → 재설치(스레드에 그래프 첨부).
+- [ ] Vercel 환경변수 `APP_URL` 확인(Slack 이 그래프 이미지를 가져갈 주소). 그래프는 알람 본문 맨 아래에 서명 주소(30일)로 들어간다 — `files:write` 는 필요 없다.
 
 ## 보류 (코드 쪽)
 

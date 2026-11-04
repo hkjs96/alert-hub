@@ -9,6 +9,9 @@ import { linksLine } from "@/lib/links";
 
 type Block = Record<string, unknown>;
 
+/** 본문 그래프 image 블록 — 발송 실패 시 이 블록만 빼고 다시 보내기 위한 표식. */
+export const GRAPH_BLOCK_ID = "ah_graph";
+
 export const SEVERITY_EMOJI: Record<string, string> = {
   "SEV-0": "🚨",
   "SEV-1": "🚨",
@@ -152,6 +155,17 @@ export function buildAlertBody(alert: NormalizedAlert, ctx: NotifyContext = {}):
   const links = ctx.links ? linksLine(ctx.links) : null;
   if (links) ctxLines.push(links);
   for (const line of ctxLines) blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: line }] });
+
+  // 그래프: Slack 이 서명된 주소에서 직접 그린다. 못 가져오면 보내는 쪽이 이 블록만 빼고 다시 보낸다.
+  if (ctx.graphUrl) {
+    blocks.push({
+      type: "image",
+      block_id: GRAPH_BLOCK_ID,
+      image_url: ctx.graphUrl,
+      alt_text: `${alert.title} 지표 그래프`,
+      title: { type: "plain_text", text: "📈 발화 전후 3시간 · 빨간 선 = 발화, 주황 선 = 임계값", emoji: true },
+    });
+  }
 
   const textParts = [`${emoji} ${alert.title} — ${alert.status}`];
   if (ctx.chainLabel) textParts.push(ctx.chainLabel);

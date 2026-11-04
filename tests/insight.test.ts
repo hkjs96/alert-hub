@@ -164,7 +164,7 @@ vi.mock("@/lib/prisma", () => ({
     customer: { findUnique: m.customerFindUnique },
     alertInsight: { create: m.insightCreate, findFirst: m.insightFindFirst, findMany: m.insightFindMany, updateMany: m.insightUpdateMany, update: m.insightUpdate },
     alert: { findUniqueOrThrow: m.alertFindUniqueOrThrow },
-    alertEvent: { findMany: m.eventFindMany },
+    alertEvent: { findMany: m.eventFindMany, findFirst: vi.fn().mockResolvedValue(null) },
     resolution: { count: m.resolutionCount },
     slackMessage: { findMany: m.slackFindMany },
   },

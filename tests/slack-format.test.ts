@@ -88,4 +88,10 @@ describe("본문 블록", () => {
     expect(JSON.stringify(resolved)).toContain("✅ *해결됨* · 박지수 · Slack");
     expect(JSON.stringify(resolved)).not.toContain("ah_ack");
   });
+  it("그래프 주소가 있으면 본문 맨 아래 image 블록", () => {
+    const { blocks: withGraph } = buildAlertBody(alert, { graphUrl: "https://hub.example/api/g/a1.png?e=1&s=x" });
+    const last = withGraph[withGraph.length - 1] as { type: string; block_id: string; image_url: string };
+    expect(last).toMatchObject({ type: "image", block_id: "ah_graph", image_url: "https://hub.example/api/g/a1.png?e=1&s=x" });
+    expect(blocks.some((b) => (b as { type: string }).type === "image")).toBe(false);
+  });
 });
