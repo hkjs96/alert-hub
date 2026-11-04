@@ -281,6 +281,9 @@ model Customer {
   // 그래프용 교차 계정 역할의 ExternalId — 고객사마다 하나, alert-hub 가 발급. 고객사 계정의
   // alert-hub-reader 역할 신뢰 조건에 들어간다(혼동된 대리인 방지). 비밀값은 아니다.
   awsExternalId String? @unique
+  // 고객사 전용 알람 수신 주소의 토큰(…/api/webhooks/cloudwatch?token=<이 값>). 이 주소로 온 알람은
+  // 이 고객사 계정의 알람이어야 받는다. 화면에서 재발급하면 이전 주소는 즉시 무효.
+  ingestToken   String? @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -749,4 +752,19 @@ model AlertInsight {
 
   @@index([alertId, createdAt])
   @@index([status, nextAttemptAt])
+}
+
+// 수집 거부 기록 — 위조 의심(남의 계정 ID, 다른 고객사 주소)으로 받지 않은 알람·구독.
+// 시스템 진단에 최근 건을 보여 준다. 원문은 남기지 않는다(필요한 식별자만).
+model IngestRejection {
+  id         String   @id @default(cuid())
+  reason     String
+  kind       String   // alert | subscription
+  accountId  String?
+  topicArn   String?
+  title      String?
+  customerId String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
 }

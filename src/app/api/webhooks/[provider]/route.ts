@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
+import { customerByIngestToken, guardAlerts, guardSubscription } from "@/server/ingest-guard";
 import { isRecord } from "@/lib/normalize";
 import { AUTO_DETECT, isKnownProvider, normalizeWith } from "@/lib/providers";
 import {
@@ -74,15 +75,16 @@ export async function POST(
     );
   }
 
+  // 토큰: 공용(INGEST_TOKEN) 또는 고객사 전용(Customer.ingestToken). 고객사 전용 주소로 온
+  // 알람은 그 고객사 계정의 알람이어야 받는다(아래 guardAlerts).
   const token = process.env.INGEST_TOKEN;
-  if (token) {
-    const provided =
-      req.headers.get("x-webhook-token") ??
-      new URL(req.url).searchParams.get("token") ??
-      "";
-    if (!safeEqual(provided, token)) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
+  const provided =
+    req.headers.get("x-webhook-token") ??
+    new URL(req.url).searchParams.get("token") ??
+    "";
+  const tokenCustomer = await customerByIngestToken(provided);
+  if (token && !tokenCustomer && !safeEqual(provided, token)) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
   const rawText = await req.text();
@@ -139,6 +141,8 @@ export async function POST(
     }
 
     if (type === "SubscriptionConfirmation") {
+      const sub = await guardSubscription(typeof body.TopicArn === "string" ? body.TopicArn : null, tokenCustomer);
+      if (!sub.ok) return NextResponse.json({ error: "subscription rejected", reason: sub.reason }, { status: 403 });
       const subscribeUrl = body.SubscribeURL;
       if (typeof subscribeUrl !== "string" || !isSnsSubscribeUrl(subscribeUrl)) {
         console.error("[webhook] rejected non-SNS SubscribeURL", subscribeUrl);
@@ -189,7 +193,13 @@ export async function POST(
     providerOverride ?? provider,
     payload,
   );
-  const results = await ingestAlerts(alerts);
+  // 누가 보냈는지 확인 — 남의 계정 ID 를 적은 알람, 다른 고객사 주소로 온 알람은 받지 않는다.
+  const guard = await guardAlerts(alerts, {
+    fromSns,
+    topicArn: fromSns && isRecord(body) && typeof body.TopicArn === "string" ? body.TopicArn : null,
+    tokenCustomer,
+  });
+  const results = await ingestAlerts(guard.accepted);
 
   // Always 200 for SNS so it does not retry-storm on an unparseable payload.
   if (alerts.length === 0 && !fromSns) {
@@ -208,6 +218,7 @@ export async function POST(
     ok: true,
     provider: used,
     ingested: results.length,
+    ...(guard.rejected ? { rejected: guard.rejected } : {}),
     results,
   });
 }

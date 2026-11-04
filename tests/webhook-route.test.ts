@@ -2,9 +2,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   ingestAlerts: vi.fn(),
+  // 계정 → 고객사 매핑과 고객사 수집 토큰 (테스트마다 채운다)
+  accounts: new Map<string, string>(),
+  tokens: new Map<string, string>(),
+  rejections: [] as { kind: string; reason: string; accountId: string | null }[],
 }));
 
 vi.mock("@/server/alerts", () => ({ ingestAlerts: mocks.ingestAlerts }));
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    awsAccountMap: {
+      findMany: async ({ where }: { where: { accountId: { in: string[] } } }) =>
+        where.accountId.in
+          .filter((a) => mocks.accounts.has(a))
+          .map((a) => ({ accountId: a, service: { project: { customerId: mocks.accounts.get(a) } } })),
+    },
+    customer: { findUnique: async ({ where }: { where: { ingestToken: string } }) => (mocks.tokens.has(where.ingestToken) ? { id: mocks.tokens.get(where.ingestToken) } : null) },
+    ingestRejection: { create: async ({ data }: { data: { kind: string; reason: string; accountId: string | null } }) => { mocks.rejections.push(data); return data; } },
+  },
+}));
 
 import { POST } from "@/app/api/webhooks/[provider]/route";
 
@@ -28,6 +44,9 @@ const fetchMock = vi.fn(async () => new Response("ok"));
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.accounts.clear();
+  mocks.tokens.clear();
+  mocks.rejections.length = 0;
   vi.stubGlobal("fetch", fetchMock);
   // 이 파일의 SNS 봉투 픽스처는 서명이 없다 — 봉투 처리 자체를 검증하는
   // 테스트라 서명 검증은 끈다. 검증 동작은 webhook-verify.test.ts와 아래
@@ -244,3 +263,92 @@ describe("PagerDuty HMAC (PAGERDUTY_WEBHOOK_SECRET 설정 시)", () => {
     expect(res.status).toBe(200);
   });
 });
+
+// ---- 누가 보냈는지 (수집 보안 1단계) ----
+const HOMENIC = "771283576189";
+const HOMENIC_DEV = "111122223333";
+const OTHER = "444455556666";
+function snsAlarm(topicAccount: string, alarmAccount: string, extra: Record<string, unknown> = {}) {
+  return {
+    Type: "Notification",
+    TopicArn: `arn:aws:sns:ap-northeast-2:${topicAccount}:alert-hub`,
+    Message: JSON.stringify({
+      AlarmName: "CPU high",
+      NewStateValue: "ALARM",
+      AlarmArn: `arn:aws:cloudwatch:ap-northeast-2:${alarmAccount}:alarm:cpu`,
+      ...extra,
+    }),
+  };
+}
+
+describe("수집 보안 — 남의 계정 ID 를 적어 보내는 위조", () => {
+  beforeEach(() => {
+    mocks.accounts.set(HOMENIC, "c_homenic").set(HOMENIC_DEV, "c_homenic").set(OTHER, "c_other");
+  });
+
+  it("주제 계정 = 알람 계정(등록됨) → 받는다", async () => {
+    const res = await post("cloudwatch", snsAlarm(HOMENIC, HOMENIC));
+    expect(res.status).toBe(200);
+    expect(mocks.ingestAlerts.mock.calls[0][0]).toHaveLength(1);
+  });
+
+  it("같은 고객사의 다른 계정 주제로 모아 보내도 받는다 (교차 계정 SNS)", async () => {
+    await post("cloudwatch", snsAlarm(HOMENIC_DEV, HOMENIC));
+    expect(mocks.ingestAlerts.mock.calls[0][0]).toHaveLength(1);
+  });
+
+  it("모르는 계정 주제가 홈닉 계정 ID 를 적어 보내면 거부하고 기록", async () => {
+    const res = await post("cloudwatch", snsAlarm("999999999999", HOMENIC));
+    expect(res.status).toBe(200); // SNS 재시도 폭주 방지 — 200 이지만 받지 않는다
+    expect(await res.json()).toMatchObject({ ingested: 0, rejected: 1 });
+    expect(mocks.ingestAlerts.mock.calls[0][0]).toHaveLength(0);
+    expect(mocks.rejections[0]).toMatchObject({ kind: "alert", accountId: HOMENIC });
+  });
+
+  it("다른 고객사 계정 주제가 홈닉 계정 ID 를 적어 보내도 거부", async () => {
+    await post("cloudwatch", snsAlarm(OTHER, HOMENIC));
+    expect(mocks.ingestAlerts.mock.calls[0][0]).toHaveLength(0);
+  });
+
+  it("등록 안 된 계정 알람은 미매핑으로 받는다 (새 계정 매핑 입구)", async () => {
+    await post("cloudwatch", snsAlarm("999999999999", "999999999999"));
+    expect(mocks.ingestAlerts.mock.calls[0][0]).toHaveLength(1);
+  });
+});
+
+describe("고객사 전용 수집 주소", () => {
+  beforeEach(() => {
+    vi.stubEnv("INGEST_TOKEN", "global-secret");
+    mocks.accounts.set(HOMENIC, "c_homenic").set(OTHER, "c_other");
+    mocks.tokens.set("in_homenic", "c_homenic");
+  });
+
+  it("고객사 토큰으로도 인증된다 (공용 토큰 없이)", async () => {
+    const res = await post("cloudwatch", snsAlarm(HOMENIC, HOMENIC), { query: "?token=in_homenic" });
+    expect(res.status).toBe(200);
+    expect(mocks.ingestAlerts.mock.calls[0][0]).toHaveLength(1);
+  });
+
+  it("홈닉 주소로 다른 고객사 계정 알람이 오면 거부", async () => {
+    await post("cloudwatch", snsAlarm(OTHER, OTHER), { query: "?token=in_homenic" });
+    expect(mocks.ingestAlerts.mock.calls[0][0]).toHaveLength(0);
+    expect(mocks.rejections[0].reason).toContain("다른 고객사");
+  });
+
+  it("틀린 토큰은 401", async () => {
+    expect((await post("cloudwatch", snsAlarm(HOMENIC, HOMENIC), { query: "?token=in_nope" })).status).toBe(401);
+  });
+
+  it("고객사 주소의 구독 확인은 그 고객사 계정 주제만", async () => {
+    const sub = (acct: string) => ({
+      Type: "SubscriptionConfirmation",
+      TopicArn: `arn:aws:sns:ap-northeast-2:${acct}:alert-hub`,
+      SubscribeURL: "https://sns.ap-northeast-2.amazonaws.com/?Action=ConfirmSubscription&Token=x",
+    });
+    expect((await post("cloudwatch", sub(OTHER), { query: "?token=in_homenic" })).status).toBe(403);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect((await post("cloudwatch", sub(HOMENIC), { query: "?token=in_homenic" })).status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+

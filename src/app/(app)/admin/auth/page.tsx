@@ -53,6 +53,12 @@ export default async function AuthDiagPage({
   ]);
   const slackAuth = isBotConfigured() ? await authTest() : null;
   const [ai, aiStats] = await Promise.all([insightPolicy(), insightStats()]);
+  const weekAgo = new Date(Date.now() - 7 * 86400_000);
+  const [customerTokens, rejectedWeek, recentRejections] = await Promise.all([
+    prisma.customer.count({ where: { ingestToken: { not: null } } }),
+    prisma.ingestRejection.count({ where: { createdAt: { gte: weekAgo } } }),
+    prisma.ingestRejection.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
+  ]);
   const hub = hubRoleArn();
   const [readerTotal, readerOk, readerBad] = await Promise.all([
     prisma.awsAccountMap.count({ where: { readerRoleArn: { not: null } } }),
@@ -177,6 +183,9 @@ export default async function AuthDiagPage({
         process.env.INGEST_TOKEN ? "INGEST_TOKEN 설정됨 — 웹훅 URL 에 ?token= 필요" : "INGEST_TOKEN 없음 — URL 을 아는 누구나 알람을 넣을 수 있습니다. 실제 고객사 투입 전 설정",
         process.env.SNS_VERIFY === "false" ? "SNS 서명 검증 꺼짐(SNS_VERIFY=false)" : "SNS 서명 검증 켜짐",
         process.env.PAGERDUTY_WEBHOOK_SECRET ? "PagerDuty 서명 필수" : "PagerDuty 서명 미설정",
+        `고객사 전용 주소 ${customerTokens}곳`,
+        "등록 계정 위조 차단 켜짐",
+        `최근 7일 거부 ${rejectedWeek}건`,
       ].join(" · "),
     },
     {
@@ -279,6 +288,22 @@ export default async function AuthDiagPage({
           </div>
         ) : null}
             </>
+          ) : null}
+          {g.title === "수집 · 웹훅" && recentRejections.length ? (
+            <div className="px-5 py-3.5 text-xs text-[#4a4842]">
+              <div className="mb-1.5 font-semibold text-stone-800">최근 거부 (위조 의심)</div>
+              <ul className="space-y-1">
+                {recentRejections.map((r) => (
+                  <li key={r.id} className="flex flex-wrap gap-x-2">
+                    <span className="font-mono text-stone-400">{fmt(r.createdAt)}</span>
+                    <span className="font-mono">{r.kind === "subscription" ? "구독" : "알람"}</span>
+                    {r.accountId ? <span className="font-mono">{r.accountId}</span> : null}
+                    {r.title ? <span className="text-stone-500">“{r.title}”</span> : null}
+                    <span className="text-[#b54708]">{r.reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : null}
           {g.title === "AI 메모" ? (
             <form action={setInsightPolicyAction} className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3.5 text-sm">
