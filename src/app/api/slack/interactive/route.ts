@@ -10,6 +10,7 @@ import { isResolutionKind, KIND_LABELS } from "@/lib/history";
 import { setResolutionKind } from "@/server/history";
 import { scopeForContact } from "@/server/scope";
 import { canSeeCustomer } from "@/lib/scope";
+import { appUrl as publicAppUrl } from "@/lib/app-url";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -107,7 +108,7 @@ export async function POST(req: Request) {
   const stored = await storedMessage(here);
   const originalText = stored?.text ?? payload.message?.text ?? "";
   const msgBody = storedBody(stored?.blocks);
-  const appUrl = process.env.APP_URL ?? null;
+  const appUrl = publicAppUrl();
   const stamp = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
 
   if (action.action_id === "ah_mute") {

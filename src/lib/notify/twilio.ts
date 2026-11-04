@@ -1,5 +1,6 @@
 import type { Notifier, NotifyContext } from "@/lib/notify";
 import type { NormalizedAlert } from "@/lib/types";
+import { appUrl as publicAppUrl } from "@/lib/app-url";
 
 // 전화/SMS (Phase 3의 마지막 단, 흐름도 1의 "Slack → email → 전화").
 //
@@ -80,7 +81,7 @@ export const twilioNotifier: Notifier = {
     const target = ctx.assignees?.[0];
     if (!target?.phone) return "skipped";
 
-    const appUrl = process.env.APP_URL?.replace(/\/+$/, "");
+    const appUrl = publicAppUrl();
     const link = appUrl && ctx.alertId ? ` ${appUrl}/alerts/${ctx.alertId}` : "";
     await post(sid, token, "Messages.json", {
       To: target.phone,
