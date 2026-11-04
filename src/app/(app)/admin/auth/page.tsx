@@ -14,6 +14,7 @@ import { isPlanEmpty, planDemoCleanup } from "@/server/demo";
 import { hubRoleArn } from "@/server/aws";
 import { graphUrlSecret } from "@/lib/aws/graph-url";
 import { cleanupDemoData } from "@/server/demo-actions";
+import { appUrl as publicAppUrl } from "@/lib/app-url";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ export default async function AuthDiagPage({
     prisma.awsAccountMap.count({ where: { readerRoleArn: { not: null }, readerError: null, readerCheckedAt: { not: null } } }),
     prisma.awsAccountMap.count({ where: { readerRoleArn: { not: null }, readerError: { not: null } } }),
   ]);
-  const appUrl = process.env.APP_URL?.replace(/\/+$/, "");
+  const appUrl = publicAppUrl();
   const redirectUri = appUrl ? `${appUrl}/api/auth/callback` : null;
   const openAllow = cfg.allowedDomains.length === 0 && cfg.allowedEmails.length === 0;
 
@@ -142,7 +143,7 @@ export default async function AuthDiagPage({
       state: process.env.SLACK_SIGNING_SECRET ? (isBotConfigured() ? "켜짐" : "봇 없음") : "없음",
       value: process.env.SLACK_SIGNING_SECRET
         ? isBotConfigured()
-          ? `메시지의 확인 · 해결 · 뮤트 버튼 동작 · Request URL ${(process.env.APP_URL ?? "<APP_URL>").replace(/\/+$/, "")}/api/slack/interactive`
+          ? `메시지의 확인 · 해결 · 뮤트 버튼 동작 · Request URL ${(publicAppUrl() ?? "<APP_URL>")}/api/slack/interactive`
           : "서명 시크릿은 있지만 봇 토큰이 없어 버튼이 붙지 않습니다"
         : "SLACK_SIGNING_SECRET 없음 · 메시지 버튼(확인·해결·뮤트)이 동작하지 않습니다. Slack 앱 › Basic Information › Signing Secret",
     },
@@ -196,7 +197,7 @@ export default async function AuthDiagPage({
         hub ? `안내 데스크 ${hub}` : "AWS_ROLE_ARN 없음 — 그래프를 받지 않습니다",
         process.env.VERCEL ? "Vercel OIDC" : "로컬 자격 증명",
         `읽기 역할 ${readerTotal}개 · 연결 ${readerOk} · 실패 ${readerBad}`,
-        process.env.APP_URL ? "Slack 본문에 그래프(서명 주소 30일)" : "APP_URL 없음 — Slack 본문 그래프를 넣지 못합니다",
+        publicAppUrl() ? "Slack 본문에 그래프(서명 주소 30일)" : "APP_URL 없음 — Slack 본문 그래프를 넣지 못합니다",
         graphUrlSecret() ? "서명 키 있음" : "서명 키 없음 (AUTH_SECRET 또는 GRAPH_URL_SECRET 16자 이상)",
       ].join(" · "),
       action: { label: "계정 매핑", href: "/admin/org" },

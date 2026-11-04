@@ -6,6 +6,7 @@ import { isWebhookUrl, normalizeBotChannel } from "@/lib/notify/targets";
 import { sendToTarget } from "@/lib/notify/slack";
 import { isBotConfigured } from "@/lib/notify/slack-api";
 import { requireRole } from "@/server/auth";
+import { appUrl as publicAppUrl } from "@/lib/app-url";
 
 function str(fd: FormData, k: string): string | null {
   const v = fd.get(k);
@@ -67,7 +68,7 @@ export async function testNotifyChannel(formData: FormData) {
   if (!id) return;
   const ch = await prisma.notifyChannel.findUnique({ where: { id } });
   if (!ch) return;
-  const appUrl = process.env.APP_URL?.replace(/\/+$/, "") ?? "";
+  const appUrl = (publicAppUrl() ?? "");
   try {
     const r = await sendToTarget(
       { kind: ch.kind, target: ch.target, label: ch.label },

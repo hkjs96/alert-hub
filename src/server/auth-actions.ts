@@ -11,6 +11,7 @@ import { isVerifyChannel } from "@/lib/auth/verify";
 import { sendEmailText } from "@/lib/notify/email";
 import { requireRole, requireSessionUser, requireUser } from "@/server/auth";
 import { VERIFY_TTL_MS, checkCode, generateCode, hashCode } from "@/lib/auth/verify";
+import { appUrl as publicAppUrl } from "@/lib/app-url";
 
 function str(fd: FormData, k: string): string | null {
   const v = fd.get(k);
@@ -96,7 +97,7 @@ export async function requestApprovalPing() {
   if (me.approvalPingAt && now - me.approvalPingAt.getTime() < PING_COOLDOWN_MS) {
     redirect("/pending?pinged=cooldown");
   }
-  const appUrl = process.env.APP_URL?.replace(/\/+$/, "") ?? "";
+  const appUrl = (publicAppUrl() ?? "");
   const r = await pingAdmins(
     `:bust_in_silhouette: 가입 승인 대기 — ${me.name} <${me.email}> · 요청 권한 ${ROLE_LABELS[me.role]}${appUrl ? ` · ${appUrl}/admin/access` : ""}`,
   );
@@ -114,7 +115,7 @@ export async function requestRoleUpgrade(formData: FormData) {
   if (me.approvalPingAt && now - me.approvalPingAt.getTime() < PING_COOLDOWN_MS) {
     redirect(withParam(back, "rq", "cooldown"));
   }
-  const appUrl = process.env.APP_URL?.replace(/\/+$/, "") ?? "";
+  const appUrl = (publicAppUrl() ?? "");
   const r = await pingAdmins(
     `:key: 권한 요청 — ${me.name} <${me.email}> · 현재 ${ROLE_LABELS[me.role]} → 요청 ${isRole(role) ? ROLE_LABELS[role] : role} (${screen})${appUrl ? ` · ${appUrl}/admin/access` : ""}`,
   );
@@ -144,7 +145,7 @@ export async function sendVerificationCode(formData: FormData) {
   const target = channel === "slack" ? me.slackId : channel === "email" ? me.email : me.phone;
   if (!target) redirect(withParam(back, "verify", `${channel}:missing`));
   const code = generateCode();
-  const appUrl = process.env.APP_URL?.replace(/\/+$/, "") ?? "";
+  const appUrl = (publicAppUrl() ?? "");
   let result: "sent" | "skipped" = "skipped";
   if (channel === "slack") {
     const text = `alert-hub 채널 확인 코드: *${code}* (10분 안에 입력)${appUrl ? ` · ${appUrl}/me` : ""}`;

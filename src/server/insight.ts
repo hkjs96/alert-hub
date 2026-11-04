@@ -20,6 +20,7 @@ import {
   type InsightStats,
   type InsightStep,
 } from "@/lib/insight";
+import { appUrl as publicAppUrl } from "@/lib/app-url";
 
 // AI 메모 — 발화 팬아웃 뒤 pending 행 하나, 통지 틱(/api/cron/notify)이 만든다.
 // 전부 best-effort: 여기서 무엇이 실패해도 통지·전이는 이미 끝났다.
@@ -164,7 +165,7 @@ async function postToSlack(
     // 이번 발화 메시지에만 — 지난 발화 스레드에 AI 메모가 달리지 않게.
     const refs = await currentFiringMessages(alertId);
     if (refs.length === 0) return;
-    const appUrl = process.env.APP_URL?.replace(/\/+$/, "");
+    const appUrl = publicAppUrl();
     const text = slackInsightLine(s, appUrl ? `${appUrl}/alerts/${alertId}#ai` : null);
     for (const m of refs) await postThread({ channel: m.channel, ts: m.ts }, text);
     await prisma.alertInsight.update({ where: { id: insightId }, data: { threadPosted: true } });

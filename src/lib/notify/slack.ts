@@ -5,6 +5,7 @@ import { defaultBotChannel, isBotConfigured, postDm, postMessage } from "@/lib/n
 import { buildAlertBlocks } from "@/lib/notify/slack-blocks";
 import { recordSlackRef } from "@/lib/notify/slack-refs";
 import { buildAlertBody, GRAPH_BLOCK_ID, SEVERITY_EMOJI } from "@/lib/notify/slack-format";
+import { appUrl as publicAppUrl } from "@/lib/app-url";
 
 type Block = Record<string, unknown>;
 
@@ -51,7 +52,7 @@ export async function sendToTarget(t: NotifyTarget, text: string, alertId?: stri
   }
   if (!isBotConfigured()) return "skipped";
   const build = (b?: Block[]) =>
-    alertId ? buildAlertBlocks(text, { alertId, status: "FIRING", appUrl: process.env.APP_URL }, b) : b;
+    alertId ? buildAlertBlocks(text, { alertId, status: "FIRING", appUrl: publicAppUrl() }, b) : b;
   let sentBody = body;
   let ref;
   try {
@@ -98,7 +99,7 @@ export async function sendSlackText(
 export async function sendSlackDm(userId: string, text: string, alertId?: string, body?: Block[]): Promise<"sent" | "skipped"> {
   if (!isBotConfigured()) return "skipped";
   const build = (b?: Block[]) =>
-    alertId ? buildAlertBlocks(text, { alertId, status: "FIRING", appUrl: process.env.APP_URL }, b) : b;
+    alertId ? buildAlertBlocks(text, { alertId, status: "FIRING", appUrl: publicAppUrl() }, b) : b;
   let sentBody = body;
   let ref;
   try {
@@ -139,7 +140,7 @@ export async function sendSlackDigest(
   ];
   if (chain) lines.push(chain);
 
-  const appUrl = process.env.APP_URL?.replace(/\/+$/, "");
+  const appUrl = publicAppUrl();
   for (const { alert, ctx } of items) {
     const emoji = SEVERITY_EMOJI[alert.severity] ?? "⚠️";
     const meta: string[] = [];

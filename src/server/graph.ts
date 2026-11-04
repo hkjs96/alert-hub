@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { buildMetricWidget, probeWidget } from "@/lib/aws/graph";
 import { signedGraphUrl } from "@/lib/aws/graph-url";
 import { explainAwsError, isHubConfigured, metricWidgetPng } from "@/server/aws";
+import { appUrl as publicAppUrl } from "@/lib/app-url";
 
 // 알람 그래프. Slack 에는 서명된 이미지 주소(/api/g/<id>.png)를 본문 image 블록으로 넣고,
 // Slack 이 그 주소에서 그림을 가져간다 — 발송을 늦추지 않고 스레드도 쓰지 않는다.
@@ -28,7 +29,7 @@ export async function readerFor(accountId: string | null | undefined): Promise<R
 export async function graphUrlForAlert(alertId: string, accountId: string | null | undefined): Promise<string | null> {
   try {
     if (!(await readerFor(accountId))) return null;
-    return signedGraphUrl(process.env.APP_URL, alertId);
+    return signedGraphUrl(publicAppUrl(), alertId);
   } catch (err) {
     console.error("[graph] url failed", err);
     return null;

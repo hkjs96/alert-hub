@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import type { Notifier, NotifyContext } from "@/lib/notify";
 import type { NormalizedAlert } from "@/lib/types";
+import { appUrl as publicAppUrl } from "@/lib/app-url";
 
 // 이메일 채널 (Phase 3). Slack과 같은 Notifier 인터페이스 뒤에 서고, 같은
 // 순간(FIRING 전환 1회 + 에스컬레이션)에만 발송된다. SMTP라 벤더 중립 —
@@ -35,7 +36,7 @@ function buildText(alert: NormalizedAlert, ctx: NotifyContext): string {
 
   if (alert.stateReason) lines.push("", alert.stateReason);
 
-  const appUrl = process.env.APP_URL?.replace(/\/+$/, "");
+  const appUrl = publicAppUrl();
   if (appUrl && ctx.alertId) {
     lines.push("", `상세: ${appUrl}/alerts/${ctx.alertId}`);
   }

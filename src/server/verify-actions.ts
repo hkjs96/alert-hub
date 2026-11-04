@@ -8,6 +8,7 @@ import { sendEmailText } from "@/lib/notify/email";
 import { sendSmsText } from "@/lib/notify/twilio";
 import { postDm, isBotConfigured } from "@/lib/notify/slack-api";
 import { requireRole } from "@/server/auth";
+import { appUrl as publicAppUrl } from "@/lib/app-url";
 
 function str(fd: FormData, k: string): string | null {
   const v = fd.get(k);
@@ -41,7 +42,7 @@ export async function requestChannelVerification(formData: FormData) {
   if (!target) redirect(withParam(back, "vreq", `${channel}:missing`));
 
   const token = newLinkToken();
-  const appUrl = process.env.APP_URL?.replace(/\/+$/, "");
+  const appUrl = publicAppUrl();
   if (!appUrl) redirect(withParam(back, "vreq", `${channel}:noappurl`));
   const link = `${appUrl}/verify/${token}`;
   const label = channel === "slack" ? "Slack" : channel === "email" ? "이메일" : "문자";

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { isBotConfigured, postThread, updateMessage } from "@/lib/notify/slack-api";
 import { setSlackRefRecorder } from "@/lib/notify/slack-refs";
 import { buildAlertBlocks, buildKindPromptBlocks, threadLine, type AlertMsgStatus } from "@/lib/notify/slack-blocks";
+import { appUrl as publicAppUrl } from "@/lib/app-url";
 
 // 웹·웹훅·Slack 버튼 어디서 상태가 바뀌든, 이 알람으로 나간 봇 메시지들을
 // 같은 모양으로 맞춘다: 본문은 그대로, 상태 줄과 버튼만 갈아끼우고 스레드에
@@ -101,7 +102,7 @@ export async function syncSlackMessages(
     console.error("[slack-sync] lookup failed", err);
     return;
   }
-  const appUrl = process.env.APP_URL ?? null;
+  const appUrl = publicAppUrl();
   const note = state.note ? `${state.note} · ${nowLabel()}` : nowLabel();
   for (const m of rows) {
     const ref = { channel: m.channel, ts: m.ts };
