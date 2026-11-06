@@ -1,4 +1,5 @@
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from "@aws-sdk/client-resource-groups-tagging-api";
+import { DescribeTagsCommand, EC2Client } from "@aws-sdk/client-ec2";
 import { identifiersOf, resourceArnOf } from "@/lib/aws/resource-name";
 import { readerCredentials } from "@/server/aws";
 import { readerFor } from "@/server/graph";
@@ -30,10 +31,21 @@ export async function lookupResourceName(input: {
   try {
     const lookup = (async () => {
       const credentials = await readerCredentials(reader.roleArn, reader.externalId);
-      const client = new ResourceGroupsTaggingAPIClient({ region: arn.startsWith("arn:aws:s3:::") ? "us-east-1" : region, credentials });
-      const res = await client.send(new GetResourcesCommand({ ResourceARNList: [arn] }));
-      const tags = res.ResourceTagMappingList?.[0]?.Tags ?? [];
-      return tags.find((t) => t.Key === "Name")?.Value?.trim() || null;
+      try {
+        const client = new ResourceGroupsTaggingAPIClient({ region: arn.startsWith("arn:aws:s3:::") ? "us-east-1" : region, credentials });
+        const res = await client.send(new GetResourcesCommand({ ResourceARNList: [arn] }));
+        const tags = res.ResourceTagMappingList?.[0]?.Tags ?? [];
+        return tags.find((t) => t.Key === "Name")?.Value?.trim() || null;
+      } catch (err) {
+        // 예전 템플릿(ec2:DescribeTags 만 있는 역할)도 EC2 계열은 이름을 받을 수 있게.
+        const ec2Id = /^arn:aws:ec2:[^:]+:\d+:(?:instance|volume|natgateway)\/(.+)$/.exec(arn)?.[1];
+        if (!ec2Id) throw err;
+        const ec2 = new EC2Client({ region, credentials });
+        const res = await ec2.send(
+          new DescribeTagsCommand({ Filters: [{ Name: "resource-id", Values: [ec2Id] }, { Name: "key", Values: ["Name"] }] }),
+        );
+        return res.Tags?.[0]?.Value?.trim() || null;
+      }
     })();
     const name = await Promise.race([
       lookup,
