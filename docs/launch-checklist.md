@@ -58,7 +58,7 @@
 ## 8. AWS 연결 (원클릭)
 
 한 번만 (메가존 쪽):
-- [ ] `https://alert-hub-rho.vercel.app/cfn/alert-hub-connect.yaml` 을 내려받아 메가존 계정 S3 버킷에 올리고 공개 읽기 → 그 객체 주소를 Vercel 환경변수 `CFN_TEMPLATE_URL` 로 → 재배포.
+- [x] `https://alert-hub-rho.vercel.app/cfn/alert-hub-connect.yaml` 을 내려받아 메가존 계정 S3 버킷에 올리고 공개 읽기 → 그 객체 주소를 Vercel 환경변수 `CFN_TEMPLATE_URL` 로 → 재배포. — 값: `https://alarm-manager-onboarding-949501913924.s3.amazonaws.com/alert-hub-connect.yaml` (자세히: aws-connect-guide.md §4)
 
 고객사 계정마다:
 - [ ] 조직 트리 › 서비스 › AWS 계정 매핑 › **🔗 AWS 연결** › (지금 쓰는 SNS 주제 ARN 있으면 입력) › **AWS 콘솔에서 연결** → 그 계정으로 로그인된 콘솔에서 IAM 동의 체크 → **스택 생성**. 패널이 "연결됨"으로 바뀌면 끝.
