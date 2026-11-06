@@ -166,15 +166,17 @@ flowchart TD
 | 리소스 | 내용 |
 |---|---|
 | SNS 구독 | 기존(또는 새) 주제 → `…/api/webhooks/cloudwatch?token=<고객사 토큰>` (HTTPS). alert-hub 가 확인 요청을 자동 수락 |
-| IAM 역할 `alert-hub-reader` | 신뢰: 메가존 `alert-hub-vercel` + ExternalId. 권한: `cloudwatch:GetMetricWidgetImage`(그래프), `ec2:DescribeTags`(EC2 Name 태그 표시) — 읽기만 |
+| IAM 역할 `alert-hub-reader` | 신뢰: 메가존 `alert-hub-vercel` + ExternalId. 권한: `cloudwatch:GetMetricWidgetImage`(그래프), `tag:GetResources`·`ec2:DescribeTags`(리소스 Name 태그 표시) — 읽기만 |
 
-### 2-1) 이미 연결한 계정에 권한 추가 (템플릿 바뀌었을 때 — 예: EC2 Name 태그, 2026-11-06)
-EC2 알람은 InstanceId 만 오므로 alert-hub 가 Name 태그를 조회해 Slack·상세 화면에 `Name` + ID 로 보여 준다. 권한이 없으면 지금처럼 ID 만 나온다(깨지지 않음).
+### 2-1) 이미 연결한 계정에 권한 추가 (템플릿 바뀌었을 때 — 예: 리소스 Name 태그, 2026-11-06)
+알람에는 차원(InstanceId·LoadBalancer·DBInstanceIdentifier …)만 오므로 alert-hub 가 리소스 ARN 을 만들어 **Name 태그**를 조회해 Slack·상세 화면에 `Name` + 원래 값으로 보여 준다.
+대상: EC2·EBS·NAT·ALB/NLB·대상 그룹·RDS(인스턴스·클러스터)·ElastiCache·Lambda·ECS·DynamoDB·SQS·SNS·S3. Name 태그가 없거나 식별자와 같으면 생략.
+권한이 없으면 ID 만 나오고, 알람 상세의 리소스 칸 아래에 **이름이 안 나오는 이유**가 표시된다.
 1. 저장소 최신 `public/cfn/alert-hub-connect.yaml` (= `https://alert-hub-rho.vercel.app/cfn/alert-hub-connect.yaml`) 을 S3 버킷에 **같은 이름으로 덮어쓰기**.
 2. 고객사 계정 콘솔 › CloudFormation › 스택 `alert-hub-connect` › **스택 업데이트 › 직접 업데이트**.
 3. **기존 템플릿 대체** → Amazon S3 URL `https://alarm-manager-onboarding-949501913924.s3.amazonaws.com/alert-hub-connect.yaml` → 다음.
 4. 파라미터는 **그대로**(이전 값 사용) → 다음 → 다음 → IAM 승인 체크 → **제출**. `UPDATE_COMPLETE` 면 끝.
-5. 확인: alert-hub 에서 그 계정의 EC2 알람 상세를 열면 리소스 칸이 `이름 (InstanceId=i-…)` 로 보인다(조회 결과는 1시간 기억).
+5. 확인: alert-hub 에서 그 계정의 EC2 알람 상세를 열면 리소스 칸이 `이름 (InstanceId=i-…)` 로 보인다. 이름은 1시간, 실패·권한 없음은 5분 기억 — 스택 업데이트 직후 5분 안에는 예전 결과가 보일 수 있다.
 
 ### 3) 검증
 - **고객사 페이지 › 수신 주소** 영역에 "최근 거부"가 없어야 한다(있으면 사유 확인, 아래 표).

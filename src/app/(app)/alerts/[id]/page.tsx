@@ -1,4 +1,4 @@
-import { resourceNameFor } from "@/server/resource-name";
+import { lookupResourceName } from "@/server/resource-name";
 import { displayResource } from "@/lib/aws/resource-name";
 import Link from "next/link";
 import { AdminLink } from "@/components/admin-link";
@@ -45,10 +45,12 @@ function Field({
   label,
   value,
   mono = false,
+  hint,
 }: {
   label: string;
   value?: string | null;
   mono?: boolean;
+  hint?: string | null;
 }) {
   if (value === null || value === undefined || value === "") return null;
   return (
@@ -63,6 +65,7 @@ function Field({
       >
         {value}
       </dd>
+      {hint ? <dd className="mt-1 text-[11px] text-stone-400">이름: {hint}</dd> : null}
     </div>
   );
 }
@@ -601,7 +604,7 @@ export default async function AlertDetailPage({
   const heroBorder =
     alert.status === "FIRING" ? sevTone.color : statusTone(alert.status).color;
 
-  const resourceName = await resourceNameFor({ accountId: alert.accountId, region: alert.region, resource: alert.resource });
+  const nameLookup = await lookupResourceName({ accountId: alert.accountId, region: alert.region, resource: alert.resource });
   return (
     <div className="space-y-[18px]">
       <div className="flex items-center gap-2 font-mono text-xs text-stone-400">
@@ -701,7 +704,7 @@ export default async function AlertDetailPage({
         </div>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-5 p-6 sm:grid-cols-4">
           <Field label="소스" value={alert.source} />
-          <Field label="리소스" value={alert.resource ? displayResource(alert.resource, resourceName) : null} mono />
+          <Field label="리소스" value={alert.resource ? displayResource(alert.resource, nameLookup.name) : null} mono hint={nameLookup.name ? null : nameLookup.reason} />
           <Field label="메트릭" value={alert.metric} mono />
           <Field label="네임스페이스" value={alert.namespace} mono />
           <Field label="현재값" value={alert.value} mono />
