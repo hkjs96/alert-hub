@@ -59,7 +59,7 @@ function Field({
         {label}
       </dt>
       <dd
-        className={`mt-1.5 break-words text-sm text-stone-900 ${
+        className={`mt-1.5 whitespace-pre-line break-words text-sm text-stone-900 ${
           mono ? "font-mono" : "font-medium"
         }`}
       >
