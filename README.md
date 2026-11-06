@@ -10,6 +10,8 @@ This is Phase 1 (MVP): **receive → store → dashboard → Slack**. It is buil
 later phases (email, ack/resolve actions, on-call/escalation, Twilio SMS/voice)
 bolt on without a rewrite.
 
+> 📘 **연결 가이드(그림 포함)**: [docs/aws-connect-guide.md](docs/aws-connect-guide.md) — 전체 흐름, 권한 사슬, 새 AWS 계정 연결 절차·문제 해결.
+
 ## Stack
 
 Next.js 14 (App Router, `src/`, TS strict) · Prisma + PostgreSQL · Tailwind ·
