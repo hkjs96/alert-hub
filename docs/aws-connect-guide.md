@@ -89,16 +89,24 @@ flowchart LR
 | ✅ | cron-job.org → `/api/cron/*` (`Authorization: Bearer CRON_SECRET`) | |
 | ✅ | 메가존 계정 `alert-hub-vercel` 역할 + Vercel `AWS_ROLE_ARN`, `AWS_REGION` | OIDC |
 | ✅ | `APP_URL` (없으면 `VERCEL_PROJECT_PRODUCTION_URL` 사용) | "열기" 버튼·그래프 주소 |
-| ⬜ | **템플릿 S3 업로드 + `CFN_TEMPLATE_URL`** | 원클릭 연결에 필요(아래) |
+| ✅ | 템플릿 S3 업로드 + `CFN_TEMPLATE_URL` | 아래 표 |
 | ⬜ | 노출된 Slack·DB 비밀값 재발급 | 테스트 끝나고 |
 
-### 템플릿 S3 업로드 (원클릭의 전제, 한 번)
-CloudFormation 빠른 생성 링크는 템플릿이 **S3 주소**여야 한다.
-1. 메가존 계정 S3 › 버킷 만들기 (예: `alert-hub-cfn-<임의>`, 리전 ap-northeast-2).
-2. `https://alert-hub-rho.vercel.app/cfn/alert-hub-connect.yaml` 을 내려받아 버킷에 업로드.
-3. 그 객체만 공개 읽기 (버킷 정책 `s3:GetObject` on `arn:aws:s3:::버킷/alert-hub-connect.yaml`).
-4. Vercel › Settings › Environment Variables 에 `CFN_TEMPLATE_URL=https://버킷.s3.ap-northeast-2.amazonaws.com/alert-hub-connect.yaml` → 재배포.
-5. 계정 매핑 패널에서 "아직 준비 안 됨: CFN_TEMPLATE_URL" 문구가 사라지면 완료.
+### 템플릿 S3 업로드 (원클릭의 전제, 한 번) ✅ 2026-11-06
+CloudFormation 빠른 생성 링크는 템플릿이 **S3 주소**여야 한다. 중앙 계정 `949501913924` 의 기존 온보딩 버킷을 함께 쓴다.
+
+| 항목 | 값 |
+|---|---|
+| 버킷 | `alarm-manager-onboarding-949501913924` (리전 **us-east-1**) |
+| 템플릿 | `alert-hub-connect.yaml` (같은 버킷의 `customer-onboarding.yaml` 은 다른 도구 것 — 건드리지 않음) |
+| 공개 읽기 | 버킷 정책 `PublicReadOnboarding` (`s3:GetObject` on `…/*`) — 추가 설정 불필요 |
+| `CFN_TEMPLATE_URL` | `https://alarm-manager-onboarding-949501913924.s3.amazonaws.com/alert-hub-connect.yaml` |
+
+주의
+- 버킷이 us-east-1 이라 주소에 리전이 **없다**. `…s3.ap-northeast-2.amazonaws.com/…` 로 쓰면 `PermanentRedirect` 오류가 난다.
+- 버킷 전체가 공개 — 비밀값이 든 파일은 올리지 않는다(템플릿에는 비밀 없음. 토큰·ExternalId 는 링크 파라미터로만 전달).
+- 템플릿을 고치면(`public/cfn/alert-hub-connect.yaml`) 같은 이름으로 다시 업로드한다.
+- 확인: 위 주소를 시크릿 창에서 열어 YAML 이 보이면 OK → 계정 매핑 패널의 "아직 준비 안 됨: CFN_TEMPLATE_URL" 문구가 사라진다.
 
 ## 5. 새 계정 연결 — 홈닉 에너지 솔루션 예시
 
@@ -154,7 +162,8 @@ flowchart TD
 
 | 증상 | 원인 | 조치 |
 |---|---|---|
-| 패널에 "아직 준비 안 됨: CFN_TEMPLATE_URL" | S3 템플릿 미설정 | §4 준비 |
+| 패널에 "아직 준비 안 됨: CFN_TEMPLATE_URL" | 환경변수 미설정·재배포 안 함 | §4 표의 값 넣고 재배포 |
+| 템플릿 주소 `PermanentRedirect` | 리전 붙인 주소 사용 | `…s3.amazonaws.com/…` (리전 없이) |
 | CloudFormation "S3 error / Access denied" | 템플릿 객체가 공개 읽기가 아님 | 버킷 정책 확인 |
 | 스택 실패: 주제를 찾을 수 없음 | 주제 ARN 의 계정·리전이 로그인 계정과 다름 | 같은 계정·리전으로 로그인 |
 | 스택 실패: Role already exists | 이 계정에 `alert-hub-reader` 가 이미 있음 | "그래프 역할도 만들기" 끄고 재실행 |
@@ -177,7 +186,8 @@ timeline
 ```
 
 ## 7. 다음 할 일
-- ⬜ 템플릿 S3 업로드 + `CFN_TEMPLATE_URL` → 에너지 솔루션 연결.
+- ✅ 템플릿 S3 업로드 + `CFN_TEMPLATE_URL`
+- ⬜ 에너지 솔루션 연결 (§5).
 - ⬜ 홈닉 기존 계정도 전용 토큰 URL 로 구독 교체 후 전역 `INGEST_TOKEN` 제거.
 - ⬜ 계정 안 서비스 분류(이름·리소스 패턴), 고객사별 심각도·에스컬레이션 시간 (`docs/multi-tenant-plan.md` 3-2, 3-5).
 - ⬜ 비밀값 재발급.
