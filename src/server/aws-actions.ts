@@ -92,3 +92,16 @@ export async function connectAws(_prev: ConnectState, formData: FormData): Promi
     }),
   };
 }
+
+/** 스택을 만든 뒤 "연결 확인": 역할 ARN 이 비어 있으면 정해진 이름으로 채우고 그래프 한 장을 받아 본다. */
+export async function checkConnection(formData: FormData) {
+  await requireRole("ADMIN");
+  const { readerRoleArnFor } = await import("@/lib/aws/connect");
+  const id = String(formData.get("accountMapId") ?? "");
+  const back = backOf(formData).replace(/([?&])(probe|awsErr|t)=[^&#]*/g, "$1").replace(/[?&]+$/, "");
+  const map = await prisma.awsAccountMap.findUniqueOrThrow({ where: { id }, select: { accountId: true, readerRoleArn: true } });
+  if (!map.readerRoleArn) {
+    await prisma.awsAccountMap.update({ where: { id }, data: { readerRoleArn: readerRoleArnFor(map.accountId), readerError: null } });
+  }
+  redirect(`${back}${back.includes("?") ? "&" : "?"}probe=${id}&t=${Date.now()}#aws-${id}`);
+}
