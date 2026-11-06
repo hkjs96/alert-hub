@@ -49,5 +49,5 @@ export function identifiersOf(resource: string): string[] {
 
 /** 화면 표시: Name 이 있으면 "Name (원래 리소스)". */
 export function displayResource(resource: string, name: string | null | undefined): string {
-  return name ? `${name} (${resource})` : resource;
+  return name ? `Name: ${name}\n${resource}` : resource;
 }

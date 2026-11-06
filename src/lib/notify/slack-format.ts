@@ -134,7 +134,7 @@ export function buildAlertBody(alert: NormalizedAlert, ctx: NotifyContext = {}):
   if (valueParts.length) fields.push(field("현재값 / 임계값", valueParts.join("  ")));
 
   if (alert.resource) {
-    fields.push(field("리소스", ctx.resourceName ? `🖥️ *${ctx.resourceName}*\n${alert.resource}` : `\`${alert.resource}\``));
+    fields.push(field("리소스", ctx.resourceName ? `\`Name: ${ctx.resourceName}\`\n\`${alert.resource}\`` : `\`${alert.resource}\``));
   }
   const where = [alert.accountId, alert.region].filter(Boolean).join(" · ");
   if (where) fields.push(field("계정 · 리전", where));

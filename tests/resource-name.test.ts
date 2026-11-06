@@ -16,13 +16,13 @@ describe("resource name", () => {
     expect(resourceArnOf(null, r, a)).toBeNull();
   });
   it("formats display", () => {
-    expect(displayResource("InstanceId=i-1", "web-01")).toBe("web-01 (InstanceId=i-1)");
+    expect(displayResource("InstanceId=i-1", "web-01")).toBe("Name: web-01\nInstanceId=i-1");
     expect(displayResource("InstanceId=i-1", null)).toBe("InstanceId=i-1");
   });
   it("shows Name above id in Slack fields", () => {
     const alert = { title: "T", severity: "UNKNOWN", source: "cloudwatch", resource: "InstanceId=i-01f242ed571b12fe2" } as unknown as NormalizedAlert;
     const withName = JSON.stringify(buildAlertBody(alert, { resourceName: "raemian-api-01" }).blocks);
-    expect(withName).toContain("🖥️ *raemian-api-01*\\nInstanceId=i-01f242ed571b12fe2");
+    expect(withName).toContain("`Name: raemian-api-01`\\n`InstanceId=i-01f242ed571b12fe2`");
     expect(withName).toContain("T  ·  raemian-api-01");
     const without = JSON.stringify(buildAlertBody(alert, {}).blocks);
     expect(without).not.toContain("raemian-api-01");
