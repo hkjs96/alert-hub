@@ -77,7 +77,7 @@ export async function AwsReaderPanel({
     2,
   );
   const perms = JSON.stringify(
-    { Version: "2012-10-17", Statement: [{ Effect: "Allow", Action: ["cloudwatch:GetMetricWidgetImage", "ec2:DescribeTags"], Resource: "*" }] },
+    { Version: "2012-10-17", Statement: [{ Effect: "Allow", Action: ["cloudwatch:GetMetricWidgetImage", "ec2:DescribeTags", "tag:GetResources"], Resource: "*" }] },
     null,
     2,
   );
