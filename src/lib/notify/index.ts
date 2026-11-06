@@ -44,6 +44,8 @@ export interface NotifyContext {
   links?: { label: string; url: string }[];
   /** 서명된 그래프 이미지 주소. 있으면 Slack 본문 맨 아래에 image 블록으로 들어간다. */
   graphUrl?: string;
+  /** 리소스 표시 이름(EC2 Name 태그 등). 있으면 "이름 (리소스)" 로 보여 준다. */
+  resourceName?: string;
 }
 
 // A Notifier is any channel that can deliver an alert — Slack, email, Twilio.

@@ -132,7 +132,9 @@ export function buildAlertBody(alert: NormalizedAlert, ctx: NotifyContext = {}):
   if (cmp && alert.threshold !== undefined) valueParts.push(`${cmp} ${formatNumber(alert.threshold)}`);
   if (valueParts.length) fields.push(field("현재값 / 임계값", valueParts.join("  ")));
 
-  if (alert.resource) fields.push(field("리소스", `\`${alert.resource}\``));
+  if (alert.resource) {
+    fields.push(field("리소스", ctx.resourceName ? `*${ctx.resourceName}*\n\`${alert.resource}\`` : `\`${alert.resource}\``));
+  }
   const where = [alert.accountId, alert.region].filter(Boolean).join(" · ");
   if (where) fields.push(field("계정 · 리전", where));
   fields.push(field("심각도", alert.severity === "UNKNOWN" ? "미지정" : alert.severity));

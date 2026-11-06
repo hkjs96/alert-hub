@@ -12,6 +12,7 @@ import { findPriorResolutions, markRecurrence, recordResolution } from "@/server
 import { linksForAlert } from "@/server/runbook";
 import { enqueueInsight } from "@/server/insight";
 import { graphUrlForAlert } from "@/server/graph";
+import { resourceNameFor } from "@/server/resource-name";
 import type { SilenceScope } from "@/lib/silence";
 import {
   refireThrottleMinutesFromEnv,
@@ -156,8 +157,13 @@ async function toNotifyContext(alertId: string, n: NormalizedAlert, own: IngestO
   const { links } = await linksForAlert({ fingerprint: n.fingerprint, ruleId, serviceId: own.scope?.serviceId ?? null });
   if (links.length) ctx.links = links;
   // 그래프: 읽기 역할이 연결된 계정이면 서명된 이미지 주소 — Slack 이 본문에서 바로 그린다.
-  const graphUrl = await graphUrlForAlert(alertId, n.accountId);
+  const [graphUrl, resourceName] = await Promise.all([
+    graphUrlForAlert(alertId, n.accountId),
+    resourceNameFor({ accountId: n.accountId, region: n.region, resource: n.resource }),
+  ]);
   if (graphUrl) ctx.graphUrl = graphUrl;
+  // EC2 는 ID 만 오므로 Name 태그를 붙인다(권한 없거나 느리면 생략).
+  if (resourceName) ctx.resourceName = resourceName;
   // 이전 처리 한 줄 — 같은 고객사·서비스의 해결 기록. 조회 실패는 빈 값(best-effort).
   if (own.scope?.customerId && own.scope?.serviceId) {
     const prior = await findPriorResolutions({
