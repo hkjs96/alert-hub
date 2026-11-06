@@ -42,32 +42,35 @@ export async function saveReaderRole(formData: FormData) {
  * "AWS 에 연결": 전용 토큰·ExternalId 를 보장하고, 읽기 역할 ARN 을 미리 채운 뒤
  * CloudFormation 빠른 생성 화면으로 보낸다. 기존 주제 ARN 을 주면 그 주제에 구독만 추가.
  */
-export async function connectAws(formData: FormData) {
+export type ConnectState = { url: string; at: number } | { error: string; at: number } | null;
+
+export async function connectAws(_prev: ConnectState, formData: FormData): Promise<ConnectState> {
   await requireRole("ADMIN");
   const { checkExistingTopic, quickCreateUrl, readerRoleArnFor } = await import("@/lib/aws/connect");
   const { cfnTemplateUrl, ensureConnectSecrets } = await import("@/server/connect");
   const { hubRoleArn } = await import("@/server/aws");
   const { appUrl } = await import("@/lib/app-url");
+  const at = Date.now();
+  const fail = (error: string): ConnectState => ({ error, at });
   const id = String(formData.get("accountMapId") ?? "");
-  const back = backOf(formData);
-  const fail = (reason: string) => redirect(`${back}${back.includes("?") ? "&" : "?"}awsErr=${encodeURIComponent(reason)}#aws-${id}`);
-  const map = await prisma.awsAccountMap.findUniqueOrThrow({
+  const map = await prisma.awsAccountMap.findUnique({
     where: { id },
     select: { accountId: true, readerRoleArn: true, service: { select: { project: { select: { customerId: true } } } } },
   });
+  if (!map) return fail("계정 매핑을 찾을 수 없습니다");
   const topicRaw = String(formData.get("existingTopicArn") ?? "").trim();
   let region = String(formData.get("region") ?? "ap-northeast-2").trim() || "ap-northeast-2";
   if (topicRaw) {
     const t = checkExistingTopic(topicRaw, map.accountId);
-    if (!t.ok) fail(t.reason);
-    else region = t.region;
+    if (!t.ok) return fail(t.reason);
+    region = t.region;
   }
   const hub = hubRoleArn();
-  if (!hub) fail("AWS_ROLE_ARN 미설정 — 안내 데스크 역할 ARN 을 Vercel 환경변수에 넣고 재배포하세요");
+  if (!hub) return fail("AWS_ROLE_ARN 미설정 — 안내 데스크 역할 ARN 을 Vercel 환경변수에 넣고 재배포하세요");
   const base = appUrl();
-  if (!base) fail("공개 주소를 알 수 없습니다 (APP_URL)");
+  if (!base) return fail("공개 주소를 알 수 없습니다 (APP_URL)");
   const templateUrl = cfnTemplateUrl();
-  if (!templateUrl) fail("CFN_TEMPLATE_URL 미설정 — 템플릿을 S3 에 한 번 올리고 그 주소를 Vercel 환경변수에 넣으세요 (아래 '수동으로' 참고)");
+  if (!templateUrl) return fail("CFN_TEMPLATE_URL 미설정 — Vercel 환경변수에 템플릿 S3 주소를 넣고 재배포하세요");
   const secrets = await ensureConnectSecrets(map.service.project.customerId);
   const createRole = formData.get("createRole") !== "off";
   if (createRole && !map.readerRoleArn) {
@@ -76,16 +79,16 @@ export async function connectAws(formData: FormData) {
       data: { readerRoleArn: readerRoleArnFor(map.accountId), readerError: null, readerCheckedAt: null },
     });
   }
-  redirect(
-    quickCreateUrl({
-      templateUrl: templateUrl!,
+  return {
+    at,
+    url: quickCreateUrl({
+      templateUrl,
       region,
       ingestUrl: `${base}/api/webhooks/cloudwatch?token=${secrets.ingestToken}`,
-      hubRoleArn: hub!,
+      hubRoleArn: hub,
       externalId: secrets.awsExternalId,
       existingTopicArn: topicRaw || null,
       createReaderRole: createRole,
     }),
-  );
+  };
 }
-

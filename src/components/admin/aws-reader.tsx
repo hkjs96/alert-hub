@@ -4,13 +4,12 @@ import { STACK_NAME } from "@/lib/aws/connect";
 import { appUrl } from "@/lib/app-url";
 import { hubRoleArn } from "@/server/aws";
 import { cfnTemplateUrl, ensureConnectSecrets } from "@/server/connect";
-import { connectAws, saveReaderRole } from "@/server/aws-actions";
+import { saveReaderRole } from "@/server/aws-actions";
+import { ConnectForm } from "@/components/admin/aws-connect-form";
 import { PendingButton } from "@/components/pending-button";
 
 const btn =
   "inline-flex h-8 items-center border border-stone-300 bg-white px-3 text-xs font-medium text-stone-900 hover:border-stone-500";
-const primary =
-  "inline-flex h-9 items-center bg-stone-900 px-4 text-sm font-semibold text-white hover:bg-black";
 
 const REGIONS = ["ap-northeast-2", "ap-northeast-1", "us-east-1", "us-west-2", "ap-southeast-1", "eu-west-1"];
 
@@ -92,47 +91,13 @@ export async function AwsReaderPanel({
       <div className="space-y-3 border-t border-stone-200 px-3 py-3 text-xs text-stone-600">
         {error ? <p className="border border-[#f3d9b8] bg-[#fdf6ec] px-2.5 py-1.5 text-[#b54708]">{error}</p> : null}
 
-        <form action={connectAws} className="space-y-2">
-          <input type="hidden" name="accountMapId" value={accountMapId} />
-          <input type="hidden" name="back" value={back} />
-          <p className="text-stone-700">
-            계정 <span className="font-mono font-semibold">{map.accountId}</span> 으로 AWS 콘솔에 <b>로그인한 상태</b>에서 누르세요.
-            CloudFormation 화면이 값이 채워진 채로 열립니다 → 맨 아래 <b>IAM 리소스 생성 동의</b> 체크 → <b>스택 생성</b>. 끝.
-          </p>
-          <div className="flex flex-wrap items-end gap-3">
-            <label className="block">
-              <span className="mb-1 block text-[11px] font-semibold text-stone-500">리전</span>
-              <select name="region" defaultValue="ap-northeast-2" className="h-8 border border-stone-300 bg-white px-2 text-xs">
-                {REGIONS.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-            </label>
-            <label className="block min-w-[18rem] flex-1">
-              <span className="mb-1 block text-[11px] font-semibold text-stone-500">
-                지금 쓰는 SNS 주제 ARN (선택 — 넣으면 그 주제에 구독만 추가, 경보는 그대로)
-              </span>
-              <input
-                name="existingTopicArn"
-                placeholder={`arn:aws:sns:ap-northeast-2:${map.accountId}:기존주제이름`}
-                className="h-8 w-full border border-stone-300 bg-white px-2 font-mono text-[11px]"
-              />
-            </label>
-            <label className="inline-flex items-center gap-1.5 pb-1.5">
-              <input type="checkbox" name="createRole" value="on" defaultChecked className="accent-stone-900" />
-              그래프 역할도 만들기
-              <input type="hidden" name="createRole" value="off" />
-            </label>
-          </div>
-          <PendingButton pendingLabel="여는 중…" className={primary}>
-            AWS 콘솔에서 연결 (CloudFormation)
-          </PendingButton>
-          <p className="text-stone-400">
-            주제 ARN 을 비우면 새 주제 <span className="font-mono">alert-hub</span> 를 만듭니다 — 그때는 경보 알림에 이 주제를 추가해야 알람이 옵니다.
-            해제: CloudFormation 에서 스택 <span className="font-mono">{STACK_NAME}</span> 삭제.
-            {!templateReady || !hub ? <span className="text-[#b54708]"> · 아직 준비 안 됨: {!hub ? "AWS_ROLE_ARN " : ""}{!templateReady ? "CFN_TEMPLATE_URL" : ""}</span> : null}
-          </p>
-        </form>
+        <ConnectForm
+          accountMapId={accountMapId}
+          accountId={map.accountId}
+          regions={REGIONS}
+          stackName={STACK_NAME}
+          notReady={!templateReady || !hub ? `${!hub ? "AWS_ROLE_ARN " : ""}${!templateReady ? "CFN_TEMPLATE_URL" : ""}` : null}
+        />
 
         {autoProbe && map.readerRoleArn ? (
           <div>
