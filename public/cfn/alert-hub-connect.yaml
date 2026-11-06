@@ -51,7 +51,7 @@ Resources:
     Condition: MakeRole
     Properties:
       RoleName: alert-hub-reader
-      Description: alert-hub read-only role for alarm graphs (GetMetricWidgetImage only)
+      Description: alert-hub read-only role for alarm graphs and EC2 Name tags (GetMetricWidgetImage, DescribeTags)
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -67,7 +67,9 @@ Resources:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
-                Action: cloudwatch:GetMetricWidgetImage
+                Action:
+                  - cloudwatch:GetMetricWidgetImage
+                  - ec2:DescribeTags
                 Resource: "*"
 
 Outputs:
