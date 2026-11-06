@@ -100,7 +100,8 @@ export function buildAlertBody(alert: NormalizedAlert, ctx: NotifyContext = {}):
   const emoji = SEVERITY_EMOJI[alert.severity] ?? "⚠️";
   const blocks: Block[] = [];
 
-  const title = `${emoji} ${alert.title}`.slice(0, 150);
+  // 리소스 이름이 있으면 제목 옆에 — 어느 서버인지 첫 줄에서 보이게.
+  const title = `${emoji} ${alert.title}${ctx.resourceName ? `  ·  ${ctx.resourceName}` : ""}`.slice(0, 150);
   blocks.push({ type: "header", text: { type: "plain_text", text: title, emoji: true } });
 
   // 조직 · 담당
@@ -133,7 +134,7 @@ export function buildAlertBody(alert: NormalizedAlert, ctx: NotifyContext = {}):
   if (valueParts.length) fields.push(field("현재값 / 임계값", valueParts.join("  ")));
 
   if (alert.resource) {
-    fields.push(field("리소스", ctx.resourceName ? `*${ctx.resourceName}*\n\`${alert.resource}\`` : `\`${alert.resource}\``));
+    fields.push(field("리소스", ctx.resourceName ? `🖥️ *${ctx.resourceName}*\n${alert.resource}` : `\`${alert.resource}\``));
   }
   const where = [alert.accountId, alert.region].filter(Boolean).join(" · ");
   if (where) fields.push(field("계정 · 리전", where));
@@ -170,6 +171,7 @@ export function buildAlertBody(alert: NormalizedAlert, ctx: NotifyContext = {}):
   }
 
   const textParts = [`${emoji} ${alert.title} — ${alert.status}`];
+  if (ctx.resourceName) textParts.push(ctx.resourceName);
   if (ctx.chainLabel) textParts.push(ctx.chainLabel);
   if (valueParts.length) textParts.push(valueParts.join(" ").replace(/\*/g, ""));
   return { text: textParts.join(" · "), blocks };
