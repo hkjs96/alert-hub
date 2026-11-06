@@ -4,7 +4,7 @@ import { STACK_NAME } from "@/lib/aws/connect";
 import { appUrl } from "@/lib/app-url";
 import { hubRoleArn } from "@/server/aws";
 import { cfnTemplateUrl, ensureConnectSecrets } from "@/server/connect";
-import { saveReaderRole } from "@/server/aws-actions";
+import { checkConnection, saveReaderRole } from "@/server/aws-actions";
 import { ConnectForm } from "@/components/admin/aws-connect-form";
 import { PendingButton } from "@/components/pending-button";
 
@@ -54,10 +54,10 @@ export async function AwsReaderPanel({
   const status = verified
     ? { tone: "text-emerald-700", label: `연결됨 · ${fmt(map.readerCheckedAt)} 확인` }
     : map.readerError
-      ? { tone: "text-[#b54708]", label: "연결 안 됨 · 스택 생성 전이거나 실패" }
+      ? { tone: "text-[#b54708]", label: "그래프 연결 실패 — 스택이 끝났는지 확인 후 ③ 다시" }
       : map.readerRoleArn
-        ? { tone: "text-stone-500", label: "스택 생성 대기 · 확인 중" }
-        : { tone: "text-stone-400", label: "미연결" };
+        ? { tone: "text-stone-500", label: "스택 생성 후 ③ 연결 확인을 누르세요" }
+        : { tone: "text-stone-400", label: "아직 연결 안 함 — 아래 ①②③ 순서대로" };
   const ingestUrl = `${appUrl() ?? "<APP_URL>"}/api/webhooks/cloudwatch?token=${secrets.ingestToken}`;
   const sep = back.includes("?") ? "&" : "?";
 
@@ -98,6 +98,14 @@ export async function AwsReaderPanel({
           stackName={STACK_NAME}
           notReady={!templateReady || !hub ? `${!hub ? "AWS_ROLE_ARN " : ""}${!templateReady ? "CFN_TEMPLATE_URL" : ""}` : null}
         />
+
+        <form action={checkConnection} className="flex flex-wrap items-center gap-2 border-t border-stone-200 pt-3">
+          <input type="hidden" name="accountMapId" value={accountMapId} />
+          <input type="hidden" name="back" value={back} />
+          <span className="font-semibold text-stone-800">③ 스택이 CREATE_COMPLETE 가 되면</span>
+          <PendingButton pendingLabel="확인 중…" className={btn}>연결 확인</PendingButton>
+          <span className="text-stone-400">그래프 역할이 실제로 동작하는지 빈 그래프 한 장을 받아 봅니다.</span>
+        </form>
 
         {autoProbe && map.readerRoleArn ? (
           <div>

@@ -50,10 +50,20 @@ export function ConnectForm({
           아직 준비 안 됨: {notReady} — Vercel 환경변수를 넣고 재배포하세요.
         </p>
       ) : null}
-      <p className="text-stone-700">
-        <b>연결 링크 만들기</b> → 계정 <span className="font-mono font-semibold">{accountId}</span> 으로 AWS 콘솔에 로그인된 창에서 링크 열기 →
-        맨 아래 <b>IAM 리소스 생성 동의</b> 체크 → <b>스택 생성</b>. 끝.
-      </p>
+      <div className="space-y-1 text-stone-700">
+        <p>
+          <b>① 경보가 쓰는 SNS 주제 ARN 찾기</b> (계정 <span className="font-mono font-semibold">{accountId}</span> 콘솔에서)
+        </p>
+        <ol className="ml-4 list-decimal space-y-0.5 text-stone-600">
+          <li>CloudWatch › 경보 › 경보 하나 클릭 › <b>작업</b> 탭 → &ldquo;알림&rdquo; 에 적힌 SNS 주제 이름 확인</li>
+          <li>SNS › 주제 › 그 이름 클릭 → 맨 위 <b>ARN</b> 복사 (<span className="font-mono">arn:aws:sns:리전:{accountId}:주제이름</span>)</li>
+          <li>아래 칸에 붙여 넣기. 이미 경보가 쓰는 주제라 <b>구독만 하나 추가</b>되고 경보·기존 수신자는 그대로입니다.</li>
+        </ol>
+        <p className="text-stone-500">
+          ⚠ CloudFormation 이 만든 <span className="font-mono">…:alert-hub</span> 주제나 구독(<span className="font-mono">…:alert-hub:xxxx</span>) ARN 은 넣지 마세요 — 그건 결과물입니다.
+        </p>
+        <p className="pt-1"><b>② 연결 링크 만들기</b> → 그 계정으로 로그인된 창에서 열기 → 맨 아래 <b>IAM 리소스 생성 동의</b> 체크 → <b>스택 생성</b></p>
+      </div>
       <div className="flex flex-wrap items-end gap-3">
         <label className="block">
           <span className="mb-1 block text-[11px] font-semibold text-stone-500">리전</span>
@@ -65,7 +75,7 @@ export function ConnectForm({
         </label>
         <label className="block min-w-[18rem] flex-1">
           <span className="mb-1 block text-[11px] font-semibold text-stone-500">
-            지금 쓰는 SNS 주제 ARN (선택 — 넣으면 그 주제에 구독만 추가, 경보는 그대로)
+            ① 에서 찾은 SNS 주제 ARN (비우면 새 주제를 만들고, 경보에 직접 추가해야 함)
           </span>
           <input
             name="existingTopicArn"
@@ -98,8 +108,8 @@ export function ConnectForm({
       ) : null}
 
       <p className="text-stone-400">
-        주제 ARN 을 비우면 새 주제 <span className="font-mono">alert-hub</span> 를 만듭니다 — 그때는 경보 알림에 이 주제를 추가해야 알람이 옵니다.
-        해제: CloudFormation 에서 스택 <span className="font-mono">{stackName}</span> 삭제.
+        이미 스택 <span className="font-mono">{stackName}</span> 을 주제 없이 만들었다면: 스택 삭제 후 주제 ARN 을 넣어 다시 하거나,
+        각 경보의 작업에 새 주제 <span className="font-mono">…:alert-hub</span> 를 추가하세요. 해제는 스택 삭제 한 번.
       </p>
     </form>
   );
